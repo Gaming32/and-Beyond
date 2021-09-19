@@ -1,5 +1,14 @@
 # pyright: reportWildcardImportFromLibrary=false
+import os
+import subprocess
+import sys
 from typing import Callable
+
+from pw32.utils import DEBUG
+
+if sys.platform == 'win32':
+    import msvcrt
+    import _winapi # type: ignore
 
 import pygame
 from pw32.client import button_ui, globals
@@ -12,7 +21,8 @@ class TitleScreen:
 
     def __init__(self) -> None:
         self.buttons = [
-            ('Start game', self.start_game),
+            ('Singleplayer', self.singleplayer),
+            ('Multiplayer', self.multiplayer),
             # ('Options', self.show_options),
             ('Quit', self.quit),
         ]
@@ -20,9 +30,31 @@ class TitleScreen:
     def render(self, surf: Surface) -> None:
         surf.fill((0, 0, 0))
         button_ui.draw_buttons_and_call(surf, self.buttons)
-    
-    def start_game(self) -> None:
+
+    def singleplayer(self) -> None:
         globals.at_title = False
+        (r, w) = os.pipe()
+        if sys.platform == 'win32':
+            curproc = _winapi.GetCurrentProcess()
+            rh = msvcrt.get_osfhandle(r)
+            rih = _winapi.DuplicateHandle(curproc, rh, curproc, 0, True, _winapi.DUPLICATE_SAME_ACCESS)
+            pipe = rih
+            globals.singleplayer_pipe_ih = rih
+        else:
+            os.set_inheritable(r, True)
+            pipe = r
+        os.close(r)
+        globals.singleplayer_pipe = os.fdopen(w, 'wb')
+        server_args = [sys.executable, '-m', 'pw32.server', '--singleplayer', str(pipe)]
+        if DEBUG:
+            server_args.append('--debug')
+        subprocess.Popen(server_args, close_fds=False)
+
+    def multiplayer(self) -> None:
+        globals.at_title = False
+
+    def load_multiplayer(self, server):
+        pass
     
     def quit(self) -> None:
         globals.running = False

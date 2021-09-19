@@ -1,6 +1,9 @@
 import json
 import logging
-from typing import TYPE_CHECKING, TypedDict
+import sys
+from pw32.pipe_commands import PipeCommands
+import socket
+from typing import TYPE_CHECKING, Any, BinaryIO, TypedDict
 
 if TYPE_CHECKING:
     from pygame.display import _VidInfo
@@ -45,11 +48,25 @@ class ConfigManager:
             logging.info('Saved config')
 
 
+def close_singleplayer_server():
+    logging.debug('Checking if singplayer server needs shutdown...')
+    if singleplayer_pipe is not None:
+        logging.info('Shutting down singplayer server...')
+        singleplayer_pipe.write(PipeCommands.SHUTDOWN.to_bytes(2, 'little'))
+        singleplayer_pipe.flush()
+        singleplayer_pipe.close()
+
+
 config: ConfigManager
 running: bool
-at_title: bool
 display_info: '_VidInfo'
 
 fullscreen: bool
 w_width: int
 w_height: int
+
+at_title: bool
+game_socket: socket.socket
+singleplayer_pipe: BinaryIO
+if sys.platform == 'win32':
+    singleplayer_pipe_ih: Any

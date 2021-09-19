@@ -14,6 +14,8 @@ COLORS = {
 FORMAT = '[%(asctime)s] [%(threadName)s/%(levelname)s] [%(filename)s:%(lineno)i]: %(message)s'
 DATA_FORMAT = '%H:%M:%S'
 
+DEBUG = '--debug' in sys.argv
+
 
 class ColoredFormatter(logging.Formatter):
     use_color: bool
@@ -32,7 +34,7 @@ class ColoredFormatter(logging.Formatter):
 
 def init_logger() -> None:
     root = logging.getLogger()
-    root.setLevel(logging.DEBUG if '--debug' in sys.argv else logging.INFO)
+    root.setLevel(logging.DEBUG if DEBUG else logging.INFO)
     logging.addLevelName(logging.WARN, 'WARN')
     logging.addLevelName(logging.CRITICAL, 'SEVERE')
     handlers: list[logging.Handler] = [

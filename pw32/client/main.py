@@ -40,6 +40,9 @@ screen = reset_window()
 
 title = TitleScreen()
 
+globals.game_socket = None
+globals.singleplayer_pipe = None
+
 
 globals.at_title = True
 globals.running = True
@@ -67,5 +70,6 @@ while globals.running:
 
 
 logging.info('Quitting...')
-config.save()
 pygame.quit()
+globals.close_singleplayer_server()
+config.save()
