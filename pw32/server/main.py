@@ -56,7 +56,9 @@ class AsyncServer:
             logging.debug('Server running in singleplayer mode (fd/handle: %i)', singleplayer_fd)
             if sys.platform == 'win32':
                 singleplayer_fd = msvcrt.open_osfhandle(singleplayer_fd, os.O_RDONLY)
-            self.singleplayer_pipe = os.fdopen(singleplayer_fd, 'rb')
+            else:
+                os.set_blocking(singleplayer_fd, True)
+            self.singleplayer_pipe = os.fdopen(singleplayer_fd, 'rb', closefd=False)
             self.loop.create_task(self.receive_singleplayer_commands(self.singleplayer_pipe))
 
         logging.info('Server started')
