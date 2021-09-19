@@ -28,7 +28,8 @@ async def _main():
             singleplayer_fd = msvcrt.open_osfhandle(singleplayer_fd, os.O_RDONLY)
         singleplayer_pipe = os.fdopen(singleplayer_fd, 'rb')
         singleplayer = True
-    
+
+    logging.info('Server started')
     running = True
     while running:
         try:
