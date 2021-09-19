@@ -12,7 +12,7 @@ class TitleScreen:
 
     def __init__(self) -> None:
         self.buttons = [
-            # ('Start game', self.start_game),
+            ('Start game', self.start_game),
             # ('Options', self.show_options),
             ('Quit', self.quit),
         ]
@@ -20,6 +20,9 @@ class TitleScreen:
     def render(self, surf: Surface) -> None:
         surf.fill((0, 0, 0))
         button_ui.draw_buttons_and_call(surf, self.buttons)
+    
+    def start_game(self) -> None:
+        globals.at_title = False
     
     def quit(self) -> None:
         globals.running = False

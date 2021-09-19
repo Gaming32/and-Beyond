@@ -9,13 +9,15 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/run_game.py",
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "args": ["--debug"]
         },
         {
             "name": "PW32: Server",
             "type": "python",
             "request": "launch",
-            "module": "pw32.server"
+            "module": "pw32.server",
+            "args": ["--debug"]
         }
     ]
 }

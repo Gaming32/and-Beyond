@@ -1,4 +1,5 @@
 import logging
+import sys
 
 RESET_SEQ = '\033[0m'
 COLOR_SEQ = '\033[%sm'
@@ -31,7 +32,7 @@ class ColoredFormatter(logging.Formatter):
 
 def init_logger() -> None:
     root = logging.getLogger()
-    root.setLevel(logging.INFO)
+    root.setLevel(logging.DEBUG if '--debug' in sys.argv else logging.INFO)
     logging.addLevelName(logging.WARN, 'WARN')
     logging.addLevelName(logging.CRITICAL, 'SEVERE')
     handlers: list[logging.Handler] = [

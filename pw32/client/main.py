@@ -17,13 +17,15 @@ logging.info('Starting client...')
 pygame.init()
 logging.info('Pygame loaded')
 
-display_info = pygame.display.Info()
-globals.config = config = ConfigManager(display_info)
+globals.display_info = pygame.display.Info()
+globals.config = config = ConfigManager(globals.display_info)
 
 def reset_window() -> Surface:
+    pygame.display.init()
+    globals.display_info = pygame.display.Info()
     if globals.fullscreen:
-        globals.w_width = display_info.current_w
-        globals.w_height = display_info.current_h
+        globals.w_width = globals.display_info.current_w
+        globals.w_height = globals.display_info.current_h
     else:
         globals.w_width = config.config['w_width']
         globals.w_height = config.config['w_height']
@@ -39,7 +41,7 @@ screen = reset_window()
 title = TitleScreen()
 
 
-at_title = True
+globals.at_title = True
 globals.running = True
 clock = pygame.time.Clock()
 while globals.running:
@@ -47,15 +49,18 @@ while globals.running:
         if event.type == QUIT:
             globals.running = False
         elif event.type == VIDEORESIZE:
-            globals.w_width = event.w
-            globals.w_height = event.h
+            logging.debug('Screen resize')
+            if not globals.fullscreen:
+                globals.w_width = event.w
+                globals.w_height = event.h
         elif event.type == KEYDOWN:
             if event.key == K_F11:
                 globals.fullscreen = not globals.fullscreen
+                logging.debug('Switching fullscreen mode...')
                 pygame.display.quit()
                 screen = reset_window()
 
-    if at_title:
+    if globals.at_title:
         title.render(screen)
 
     pygame.display.update()

@@ -32,8 +32,10 @@ class ConfigManager:
             'fullscreen': False,
         }
 
-    def save(self) -> None:
+    def save(self, reassign: bool = True) -> None:
         logging.info('Saving config...')
+        if reassign:
+            self.config['fullscreen'] = fullscreen
         try:
             with open('config.json', 'w', encoding='utf-8') as fp:
                 json.dump(self.config, fp)
@@ -45,6 +47,8 @@ class ConfigManager:
 
 config: ConfigManager
 running: bool
+at_title: bool
+display_info: '_VidInfo'
 
 fullscreen: bool
 w_width: int

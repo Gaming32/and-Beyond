@@ -13,7 +13,7 @@ from pygame.locals import *
 BUTTON_WIDTH = 300
 BUTTON_HEIGHT = 50
 
-BUTTON_HEIGHT_PAD = BUTTON_HEIGHT + 10
+BUTTON_HEIGHT_PAD = BUTTON_HEIGHT + 25
 
 pygame.font.init()
 BUTTON_FONT = pygame.font.SysFont('Calibri', 30)
