@@ -32,6 +32,15 @@ if not has_perlin_noise:
     missing_deps_text += ' - Perlin Noise library (perlin-noise)\n'
     missing_deps.append('perlin-noise')
 
+has_colorama = True
+try:
+    import colorama
+except ModuleNotFoundError:
+    has_colorama = False
+if not has_colorama:
+    missing_deps_text += ' - Colorama (colorama)\n'
+    missing_deps.append('colorama')
+
 if missing_deps:
     print('You appear to be missing the following requirements for this game to run:')
     print(missing_deps_text, end='')
@@ -47,4 +56,4 @@ if missing_deps:
         print('Installation cancelled.')
         sys.exit(0)
 
-
+import pw32.client.main

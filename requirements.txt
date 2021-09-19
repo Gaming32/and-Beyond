@@ -1,2 +1,3 @@
 pygame>=2.0
 perlin-noise
+colorama
