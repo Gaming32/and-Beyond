@@ -49,9 +49,9 @@ class ConfigManager:
 
 
 def close_singleplayer_server():
-    logging.debug('Checking if singplayer server needs shutdown...')
+    logging.debug('Checking if singleplayer server needs shutdown...')
     if singleplayer_pipe is not None:
-        logging.info('Shutting down singplayer server...')
+        logging.info('Shutting down singleplayer server...')
         singleplayer_pipe.write(PipeCommands.SHUTDOWN.to_bytes(2, 'little'))
         singleplayer_pipe.flush()
         singleplayer_pipe.close()

@@ -34,6 +34,9 @@ class TitleScreen:
     def singleplayer(self) -> None:
         globals.at_title = False
         (r, w) = os.pipe()
+        # Thanks to
+        # https://www.digitalenginesoftware.com/blog/archives/47-Passing-pipes-to-subprocesses-in-Python-in-Windows.html
+        # for teaching how to work with subprocess pipes on Windows :)
         if sys.platform == 'win32':
             curproc = _winapi.GetCurrentProcess()
             rh = msvcrt.get_osfhandle(r)

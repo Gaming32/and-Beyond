@@ -48,25 +48,29 @@ globals.at_title = True
 globals.running = True
 clock = pygame.time.Clock()
 while globals.running:
-    for event in pygame.event.get():
-        if event.type == QUIT:
-            globals.running = False
-        elif event.type == VIDEORESIZE:
-            logging.debug('Screen resize')
-            if not globals.fullscreen:
-                globals.w_width = event.w
-                globals.w_height = event.h
-        elif event.type == KEYDOWN:
-            if event.key == K_F11:
-                globals.fullscreen = not globals.fullscreen
-                logging.debug('Switching fullscreen mode...')
-                pygame.display.quit()
-                screen = reset_window()
+    try:
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                globals.running = False
+            elif event.type == VIDEORESIZE:
+                logging.debug('Screen resize')
+                if not globals.fullscreen:
+                    globals.w_width = event.w
+                    globals.w_height = event.h
+            elif event.type == KEYDOWN:
+                if event.key == K_F11:
+                    globals.fullscreen = not globals.fullscreen
+                    logging.debug('Switching fullscreen mode...')
+                    pygame.display.quit()
+                    screen = reset_window()
 
-    if globals.at_title:
-        title.render(screen)
+        if globals.at_title:
+            title.render(screen)
 
-    pygame.display.update()
+        pygame.display.update()
+    except KeyboardInterrupt:
+        globals.running = False
+
 
 
 logging.info('Quitting...')
