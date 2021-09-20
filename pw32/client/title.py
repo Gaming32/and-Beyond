@@ -43,10 +43,10 @@ class TitleScreen:
             rih = _winapi.DuplicateHandle(curproc, rh, curproc, 0, True, _winapi.DUPLICATE_SAME_ACCESS)
             pipe = rih
             globals.singleplayer_pipe_ih = rih
+            os.close(r)
         else:
             os.set_inheritable(r, True)
             pipe = r
-        os.close(r)
         globals.singleplayer_pipe = os.fdopen(w, 'wb')
         server_args = [sys.executable, '-m', 'pw32.server', '--singleplayer', str(pipe)]
         if DEBUG:
