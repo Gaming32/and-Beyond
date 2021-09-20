@@ -33,6 +33,16 @@ class AsyncServer:
 
     last_spt: float
 
+    def __init__(self) -> None:
+        self.loop = None # type: ignore
+        self.singleplayer_pipe = None
+        self.multiplayer = True
+        self.running = False
+        self.has_been_shutdown = False
+        self.async_server = None # type: ignore
+        self.clients = []
+        self.last_spt = 0
+
     def start(self) -> None:
         if sys.platform == 'win32':
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
