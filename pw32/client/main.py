@@ -1,5 +1,7 @@
 # pyright: reportWildcardImportFromLibrary=false
+import asyncio
 import logging
+import sys
 
 import pygame
 import pygame.display
@@ -16,6 +18,9 @@ init_logger()
 logging.info('Starting client...')
 pygame.init()
 logging.info('Pygame loaded')
+
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 globals.display_info = pygame.display.Info()
 globals.config = config = ConfigManager(globals.display_info)
@@ -40,7 +45,8 @@ screen = reset_window()
 
 title = TitleScreen()
 
-globals.game_socket = None
+globals.game_connection = None
+globals.singleplayer_popen = None
 globals.singleplayer_pipe = None
 
 

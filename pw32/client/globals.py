@@ -1,9 +1,12 @@
 import json
 import logging
-import sys
-from pw32.pipe_commands import PipeCommands
 import socket
+import subprocess
+import sys
 from typing import TYPE_CHECKING, Any, BinaryIO, TypedDict
+
+from pw32.client.server_connection import ServerConnection
+from pw32.pipe_commands import PipeCommands
 
 if TYPE_CHECKING:
     from pygame.display import _VidInfo
@@ -55,6 +58,10 @@ def close_singleplayer_server():
         singleplayer_pipe.write(PipeCommands.SHUTDOWN.to_bytes(2, 'little'))
         singleplayer_pipe.flush()
         singleplayer_pipe.close()
+    if singleplayer_popen is not None:
+        logging.info('Waiting for singleplayer to stop...')
+        if returncode := singleplayer_popen.wait():
+            logging.warn('Singleplayer server stopped with exit code %i', returncode)
 
 
 config: ConfigManager
@@ -66,7 +73,8 @@ w_width: int
 w_height: int
 
 at_title: bool
-game_socket: socket.socket
+game_connection: ServerConnection
+singleplayer_popen: subprocess.Popen
 singleplayer_pipe: BinaryIO
 if sys.platform == 'win32':
     singleplayer_pipe_ih: Any

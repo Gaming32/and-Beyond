@@ -1,9 +1,11 @@
 # pyright: reportWildcardImportFromLibrary=false
+import logging
 import os
 import subprocess
 import sys
 from typing import Callable
 
+from pw32.client.server_connection import ServerConnection
 from pw32.utils import DEBUG
 
 if sys.platform == 'win32':
@@ -51,13 +53,16 @@ class TitleScreen:
         server_args = [sys.executable, '-m', 'pw32.server', '--singleplayer', str(pipe)]
         if DEBUG:
             server_args.append('--debug')
-        subprocess.Popen(server_args, close_fds=False)
+        globals.singleplayer_popen = subprocess.Popen(server_args, close_fds=False)
+        self.load_multiplayer('localhost')
 
     def multiplayer(self) -> None:
         globals.at_title = False
 
-    def load_multiplayer(self, server):
-        pass
-    
+    def load_multiplayer(self, server: str):
+        conn = ServerConnection()
+        globals.game_connection = conn
+        conn.start(server)
+
     def quit(self) -> None:
         globals.running = False

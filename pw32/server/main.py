@@ -107,7 +107,11 @@ class AsyncServer:
 
     async def client_connected(self, reader: StreamReader, writer: StreamWriter) -> None:
         client = Client(self, reader, writer)
-        self.clients.insert(random.randrange(len(self.clients)), client)
+        if self.clients:
+            self.clients.insert(random.randrange(len(self.clients)), client)
+        else:
+            self.clients.append(client)
+        await client.start()
 
     async def tick(self) -> None:
         for client in self.clients:
@@ -115,7 +119,7 @@ class AsyncServer:
 
     async def shutdown(self) -> None:
         logging.info('Shutting down...')
-        asyncio.gather(*(client.disconnect('Server closed') for client in self.clients))
+        await asyncio.gather(*(client.disconnect('Server closed') for client in self.clients))
         self.async_server.close()
         if self.singleplayer_pipe is not None:
             self.singleplayer_pipe.close()

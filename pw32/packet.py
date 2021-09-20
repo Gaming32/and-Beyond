@@ -1,7 +1,8 @@
 import abc
-from asyncio.streams import StreamWriter
 import enum
+import uuid
 from asyncio import StreamReader
+from asyncio.streams import StreamWriter
 from typing import TypeVar
 
 T = TypeVar('T', bound=int)
@@ -44,6 +45,10 @@ async def _read_string(reader: StreamReader) -> str:
     return (await reader.read(await _read_ushort(reader))).decode('utf-8')
 
 
+async def _read_uuid(reader: StreamReader) -> uuid.UUID:
+    return uuid.UUID(bytes=await reader.read(16))
+
+
 def _write_ushort(value: int, writer: StreamWriter) -> None:
     writer.write(value.to_bytes(2, 'little', signed=False))
 
@@ -54,10 +59,24 @@ def _write_string(value: str, writer: StreamWriter) -> None:
     writer.write(enc)
 
 
+def _write_uuid(value: uuid.UUID, writer: StreamWriter) -> None:
+    writer.write(value.bytes)
+
+
 # Packet classes
 
 class AuthenticatePacket(Packet):
     type = PacketType.AUTHENTICATE
+    auth_id: uuid.UUID
+
+    def __init__(self, auth_id: uuid.UUID = uuid.UUID(int=0)) -> None:
+        self.auth_id = auth_id
+
+    async def read(self, reader: StreamReader) -> None:
+        self.auth_id = await _read_uuid(reader)
+
+    def write(self, writer: StreamWriter) -> None:
+        _write_uuid(self.auth_id, writer)
 
 
 class DisconnectPacket(Packet):
