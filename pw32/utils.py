@@ -1,5 +1,8 @@
 import logging
 import sys
+from typing import TypeVar
+
+T = TypeVar('T', bound=type)
 
 RESET_SEQ = '\033[0m'
 COLOR_SEQ = '\033[%sm'
@@ -30,6 +33,13 @@ class ColoredFormatter(logging.Formatter):
         if self.use_color and levelname in COLORS:
             message = COLOR_SEQ % COLORS[levelname] + message + RESET_SEQ
         return message
+
+
+def autoslots(cls: T) -> T:
+    slots = set(cls.__slots__) if hasattr(cls, '__slots__') else set()
+    slots.update(cls.__annotations__.keys())
+    cls.__slots__ = slots
+    return cls
 
 
 def init_logger() -> None:

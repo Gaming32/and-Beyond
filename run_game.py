@@ -41,6 +41,15 @@ if not has_colorama:
     missing_deps_text += ' - Colorama (colorama)\n'
     missing_deps.append('colorama')
 
+has_aiofiles = True
+try:
+    import aiofiles
+except ModuleNotFoundError:
+    has_aiofiles = False
+if not has_aiofiles:
+    missing_deps_text += ' - aiofiles (aiofiles)\n'
+    missing_deps.append('aiofiles')
+
 if missing_deps:
     print('You appear to be missing the following requirements for this game to run:')
     print(missing_deps_text, end='')
