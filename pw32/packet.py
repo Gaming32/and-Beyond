@@ -3,7 +3,10 @@ import enum
 import uuid
 from asyncio import StreamReader
 from asyncio.streams import StreamWriter
-from typing import TypeVar
+from typing import Optional, TypeVar
+
+from pw32.server.world import WorldChunk
+from pw32.utils import autoslots
 
 T = TypeVar('T', bound=int)
 
@@ -11,6 +14,7 @@ T = TypeVar('T', bound=int)
 class PacketType(enum.IntEnum):
     AUTHENTICATE = 0
     DISCONNECT = 1
+    CHUNK = 2
 
 
 class Packet(abc.ABC):
@@ -41,6 +45,17 @@ async def _read_ushort(reader: StreamReader, factory: type[T] = int) -> T:
     return factory.from_bytes(await reader.read(2), 'little', signed=False) # type: ignore
 
 
+async def _read_varint(reader: StreamReader) -> int:
+    result = 0
+    offset = 0
+    while True:
+        b = (await reader.read(1))[0]
+        result |= (b & 0b01111111) << offset
+        if not (b & 0b10000000):
+            return result
+        offset += 7
+
+
 async def _read_string(reader: StreamReader) -> str:
     return (await reader.read(await _read_ushort(reader))).decode('utf-8')
 
@@ -51,6 +66,15 @@ async def _read_uuid(reader: StreamReader) -> uuid.UUID:
 
 def _write_ushort(value: int, writer: StreamWriter) -> None:
     writer.write(value.to_bytes(2, 'little', signed=False))
+
+
+def _write_varint(value: int, writer: StreamWriter) -> None:
+    while True:
+        if not (value & 0xFFFFFF80):
+            writer.write(bytes((value,)))
+            return
+        writer.write(bytes((value & 0x7F | 0x80,)))
+        value >>= 7
 
 
 def _write_string(value: str, writer: StreamWriter) -> None:
@@ -93,7 +117,31 @@ class DisconnectPacket(Packet):
         _write_string(self.reason, writer)
 
 
+@autoslots
+class ChunkPacket(Packet):
+    type = PacketType.CHUNK
+    chunk: Optional[WorldChunk]
+
+    def __init__(self, chunk: Optional[WorldChunk] = None) -> None:
+        self.chunk = chunk
+
+    async def read(self, reader: StreamReader) -> None:
+        x = await _read_varint(reader)
+        y = await _read_varint(reader)
+        data = await reader.read(1024)
+        self.chunk = WorldChunk.virtual_chunk(x, y, data)
+
+    def write(self, writer: StreamWriter) -> None:
+        if self.chunk is None:
+            writer.write(bytes(1026))
+            return
+        _write_varint(self.chunk.x, writer)
+        _write_varint(self.chunk.y, writer)
+        writer.write(self.chunk.get_data())
+
+
 PACKET_CLASSES: list[type[Packet]] = [
     AuthenticatePacket,
     DisconnectPacket,
+    ChunkPacket,
 ]

@@ -5,19 +5,30 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "PW32: Client",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/run_game.py",
             "console": "integratedTerminal",
-            "args": ["--debug"]
+            "args": [
+                "--debug"
+            ]
         },
         {
             "name": "PW32: Server",
             "type": "python",
             "request": "launch",
             "module": "pw32.server",
-            "args": ["--debug"]
+            "args": [
+                "--debug"
+            ]
         }
     ]
 }

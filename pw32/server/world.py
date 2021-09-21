@@ -1,20 +1,18 @@
 import asyncio
 import enum
 import json
-import os
 from functools import partial
 from json.decoder import JSONDecodeError
 from mmap import ACCESS_WRITE, mmap
 from pathlib import Path
-from typing import TypedDict
+from typing import ByteString, Optional, TypedDict, Union
 
 import aiofiles
-from aiofiles.threadpool.binary import AsyncBufferedReader
 from pw32.utils import autoslots
 
 ALLOWED_FILE_CHARS = ' ._'
 UINT32_MAX = 2 ** 32 - 1
-SECTION_SIZE = 131104
+SECTION_SIZE = 262176
 
 
 def safe_filename(name: str):
@@ -156,35 +154,45 @@ class WorldSection:
 
     def __exit__(self, *args) -> None:
         self.close()
-    
+
     def __del__(self) -> None:
         self.close()
 
-    def _get_sect_offset(self, x: int, y: int) -> int:
-        return 32 + (x * 16 + y) * 512
-    
+    def _get_sect_address(self, x: int, y: int) -> int:
+        return 32 + (x * 16 + y) * 1024
+
     def get_chunk(self, x: int, y: int) -> 'WorldChunk':
         return WorldChunk(self, x, y)
-    
+
     def flush(self) -> None:
         self.fp.flush()
 
 
 @autoslots
 class WorldChunk:
-    section: WorldSection
+    section: Optional[WorldSection]
     x: int
     y: int
     address: int
-    fp: mmap
+    fp: Union[bytearray, mmap]
 
     def __init__(self, section: WorldSection, x: int, y: int) -> None:
         self.section = section
         self.x = x
         self.y = y
-        self.address = section._get_sect_offset(x, y)
+        self.address = section._get_sect_address(x, y)
         self.fp = section.fp
-    
+
+    @classmethod
+    def virtual_chunk(cls, x: int, y: int, data: ByteString) -> 'WorldChunk':
+        self = cls.__new__(cls)
+        self.section = None
+        self.x = x
+        self.y = y
+        self.address = 0
+        self.fp = data if isinstance(data, bytearray) else bytearray(data) # Copy if necessary, otherwise don't
+        return self
+
     def _get_tile_address(self, x: int, y: int) -> int:
         return self.address + (x * 16 + y) * 2
 
@@ -195,6 +203,9 @@ class WorldChunk:
     def set_tile_type(self, x: int, y: int, type: 'BlockTypes') -> None:
         addr = self._get_tile_address(x, y)
         self.fp[addr] = type
+    
+    def get_data(self) -> bytes:
+        return self.fp[self.address:self.address + 1024]
 
 
 DEFAULT_META: WorldMeta = {
