@@ -57,8 +57,8 @@ class World:
     def _default_meta(self) -> None:
         meta = DEFAULT_META.copy()
         meta['name'] = self.name
-        full_seed = int(time.time())
-        meta['seed'] = int(full_seed - (full_seed >> 64))
+        meta['seed'] = time.time_ns()
+        self.meta = meta
 
     async def ainit(self):
         self.aloop = asyncio.get_running_loop()
@@ -160,7 +160,7 @@ class WorldSection:
         self.close()
 
     def __del__(self) -> None:
-        self.close()
+        self._close()
 
     def _get_sect_address(self, x: int, y: int) -> int:
         return 32 + (x * 16 + y) * 1024

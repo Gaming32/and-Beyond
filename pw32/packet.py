@@ -5,7 +5,7 @@ from asyncio import StreamReader
 from asyncio.streams import StreamWriter
 from typing import Optional, TypeVar
 
-from pw32.server.world import WorldChunk
+from pw32.world import WorldChunk
 from pw32.utils import autoslots
 
 T = TypeVar('T', bound=int)

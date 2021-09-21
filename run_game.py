@@ -23,14 +23,14 @@ if not has_pygame_20:
     missing_deps_text += ' - Pygame 2.0 or later (pygame>=2.0)\n'
     missing_deps.append('pygame>=2.0')
 
-has_perlin_noise = True
-try:
-    import perlin_noise
-except ModuleNotFoundError:
-    has_perlin_noise = False
-if not has_perlin_noise:
-    missing_deps_text += ' - Perlin Noise library (perlin-noise)\n'
-    missing_deps.append('perlin-noise')
+# has_perlin_noise = True
+# try:
+#     import perlin_noise
+# except ModuleNotFoundError:
+#     has_perlin_noise = False
+# if not has_perlin_noise:
+#     missing_deps_text += ' - Perlin Noise library (perlin-noise)\n'
+#     missing_deps.append('perlin-noise')
 
 has_colorama = True
 try:
