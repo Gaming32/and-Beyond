@@ -126,15 +126,19 @@ class ChunkPacket(Packet):
         self.chunk = chunk
 
     async def read(self, reader: StreamReader) -> None:
+        abs_x = await _read_varint(reader)
+        abs_y = await _read_varint(reader)
         x = await _read_varint(reader)
         y = await _read_varint(reader)
         data = await reader.read(1024)
-        self.chunk = WorldChunk.virtual_chunk(x, y, data)
+        self.chunk = WorldChunk.virtual_chunk(x, y, abs_x, abs_y, data)
 
     def write(self, writer: StreamWriter) -> None:
         if self.chunk is None:
-            writer.write(bytes(1026))
+            writer.write(bytes(1028))
             return
+        _write_varint(self.chunk.abs_x, writer)
+        _write_varint(self.chunk.abs_y, writer)
         _write_varint(self.chunk.x, writer)
         _write_varint(self.chunk.y, writer)
         writer.write(self.chunk.get_data())

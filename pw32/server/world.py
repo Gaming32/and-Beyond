@@ -1,6 +1,7 @@
 import asyncio
 import enum
 import json
+import time
 from functools import partial
 from json.decoder import JSONDecodeError
 from mmap import ACCESS_WRITE, mmap
@@ -27,6 +28,7 @@ def safe_filename(name: str):
 
 class WorldMeta(TypedDict):
     name: str
+    seed: int
 
 
 @autoslots
@@ -55,6 +57,8 @@ class World:
     def _default_meta(self) -> None:
         meta = DEFAULT_META.copy()
         meta['name'] = self.name
+        full_seed = int(time.time())
+        meta['seed'] = int(full_seed - (full_seed >> 64))
 
     async def ainit(self):
         self.aloop = asyncio.get_running_loop()
@@ -173,6 +177,8 @@ class WorldChunk:
     section: Optional[WorldSection]
     x: int
     y: int
+    abs_x: int
+    abs_y: int
     address: int
     fp: Union[bytearray, mmap]
 
@@ -180,15 +186,19 @@ class WorldChunk:
         self.section = section
         self.x = x
         self.y = y
+        self.abs_x = x + (section.x << 4)
+        self.abs_y = y + (section.y << 4)
         self.address = section._get_sect_address(x, y)
         self.fp = section.fp
 
     @classmethod
-    def virtual_chunk(cls, x: int, y: int, data: ByteString) -> 'WorldChunk':
+    def virtual_chunk(cls, x: int, y: int, abs_x: int, abs_y: int, data: ByteString) -> 'WorldChunk':
         self = cls.__new__(cls)
         self.section = None
         self.x = x
         self.y = y
+        self.abs_x = abs_x
+        self.abs_y = abs_y
         self.address = 0
         self.fp = data if isinstance(data, bytearray) else bytearray(data) # Copy if necessary, otherwise don't
         return self
@@ -209,7 +219,8 @@ class WorldChunk:
 
 
 DEFAULT_META: WorldMeta = {
-    'name': ''
+    'name': '',
+    'seed': 0,
 }
 
 
