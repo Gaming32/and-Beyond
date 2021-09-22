@@ -7,7 +7,7 @@ import sys
 from typing import TYPE_CHECKING, Any, BinaryIO, Optional, TypedDict
 
 import janus
-from pw32.client.local_world import LocalWorld
+from pw32.client.world import ClientWorld
 from pw32.pipe_commands import PipeCommands
 from pw32.world import WorldChunk
 
@@ -91,4 +91,4 @@ if sys.platform == 'win32':
     singleplayer_pipe_ih: int
 
 connecting_status: str
-local_world: LocalWorld
+local_world: ClientWorld

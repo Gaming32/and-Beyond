@@ -13,7 +13,7 @@ from pw32.client import globals
 from pw32.client.assets import GAME_FONT
 from pw32.client.consts import UI_FG
 from pw32.client.globals import ConfigManager, GameStatus
-from pw32.client.local_world import LocalWorld
+from pw32.client.world import ClientWorld
 from pw32.client.title import TitleScreen
 from pw32.utils import init_logger
 from pygame import *
@@ -53,7 +53,7 @@ title = TitleScreen()
 globals.game_connection = None
 globals.singleplayer_popen = None
 globals.singleplayer_pipe = None
-globals.local_world = LocalWorld()
+globals.local_world = ClientWorld()
 
 
 globals.game_status = GameStatus.MAIN_MENU

@@ -10,6 +10,7 @@ from typing import Optional
 import janus
 from pw32.client import globals
 from pw32.client.globals import GameStatus
+from pw32.client.world import ClientChunk
 from pw32.common import PORT
 from pw32.packet import (AuthenticatePacket, ChunkPacket, Packet, PacketType,
                          read_packet, write_packet)
@@ -70,8 +71,8 @@ class ServerConnection:
             if isinstance(packet, ChunkPacket):
                 # The chunk is never None when recieved from the network
                 chunk: WorldChunk = packet.chunk # type: ignore
-                globals.local_world.loaded_chunks[(chunk.abs_x, chunk.abs_y)] = chunk
-                globals.local_world.dirty = True
+                client_chunk = ClientChunk(chunk)
+                globals.local_world.loaded_chunks[(chunk.abs_x, chunk.abs_y)] = client_chunk
 
     async def send_outgoing_packets(self) -> None:
         self.outgoing_queue = janus.Queue()
