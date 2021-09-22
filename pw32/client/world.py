@@ -6,7 +6,7 @@ from pw32.world import BlockTypes, WorldChunk
 from pygame import *
 from pygame.locals import *
 
-BLOCK_RENDER_SIZE = 10
+BLOCK_RENDER_SIZE = 75
 CHUNK_RENDER_SIZE = BLOCK_RENDER_SIZE * 16
 
 
@@ -17,7 +17,8 @@ class ClientWorld:
 
     def __init__(self) -> None:
         self.loaded_chunks = {}
-        self.camera = Vector2()
+        self.camera = Vector2(0, -48)
+        # self.camera = Vector2()
     
     def load(self) -> None:
         pass

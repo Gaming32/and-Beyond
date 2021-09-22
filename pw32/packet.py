@@ -42,14 +42,14 @@ async def write_packet(packet: Packet, writer: StreamWriter) -> None:
 
 async def _read_ushort(reader: StreamReader, factory: type[T] = int) -> T:
     # The typing is correct, but Pyright hates me
-    return factory.from_bytes(await reader.read(2), 'little', signed=False) # type: ignore
+    return factory.from_bytes(await reader.readexactly(2), 'little', signed=False) # type: ignore
 
 
 async def _read_varint(reader: StreamReader) -> int:
     r = 0
     i = 0
     while True:
-        e = (await reader.read(1))[0]
+        e = (await reader.readexactly(1))[0]
         r += (e & 0x7f) << (i * 7)
         if not (e & 0x80):
             break
@@ -60,11 +60,11 @@ async def _read_varint(reader: StreamReader) -> int:
 
 
 async def _read_string(reader: StreamReader) -> str:
-    return (await reader.read(await _read_ushort(reader))).decode('utf-8')
+    return (await reader.readexactly(await _read_ushort(reader))).decode('utf-8')
 
 
 async def _read_uuid(reader: StreamReader) -> uuid.UUID:
-    return uuid.UUID(bytes=await reader.read(16))
+    return uuid.UUID(bytes=await reader.readexactly(16))
 
 
 def _write_ushort(value: int, writer: StreamWriter) -> None:
@@ -134,7 +134,7 @@ class ChunkPacket(Packet):
         abs_y = await _read_varint(reader)
         x = await _read_varint(reader)
         y = await _read_varint(reader)
-        data = await reader.read(1024)
+        data = await reader.readexactly(1024)
         self.chunk = WorldChunk.virtual_chunk(x, y, abs_x, abs_y, data)
 
     def write(self, writer: StreamWriter) -> None:
