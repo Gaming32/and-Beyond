@@ -1,8 +1,6 @@
 import asyncio
 import logging
 import os
-from pw32.server.world_gen.core import WorldGenerator
-from pw32.world import World
 import random
 import sys
 import threading
@@ -13,8 +11,11 @@ from asyncio.streams import StreamReader, StreamWriter
 from typing import Any, BinaryIO, Optional
 
 from pw32.common import PORT
+from pw32.packet import ChunkUpdatePacket, read_packet, write_packet
 from pw32.pipe_commands import PipeCommands
 from pw32.server.client import Client
+from pw32.server.world_gen.core import WorldGenerator
+from pw32.world import BlockTypes, World
 
 if sys.platform == 'win32':
     import msvcrt
@@ -72,6 +73,16 @@ class AsyncServer:
             command = PipeCommands.from_bytes(command, 'little')
             if command == PipeCommands.SHUTDOWN:
                 self.running = False
+
+    async def set_block(self, cx: int, cy: int, bx: int, by: int, block: BlockTypes) -> None:
+        tasks: list[asyncio.Task] = []
+        self.world.get_chunk(cx, cy).set_tile_type(bx, by, block)
+        chunk_pos = (cx, cy)
+        packet = ChunkUpdatePacket(cx, cy, bx, by, block)
+        for client in self.clients:
+            if chunk_pos in client.loaded_chunks:
+                tasks.append(self.loop.create_task(write_packet(packet, client.writer)))
+        await asyncio.gather(*tasks)
 
     async def main(self):
         self.loop = asyncio.get_running_loop()

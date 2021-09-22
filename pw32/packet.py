@@ -1,20 +1,25 @@
 import abc
 import enum
+import struct
 import uuid
 from asyncio import StreamReader
 from asyncio.streams import StreamWriter
 from typing import Optional, TypeVar
 
-from pw32.world import WorldChunk
 from pw32.utils import autoslots
+from pw32.world import BlockTypes, WorldChunk
 
 T = TypeVar('T', bound=int)
+_D = struct.Struct('<d')
 
 
 class PacketType(enum.IntEnum):
     AUTHENTICATE = 0
     DISCONNECT = 1
     CHUNK = 2
+    CHUNK_UPDATE = 3
+    # PLAYER_INFO = 4 # Reserved for future use
+    PLAYER_POS = 5
 
 
 class Packet(abc.ABC):
@@ -59,6 +64,10 @@ async def _read_varint(reader: StreamReader) -> int:
     return r
 
 
+async def _read_double(reader: StreamReader) -> float:
+    return _D.unpack(await reader.readexactly(8))[0]
+
+
 async def _read_string(reader: StreamReader) -> str:
     return (await reader.readexactly(await _read_ushort(reader))).decode('utf-8')
 
@@ -79,6 +88,10 @@ def _write_varint(value: int, writer: StreamWriter) -> None:
             writer.write(bytes((b,)))
             return
         writer.write(bytes((0x80 | b,)))
+
+
+def _write_double(value: float, writer: StreamWriter) -> None:
+    writer.write(_D.pack(value))
 
 
 def _write_string(value: str, writer: StreamWriter) -> None:
@@ -124,10 +137,10 @@ class DisconnectPacket(Packet):
 @autoslots
 class ChunkPacket(Packet):
     type = PacketType.CHUNK
-    chunk: Optional[WorldChunk]
+    chunk: WorldChunk # Can be None, but that makes Pyright go crazy in server_connection.py lol
 
     def __init__(self, chunk: Optional[WorldChunk] = None) -> None:
-        self.chunk = chunk
+        self.chunk = chunk # type: ignore
 
     async def read(self, reader: StreamReader) -> None:
         abs_x = await _read_varint(reader)
@@ -148,8 +161,60 @@ class ChunkPacket(Packet):
         writer.write(bytes(self.chunk.get_data()))
 
 
+@autoslots
+class ChunkUpdatePacket(Packet):
+    type = PacketType.CHUNK_UPDATE
+    cx: int
+    cy: int
+    bx: int
+    by: int
+    block: BlockTypes
+
+    def __init__(self, cx: int = 0, cy: int = 0, bx: int = 0, by: int = 0, block: BlockTypes = BlockTypes.AIR) -> None:
+        self.cx = cx
+        self.cy = cy
+        self.bx = bx
+        self.by = by
+        self.block = block
+
+    async def read(self, reader: StreamReader) -> None:
+        self.cx = await _read_varint(reader)
+        self.cy = await _read_varint(reader)
+        block_info = await reader.readexactly(3)
+        self.bx = block_info[0]
+        self.by = block_info[1]
+        self.block = BlockTypes(block_info[2])
+
+    def write(self, writer: StreamWriter) -> None:
+        _write_varint(self.cx, writer)
+        _write_varint(self.cy, writer)
+        writer.write(bytes((self.bx, self.by, self.block)))
+
+
+@autoslots
+class PlayerPositionPacket(Packet):
+    type = PacketType.PLAYER_POS
+    x: float
+    y: float
+
+    def __init__(self, x: float = 0, y: float = 0) -> None:
+        self.x = x
+        self.y = y
+
+    async def read(self, reader: StreamReader) -> None:
+        self.x = await _read_double(reader)
+        self.y = await _read_double(reader)
+
+    def write(self, writer: StreamWriter) -> None:
+        _write_double(self.x, writer)
+        _write_double(self.y, writer)
+
+
 PACKET_CLASSES: list[type[Packet]] = [
     AuthenticatePacket,
     DisconnectPacket,
     ChunkPacket,
+    ChunkUpdatePacket,
+    PlayerPositionPacket,
+    PlayerPositionPacket,
 ]

@@ -13,8 +13,9 @@ from pw32.client import globals
 from pw32.client.assets import GAME_FONT
 from pw32.client.consts import UI_FG
 from pw32.client.globals import ConfigManager, GameStatus
-from pw32.client.world import ClientWorld
+from pw32.client.player import ClientPlayer
 from pw32.client.title import TitleScreen
+from pw32.client.world import ClientWorld
 from pw32.utils import init_logger
 from pygame import *
 from pygame.locals import *
@@ -53,7 +54,12 @@ title = TitleScreen()
 globals.game_connection = None
 globals.singleplayer_popen = None
 globals.singleplayer_pipe = None
+
+globals.connecting_status = ''
 globals.local_world = ClientWorld()
+globals.player = ClientPlayer()
+globals.camera = Vector2(0, -48)
+# globals.camera = Vector2()
 
 
 globals.game_status = GameStatus.MAIN_MENU
@@ -89,6 +95,7 @@ while globals.running:
             screen.blit(text_render, area)
         else:
             globals.local_world.render(screen)
+            globals.player.render(screen)
             text_render = GAME_FONT.render(str(1 / globals.delta), True, UI_FG)
             screen.fill((0, 0, 0), text_render.get_rect())
             screen.blit(text_render, text_render.get_rect())

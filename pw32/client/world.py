@@ -1,30 +1,26 @@
 # pyright: reportWildcardImportFromLibrary=false
 import pygame
 from pw32.client import globals
+from pw32.client.consts import BLOCK_RENDER_SIZE
 from pw32.common import MAX_LOADED_CHUNKS
 from pw32.utils import MaxSizedDict, autoslots
 from pw32.world import BlockTypes, WorldChunk
 from pygame import *
 from pygame.locals import *
 
-# BLOCK_RENDER_SIZE = 5
-BLOCK_RENDER_SIZE = 25
 CHUNK_RENDER_SIZE = BLOCK_RENDER_SIZE * 16
 
 
 @autoslots
 class ClientWorld:
     loaded_chunks: dict[tuple[int, int], 'ClientChunk']
-    camera: Vector2
 
     def __init__(self) -> None:
         self.loaded_chunks = MaxSizedDict(max_size=MAX_LOADED_CHUNKS)
-        self.camera = Vector2(0, -48)
-        # self.camera = Vector2()
-    
+
     def load(self) -> None:
         pass
-    
+
     def unload(self) -> None:
         self.loaded_chunks.clear()
 
@@ -34,7 +30,7 @@ class ClientWorld:
         half_size = Vector2(surf.get_size()) / 2
         for ((cx, cy), chunk) in render_chunks.items():
             chunk_render = chunk.render()
-            rpos = (Vector2(cx, cy) * 16 - self.camera) * BLOCK_RENDER_SIZE
+            rpos = (Vector2(cx, cy) * 16 - globals.camera) * BLOCK_RENDER_SIZE
             rpos += half_size
             rpos.y = surf.get_height() - rpos.y
             surf.blit(chunk_render, chunk_render.get_rect().move(rpos))
@@ -51,7 +47,7 @@ class ClientChunk:
         self.chunk = chunk
         self.dirty = True
         self.surf = Surface((CHUNK_RENDER_SIZE, CHUNK_RENDER_SIZE)).convert_alpha() # type: ignore
-    
+
     def render(self) -> Surface:
         if self.dirty:
            self.surf.fill((0, 0, 0, 0))
@@ -69,4 +65,4 @@ class ClientChunk:
                     rpos = Vector2(x, 15 - y) * BLOCK_RENDER_SIZE
                     self.surf.fill(color, Rect(rpos, (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)))
            self.dirty = False
-        return self.surf 
+        return self.surf

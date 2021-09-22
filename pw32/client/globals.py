@@ -7,9 +7,11 @@ import sys
 from typing import TYPE_CHECKING, Any, BinaryIO, Optional, TypedDict
 
 import janus
+from pw32.client.player import ClientPlayer
 from pw32.client.world import ClientWorld
 from pw32.pipe_commands import PipeCommands
 from pw32.world import WorldChunk
+from pygame import Vector2
 
 if TYPE_CHECKING:
     from pw32.client.server_connection import ServerConnection
@@ -92,3 +94,5 @@ if sys.platform == 'win32':
 
 connecting_status: str
 local_world: ClientWorld
+player: ClientPlayer
+camera: Vector2
