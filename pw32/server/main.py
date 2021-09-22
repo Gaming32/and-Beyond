@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import os
+from pw32.server.world_gen.core import WorldGenerator
+from pw32.world import World
 import random
 import sys
 import threading
@@ -32,6 +34,8 @@ class AsyncServer:
     clients: list[Client]
 
     last_spt: float
+    world: World
+    world_generator: WorldGenerator
 
     def __init__(self) -> None:
         self.loop = None # type: ignore
@@ -52,7 +56,7 @@ class AsyncServer:
             try:
                 self.loop.run_until_complete(self.main())
             except KeyboardInterrupt:
-                pass
+                raise
             finally:
                 self.loop.run_until_complete(self.shutdown())
             logging.info('Server closed')
@@ -61,10 +65,13 @@ class AsyncServer:
         self.running = False
 
     async def receive_singleplayer_commands(self, singleplayer_pipe: BinaryIO):
-        command = await self.loop.run_in_executor(None, singleplayer_pipe.read, 2)
-        command = PipeCommands.from_bytes(command, 'little')
-        if command == PipeCommands.SHUTDOWN:
-            self.running = False
+        while not self.running:
+            await asyncio.sleep(0)
+        while self.running:
+            command = await self.loop.run_in_executor(None, singleplayer_pipe.read, 2)
+            command = PipeCommands.from_bytes(command, 'little')
+            if command == PipeCommands.SHUTDOWN:
+                self.running = False
 
     async def main(self):
         self.loop = asyncio.get_running_loop()
@@ -87,8 +94,17 @@ class AsyncServer:
             self.multiplayer = False
             host = '127.0.0.1'
 
-        await self.listen(host)
+        self.world = World('world')
+        await self.world.ainit()
+        self.world_generator = WorldGenerator(self.world.meta['seed'])
+        logging.info('Locating spawn location for world...')
+        start = time.perf_counter()
+        spawn_x, spawn_y = self.world.find_spawn(self.world_generator)
+        end = time.perf_counter()
+        logging.info('Found spawn location (%i, %i) in %f seconds', spawn_x, spawn_y, end - start)
 
+        await self.listen(host)
+    
         logging.info('Server started')
         self.running = True
         while self.running:

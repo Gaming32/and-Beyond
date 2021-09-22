@@ -1,15 +1,17 @@
 import asyncio
 import enum
 import json
+import logging
 import time
 from functools import partial
 from json.decoder import JSONDecodeError
 from mmap import ACCESS_WRITE, mmap
 from pathlib import Path
-from typing import ByteString, Optional, TypedDict, Union
+from typing import ByteString, Optional, TypedDict, TypeVar, Union
 
 import aiofiles
-from pw32.utils import autoslots
+
+from pw32.utils import MutableView, View, autoslots
 
 ALLOWED_FILE_CHARS = ' ._'
 UINT32_MAX = 2 ** 32 - 1
@@ -29,6 +31,8 @@ def safe_filename(name: str):
 class WorldMeta(TypedDict):
     name: str
     seed: int
+    spawn_x: Optional[int]
+    spawn_y: Optional[int]
 
 
 @autoslots
@@ -57,7 +61,7 @@ class World:
     def _default_meta(self) -> None:
         meta = DEFAULT_META.copy()
         meta['name'] = self.name
-        meta['seed'] = time.time_ns()
+        meta['seed'] = time.time_ns() & (2 ** 64 - 1)
         self.meta = meta
 
     async def ainit(self):
@@ -93,6 +97,46 @@ class World:
     async def save_meta(self) -> None:
         async with aiofiles.open(self.meta_path, 'w') as fp:
             await fp.write(await self.aloop.run_in_executor(None, json.dumps, self.meta))
+    
+    def find_spawn(self, gen: 'WorldGenerator') -> tuple[int, int]:
+        if self.meta['spawn_x'] is not None:
+            if self.meta['spawn_y'] is not None:
+                return self.meta['spawn_x'], self.meta['spawn_y']
+            else:
+                logging.warn('Invalid world spawn location (is partially null). Regenerating.')
+        x = 0
+        y = 0
+        cmp = self._compare_valid_spawn(x, y, gen)
+        if cmp != 0: # If it == 0, we've already found it
+            y += -cmp * 16
+            last_cmp = cmp
+            while True:
+                cmp = self._compare_valid_spawn(x, y, gen)
+                if cmp == 0:
+                    break
+                y += -cmp * 16
+                if cmp == -last_cmp:
+                    dir = cmp
+                    break
+                last_cmp = cmp
+            while cmp != 0:
+                y += dir
+                cmp = self._compare_valid_spawn(x, y, gen)
+        self.meta['spawn_x'] = x
+        self.meta['spawn_y'] = y
+        return x, y
+    
+    def is_valid_spawn(self, x: int, y: int, gen: 'WorldGenerator') -> bool:
+        return self._compare_valid_spawn(x, y, gen) == 0
+    
+    def _compare_valid_spawn(self, x: int, y: int, gen: 'WorldGenerator') -> int:
+        if self.get_generated_tile_type(x, y, gen) != BlockTypes.AIR:
+            return -1
+        if self.get_generated_tile_type(x, y + 1, gen) != BlockTypes.AIR:
+            return -1
+        if self.get_generated_tile_type(x, y - 1, gen) == BlockTypes.AIR:
+            return 1
+        return 0
 
     def get_section(self, x: int, y: int) -> 'WorldSection':
         if (x, y) in self.open_sections:
@@ -119,6 +163,20 @@ class World:
         bx = x - (cx << 4)
         by = y - (cy << 4)
         self.get_chunk(cx, cy).set_tile_type(bx, by, type)
+
+    def get_generated_chunk(self, x: int, y: int, gen: 'WorldGenerator') -> 'WorldChunk':
+        c = self.get_chunk(x, y)
+        if not c.has_generated:
+            gen.generate_chunk(c)
+            c.has_generated = True
+        return c
+
+    def get_generated_tile_type(self, x: int, y: int, gen: 'WorldGenerator') -> 'BlockTypes':
+        cx = x >> 4
+        cy = y >> 4
+        bx = x - (cx << 4)
+        by = y - (cy << 4)
+        return self.get_generated_chunk(cx, cy, gen).get_tile_type(bx, by)
 
     async def close(self) -> None:
         await self.save_meta()
@@ -181,6 +239,7 @@ class WorldChunk:
     abs_y: int
     address: int
     fp: Union[bytearray, mmap]
+    _has_generated: Optional[bool]
 
     def __init__(self, section: WorldSection, x: int, y: int) -> None:
         self.section = section
@@ -190,6 +249,7 @@ class WorldChunk:
         self.abs_y = y + (section.y << 4)
         self.address = section._get_sect_address(x, y)
         self.fp = section.fp
+        self._has_generated = None
 
     @classmethod
     def virtual_chunk(cls, x: int, y: int, abs_x: int, abs_y: int, data: ByteString) -> 'WorldChunk':
@@ -214,13 +274,67 @@ class WorldChunk:
         addr = self._get_tile_address(x, y)
         self.fp[addr] = type
     
-    def get_data(self) -> bytes:
-        return self.fp[self.address:self.address + 1024]
+    def get_data(self) -> 'ChunkDataView':
+        return ChunkDataView(self.fp, self.address, self.address + 1024)
+    
+    def get_metadata_view(self) -> 'ChunkDataView':
+        return ChunkDataView(self.fp, self.address + 512, self.address + 1024)
+    
+    @property
+    def has_generated(self) -> bool:
+        if self._has_generated is None:
+            self._has_generated = self.fp[self.address + 512] > 0
+        return self._has_generated
+    
+    @has_generated.setter
+    def has_generated(self, gen: bool) -> None:
+        self._has_generated = gen
+        self.fp[self.address + 512] = gen
+
+
+@autoslots
+class ChunkDataView:
+    fp: Union[bytearray, mmap]
+    start: int
+    end: int
+
+    def __init__(self, fp: Union[bytearray, mmap], start: int, end: int) -> None:
+        self.fp = fp
+        self.start = start
+        self.end = end
+
+    def _index_error(self, i: int):
+        fp_repr = self.fp if isinstance(self.fp, mmap) else f'<bytearray len={len(self.fp)}>'
+        raise IndexError(f'{i} out of bounds for View({fp_repr}, {self.start}, {self.end})')
+
+    def _get_index(self, i):
+        if isinstance(i, slice):
+            start = self._get_index(i.start)
+            stop = None if slice.stop is None else self._get_index(i.stop)
+            return slice(start, i.step, stop)
+        if i < 0:
+            index = self.end + i
+        else:
+            index = self.start + i
+        if index < self.start or index >= self.end:
+            self._index_error(i)
+        return index
+
+    def __getitem__(self, i: Union[int, slice]) -> Union[int, bytes]:
+        return self.fp[self._get_index(i)]
+
+    def __setitem__(self, i: Union[int, slice], v: Union[int, bytes]) -> None:
+        self.fp[self._get_index(i)] = v # type: ignore
+    
+    def __bytes__(self) -> bytes:
+        return self.fp[self.start:self.end]
 
 
 DEFAULT_META: WorldMeta = {
     'name': '',
     'seed': 0,
+    'spawn_x': None,
+    'spawn_y': None,
 }
 
 
@@ -229,3 +343,6 @@ class BlockTypes(enum.IntEnum):
     STONE = 1
     DIRT = 2
     GRASS = 3
+
+
+from pw32.server.world_gen.core import WorldGenerator

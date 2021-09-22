@@ -1,27 +1,39 @@
 import asyncio
 import logging
+from pw32.world import WorldChunk
 import uuid
 from asyncio import StreamReader, StreamWriter
+from asyncio.events import AbstractEventLoop
+from asyncio.exceptions import CancelledError
 from typing import TYPE_CHECKING, Optional
 
-from pw32.packet import (AuthenticatePacket, DisconnectPacket, read_packet,
+from pw32.packet import (AuthenticatePacket, ChunkPacket, DisconnectPacket, read_packet,
                          write_packet)
+from pw32.utils import spiral_loop, spiral_loop_async
 
 if TYPE_CHECKING:
     from pw32.server.main import AsyncServer
+
+VIEW_DISTANCE = 16
 
 
 class Client:
     server: 'AsyncServer'
     reader: StreamReader
     writer: StreamWriter
+    aloop: AbstractEventLoop
+
     auth_uuid: Optional[uuid.UUID]
+    load_chunks_task: asyncio.Task
+    loaded_chunks: dict[tuple[int, int], WorldChunk]
 
     def __init__(self, server: 'AsyncServer', reader: StreamReader, writer: StreamWriter) -> None:
         self.server = server
         self.reader = reader
         self.writer = writer
+        self.aloop = server.loop
         self.auth_uuid = None
+        self.loaded_chunks = {}
 
     async def start(self):
         try:
@@ -32,6 +44,29 @@ class Client:
             return await self.disconnect('Malformed authentication packet')
         self.auth_uuid = auth_packet.auth_id
         logging.info('Player logged in with UUID %s', self.auth_uuid)
+        self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
+
+    async def load_chunk(self, x, y):
+        chunk = self.server.world.get_generated_chunk(x, y, self.server.world_generator)
+        self.loaded_chunks[(x, y)] = chunk
+        packet = ChunkPacket(chunk)
+        await write_packet(packet, self.writer)
+
+    async def load_chunks_around_player(self):
+        async def load_chunk_rel(x, y):
+            await asyncio.sleep(0) # Why do I have to do this? I *do* have to for some reason
+            if (x, y) in self.loaded_chunks:
+                return
+            await self.load_chunk(cx + x, cy + y)
+        try:
+            while self.server.running:
+                x = 0
+                y = 0
+                cx = x >> 4
+                cy = y >> 4
+                await spiral_loop_async(VIEW_DISTANCE, VIEW_DISTANCE, load_chunk_rel)
+        except asyncio.CancelledError:
+            pass
 
     async def tick(self) -> None:
         pass
@@ -46,4 +81,5 @@ class Client:
             self.server.clients.remove(self)
         except ValueError:
             pass
+        self.load_chunks_task.cancel()
         logging.info('Player %s disconnected for reason: %s', self, reason)

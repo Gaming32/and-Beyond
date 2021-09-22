@@ -5,8 +5,10 @@ import subprocess
 import sys
 from typing import TYPE_CHECKING, Any, BinaryIO, TypedDict
 
+import janus
 from pw32.client.server_connection import ServerConnection
 from pw32.pipe_commands import PipeCommands
+from pw32.world import WorldChunk
 
 if TYPE_CHECKING:
     from pygame.display import _VidInfo
@@ -59,7 +61,7 @@ def close_singleplayer_server():
         singleplayer_pipe.flush()
         singleplayer_pipe.close()
     if singleplayer_popen is not None:
-        logging.info('Waiting for singleplayer to stop...')
+        logging.info('Waiting for singleplayer server to stop...')
         if returncode := singleplayer_popen.wait():
             logging.warn('Singleplayer server stopped with exit code %i', returncode)
 
@@ -78,3 +80,5 @@ singleplayer_popen: subprocess.Popen
 singleplayer_pipe: BinaryIO
 if sys.platform == 'win32':
     singleplayer_pipe_ih: Any
+
+loaded_chunks: dict[tuple[int, int], WorldChunk]

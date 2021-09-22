@@ -9,8 +9,7 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "console": "integratedTerminal",
-            "justMyCode": true
+            "console": "integratedTerminal"
         },
         {
             "name": "PW32: Client",
@@ -20,7 +19,8 @@
             "console": "integratedTerminal",
             "args": [
                 "--debug"
-            ]
+            ],
+            "justMyCode": false
         },
         {
             "name": "PW32: Server",

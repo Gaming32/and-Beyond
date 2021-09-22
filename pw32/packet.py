@@ -46,14 +46,17 @@ async def _read_ushort(reader: StreamReader, factory: type[T] = int) -> T:
 
 
 async def _read_varint(reader: StreamReader) -> int:
-    result = 0
-    offset = 0
+    r = 0
+    i = 0
     while True:
-        b = (await reader.read(1))[0]
-        result |= (b & 0b01111111) << offset
-        if not (b & 0b10000000):
-            return result
-        offset += 7
+        e = (await reader.read(1))[0]
+        r += (e & 0x7f) << (i * 7)
+        if not (e & 0x80):
+            break
+        i += 1
+    if e & 0x40:
+        r |= -(1 << (i * 7) + 7)
+    return r
 
 
 async def _read_string(reader: StreamReader) -> str:
@@ -70,11 +73,12 @@ def _write_ushort(value: int, writer: StreamWriter) -> None:
 
 def _write_varint(value: int, writer: StreamWriter) -> None:
     while True:
-        if not (value & 0xFFFFFF80):
-            writer.write(bytes((value,)))
-            return
-        writer.write(bytes((value & 0x7F | 0x80,)))
+        b = value & 0x7f
         value >>= 7
+        if (value == 0 and b & 0x40 == 0) or (value == -1 and b & 0x40 != 0):
+            writer.write(bytes((b,)))
+            return
+        writer.write(bytes((0x80 | b,)))
 
 
 def _write_string(value: str, writer: StreamWriter) -> None:
@@ -141,7 +145,7 @@ class ChunkPacket(Packet):
         _write_varint(self.chunk.abs_y, writer)
         _write_varint(self.chunk.x, writer)
         _write_varint(self.chunk.y, writer)
-        writer.write(self.chunk.get_data())
+        writer.write(bytes(self.chunk.get_data()))
 
 
 PACKET_CLASSES: list[type[Packet]] = [

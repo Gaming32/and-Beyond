@@ -1,8 +1,11 @@
 import logging
 import sys
-from typing import TypeVar
+from collections.abc import Collection
+from typing import (Any, Awaitable, Callable, Coroutine, Generic, MutableSequence, Optional,
+                    Sequence, TypeVar, Union)
 
 T = TypeVar('T', bound=type)
+E = TypeVar('E')
 
 RESET_SEQ = '\033[0m'
 COLOR_SEQ = '\033[%sm'
@@ -40,6 +43,76 @@ def autoslots(cls: T) -> T:
     slots.update(cls.__annotations__.keys())
     cls.__slots__ = slots
     return cls
+
+
+@autoslots
+class View(Generic[E]):
+    c: Sequence[E]
+    start: int
+    end: Optional[int]
+
+    def __init__(self, c: Sequence[E], start: int, end: Optional[int] = None) -> None:
+        self.c = c
+        self.start = start
+        self.end = end
+
+    def _index_error(self, i: int):
+        raise IndexError(f'{i} out of bounds for View({self.c}, {self.start}, {self.end})')
+
+    def _get_index(self, i: Union[int, slice]) -> Union[int, slice]:
+        if isinstance(i, slice):
+            start = self._get_index(i.start)
+            stop = None if slice.stop is None else self._get_index(i.stop)
+            return slice(start, i.step, stop)
+        end = len(self.c) if self.end is None else self.end
+        if i < 0:
+            index = end + i
+        else:
+            index = self.start + i
+        if index < self.start or index >= end:
+            self._index_error(i)
+        return index
+
+    def __getitem__(self, i: Union[int, slice]) -> Union[E, Sequence[E]]:
+        return self.c[self._get_index(i)]
+
+
+@autoslots
+class MutableView(View[E], Generic[E]):
+    c: MutableSequence[E]
+
+    def __init__(self, c: MutableSequence[E], start: int, end: Optional[int] = None) -> None:
+        self.c = c
+        self.start = start
+        self.end = end
+
+    def __setitem__(self, i: Union[int, slice], v: E) -> None:
+        # Why does Pyright hate me?
+        self.c[self._get_index(i)] = v # type: ignore
+
+
+def spiral_loop(w: int, h: int, cb: Callable[[int, int], Any]):
+    x = y = 0
+    dx = 0
+    dy = -1
+    for i in range(max(w, h)**2):
+        if (-w/2 < x <= w/2) and (-h/2 < y <= h/2):
+            cb(x, y)
+        if x == y or (x < 0 and x == -y) or (x > 0 and x == 1-y):
+            dx, dy = -dy, dx
+        x, y = x+dx, y+dy
+
+
+async def spiral_loop_async(w: int, h: int, cb: Callable[[int, int], Awaitable[Any]]):
+    x = y = 0
+    dx = 0
+    dy = -1
+    for i in range(max(w, h)**2):
+        if (-w/2 < x <= w/2) and (-h/2 < y <= h/2):
+            await cb(x, y)
+        if x == y or (x < 0 and x == -y) or (x > 0 and x == 1-y):
+            dx, dy = -dy, dx
+        x, y = x+dx, y+dy
 
 
 def init_logger() -> None:

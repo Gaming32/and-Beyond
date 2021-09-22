@@ -3,6 +3,7 @@ import asyncio
 import logging
 import sys
 
+import janus
 import pygame
 import pygame.display
 import pygame.event
@@ -48,6 +49,7 @@ title = TitleScreen()
 globals.game_connection = None
 globals.singleplayer_popen = None
 globals.singleplayer_pipe = None
+globals.loaded_chunks = {}
 
 
 globals.at_title = True
@@ -81,5 +83,7 @@ while globals.running:
 
 logging.info('Quitting...')
 pygame.quit()
+if globals.game_connection is not None:
+    globals.game_connection.stop()
 globals.close_singleplayer_server()
 config.save()
