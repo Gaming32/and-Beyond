@@ -6,10 +6,10 @@ from asyncio.events import AbstractEventLoop
 from asyncio.exceptions import CancelledError
 from typing import TYPE_CHECKING, Optional
 
-from pw32.common import VIEW_DISTANCE
+from pw32.common import MAX_LOADED_CHUNKS, VIEW_DISTANCE, VIEW_DISTANCE_BOX
 from pw32.packet import (AuthenticatePacket, ChunkPacket, DisconnectPacket,
                          read_packet, write_packet)
-from pw32.utils import spiral_loop, spiral_loop_async
+from pw32.utils import MaxSizedDict, spiral_loop, spiral_loop_async
 from pw32.world import WorldChunk
 
 if TYPE_CHECKING:
@@ -32,7 +32,7 @@ class Client:
         self.writer = writer
         self.aloop = server.loop
         self.auth_uuid = None
-        self.loaded_chunks = {}
+        self.loaded_chunks = MaxSizedDict(max_size=MAX_LOADED_CHUNKS)
 
     async def start(self):
         try:
@@ -61,8 +61,7 @@ class Client:
         y = 0
         cx = x >> 4
         cy = y >> 4
-        box_view_distance = 2 * VIEW_DISTANCE + 1
-        await spiral_loop_async(box_view_distance, box_view_distance, load_chunk_rel)
+        await spiral_loop_async(VIEW_DISTANCE_BOX, VIEW_DISTANCE_BOX, load_chunk_rel)
 
     async def tick(self) -> None:
         pass

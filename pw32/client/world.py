@@ -1,13 +1,14 @@
 # pyright: reportWildcardImportFromLibrary=false
 import pygame
 from pw32.client import globals
-from pw32.utils import autoslots
+from pw32.common import MAX_LOADED_CHUNKS
+from pw32.utils import MaxSizedDict, autoslots
 from pw32.world import BlockTypes, WorldChunk
 from pygame import *
 from pygame.locals import *
 
-# BLOCK_RENDER_SIZE = 75
-BLOCK_RENDER_SIZE = 5
+# BLOCK_RENDER_SIZE = 5
+BLOCK_RENDER_SIZE = 25
 CHUNK_RENDER_SIZE = BLOCK_RENDER_SIZE * 16
 
 
@@ -17,7 +18,7 @@ class ClientWorld:
     camera: Vector2
 
     def __init__(self) -> None:
-        self.loaded_chunks = {}
+        self.loaded_chunks = MaxSizedDict(max_size=MAX_LOADED_CHUNKS)
         self.camera = Vector2(0, -48)
         # self.camera = Vector2()
     

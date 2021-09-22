@@ -91,6 +91,20 @@ class MutableView(View[E], Generic[E]):
         self.c[self._get_index(i)] = v # type: ignore
 
 
+@autoslots
+class MaxSizedDict(dict):
+    max_size: int
+
+    def __init__(self, *args, max_size: int = 0, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.max_size = max_size
+
+    def __setitem__(self, k, v) -> None:
+        super().__setitem__(k, v)
+        if self.max_size > 0 and len(self) > self.max_size:
+            del self[next(iter(self))]
+
+
 def spiral_loop(w: int, h: int, cb: Callable[[int, int], Any]):
     x = y = 0
     dx = 0

@@ -11,7 +11,7 @@ from typing import ByteString, Optional, TypedDict, TypeVar, Union
 
 import aiofiles
 
-from pw32.utils import MutableView, View, autoslots
+from pw32.utils import MaxSizedDict, MutableView, View, autoslots
 
 ALLOWED_FILE_CHARS = ' ._'
 UINT32_MAX = 2 ** 32 - 1
@@ -193,6 +193,7 @@ class WorldSection:
 
     path: Path
     fp: mmap
+    cached_chunks: dict[tuple[int, int], 'WorldChunk']
 
     def __init__(self, world: World, x: int, y: int) -> None:
         self.world = world
@@ -203,6 +204,7 @@ class WorldSection:
         self.fp = mmap(fp.fileno(), SECTION_SIZE, access=ACCESS_WRITE)
         fp.close()
         world.open_sections[(x, y)] = self
+        self.cached_chunks = MaxSizedDict(max_size=8)
 
     def close(self) -> None:
         self._close()
@@ -224,7 +226,9 @@ class WorldSection:
         return 32 + (x * 16 + y) * 1024
 
     def get_chunk(self, x: int, y: int) -> 'WorldChunk':
-        return WorldChunk(self, x, y)
+        if (x, y) not in self.cached_chunks:
+            self.cached_chunks[(x, y)] = WorldChunk(self, x, y)
+        return self.cached_chunks[(x, y)]
 
     def flush(self) -> None:
         self.fp.flush()
