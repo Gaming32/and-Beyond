@@ -80,7 +80,6 @@ while globals.running:
         globals.running = False
 
 
-
 logging.info('Quitting...')
 pygame.quit()
 if globals.game_connection is not None:

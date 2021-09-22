@@ -104,7 +104,7 @@ class AsyncServer:
         logging.info('Found spawn location (%i, %i) in %f seconds', spawn_x, spawn_y, end - start)
 
         await self.listen(host)
-    
+
         logging.info('Server started')
         self.running = True
         while self.running:

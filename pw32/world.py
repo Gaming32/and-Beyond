@@ -97,7 +97,7 @@ class World:
     async def save_meta(self) -> None:
         async with aiofiles.open(self.meta_path, 'w') as fp:
             await fp.write(await self.aloop.run_in_executor(None, json.dumps, self.meta))
-    
+
     def find_spawn(self, gen: 'WorldGenerator') -> tuple[int, int]:
         if self.meta['spawn_x'] is not None:
             if self.meta['spawn_y'] is not None:
@@ -125,10 +125,10 @@ class World:
         self.meta['spawn_x'] = x
         self.meta['spawn_y'] = y
         return x, y
-    
+
     def is_valid_spawn(self, x: int, y: int, gen: 'WorldGenerator') -> bool:
         return self._compare_valid_spawn(x, y, gen) == 0
-    
+
     def _compare_valid_spawn(self, x: int, y: int, gen: 'WorldGenerator') -> int:
         if self.get_generated_tile_type(x, y, gen) != BlockTypes.AIR:
             return -1
@@ -273,19 +273,19 @@ class WorldChunk:
     def set_tile_type(self, x: int, y: int, type: 'BlockTypes') -> None:
         addr = self._get_tile_address(x, y)
         self.fp[addr] = type
-    
+
     def get_data(self) -> 'ChunkDataView':
         return ChunkDataView(self.fp, self.address, self.address + 1024)
-    
+
     def get_metadata_view(self) -> 'ChunkDataView':
         return ChunkDataView(self.fp, self.address + 512, self.address + 1024)
-    
+
     @property
     def has_generated(self) -> bool:
         if self._has_generated is None:
             self._has_generated = self.fp[self.address + 512] > 0
         return self._has_generated
-    
+
     @has_generated.setter
     def has_generated(self, gen: bool) -> None:
         self._has_generated = gen
@@ -325,7 +325,7 @@ class ChunkDataView:
 
     def __setitem__(self, i: Union[int, slice], v: Union[int, bytes]) -> None:
         self.fp[self._get_index(i)] = v # type: ignore
-    
+
     def __bytes__(self) -> bytes:
         return self.fp[self.start:self.end]
 
