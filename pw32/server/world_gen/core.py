@@ -4,7 +4,7 @@ from pw32.server.world_gen.perlin import PerlinNoise
 from pw32.utils import autoslots
 
 OCTAVES = 3
-X_SCALE = 1
+X_SCALE = 150
 Y_SCALE = 96
 Y_OFFSET = -32
 

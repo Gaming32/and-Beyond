@@ -6,7 +6,8 @@ from pw32.world import BlockTypes, WorldChunk
 from pygame import *
 from pygame.locals import *
 
-BLOCK_RENDER_SIZE = 75
+# BLOCK_RENDER_SIZE = 75
+BLOCK_RENDER_SIZE = 5
 CHUNK_RENDER_SIZE = BLOCK_RENDER_SIZE * 16
 
 

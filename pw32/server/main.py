@@ -137,8 +137,12 @@ class AsyncServer:
         logging.info('Shutting down...')
         await asyncio.gather(*(client.disconnect('Server closed') for client in self.clients))
         self.async_server.close()
+        logging.info('Server closed')
         if self.singleplayer_pipe is not None:
             self.singleplayer_pipe.close()
+        logging.info('Saving world...')
+        await self.world.close()
+        logging.info('World saved')
         await self.async_server.wait_closed()
 
 
