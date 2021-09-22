@@ -1,17 +1,19 @@
 import asyncio
-from asyncio.exceptions import CancelledError
 import logging
-from pw32.world import WorldChunk
 import socket
 import threading
-from typing import Optional
 import uuid
+from asyncio.exceptions import CancelledError
 from asyncio.streams import StreamReader, StreamWriter
+from typing import Optional
 
 import janus
 from pw32.client import globals
+from pw32.client.globals import GameStatus
 from pw32.common import PORT
-from pw32.packet import AuthenticatePacket, ChunkPacket, Packet, PacketType, read_packet, write_packet
+from pw32.packet import (AuthenticatePacket, ChunkPacket, Packet, PacketType,
+                         read_packet, write_packet)
+from pw32.world import WorldChunk
 
 
 class ServerConnection:
@@ -46,6 +48,7 @@ class ServerConnection:
 
     async def main(self, server: str) -> None:
         logging.info('Connecting to server %s...', server)
+        globals.connecting_status = 'Connecting to server' + (f' {server}' if server != 'localhost' else '')
         while True:
             try:
                 self.reader, self.writer = await asyncio.open_connection(server, PORT)
@@ -54,17 +57,21 @@ class ServerConnection:
             else:
                 break
         logging.debug('Authenticating with server...')
+        globals.connecting_status = 'Authenticating'
         auth = AuthenticatePacket(uuid.UUID(int=23984)) # Why not? This will be more rigorous in the future
         await write_packet(auth, self.writer)
         logging.info('Connected to server')
+        globals.connecting_status = 'Connected'
+        globals.game_status = GameStatus.IN_GAME
+        globals.local_world.load()
         self.send_packets_task = self.aio_loop.create_task(self.send_outgoing_packets())
         while self.running:
             packet = await read_packet(self.reader)
             if isinstance(packet, ChunkPacket):
                 # The chunk is never None when recieved from the network
                 chunk: WorldChunk = packet.chunk # type: ignore
-                logging.debug('Recieved chunk (%i, %i)', chunk.abs_x, chunk.abs_y)
-                globals.loaded_chunks[(chunk.abs_x, chunk.abs_y)] = chunk
+                globals.local_world.loaded_chunks[(chunk.abs_x, chunk.abs_y)] = chunk
+                globals.local_world.dirty = True
 
     async def send_outgoing_packets(self) -> None:
         self.outgoing_queue = janus.Queue()
@@ -78,7 +85,7 @@ class ServerConnection:
             raise
 
     async def shutdown(self) -> None:
-        globals.loaded_chunks.clear()
+        globals.local_world.unload()
         if self.send_packets_task is not None:
             self.send_packets_task.cancel()
         self.writer.close()

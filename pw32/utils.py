@@ -115,14 +115,14 @@ async def spiral_loop_async(w: int, h: int, cb: Callable[[int, int], Awaitable[A
         x, y = x+dx, y+dy
 
 
-def init_logger() -> None:
+def init_logger(log_file: str) -> None:
     root = logging.getLogger()
     root.setLevel(logging.DEBUG if DEBUG else logging.INFO)
     logging.addLevelName(logging.WARN, 'WARN')
     logging.addLevelName(logging.CRITICAL, 'SEVERE')
     handlers: list[logging.Handler] = [
         logging.StreamHandler(),
-        logging.FileHandler('latest.log', 'w', encoding='utf-8'),
+        logging.FileHandler(log_file, 'w', encoding='utf-8'),
     ]
     handlers[0].setFormatter(ColoredFormatter(True))
     handlers[1].setFormatter(ColoredFormatter(False))

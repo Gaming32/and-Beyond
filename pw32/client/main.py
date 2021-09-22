@@ -6,16 +6,20 @@ import sys
 import janus
 import pygame
 import pygame.display
+import pygame.draw
 import pygame.event
 import pygame.time
 from pw32.client import globals
-from pw32.client.globals import ConfigManager
+from pw32.client.assets import GAME_FONT
+from pw32.client.consts import UI_FG
+from pw32.client.globals import ConfigManager, GameStatus
+from pw32.client.local_world import LocalWorld
 from pw32.client.title import TitleScreen
 from pw32.utils import init_logger
 from pygame import *
 from pygame.locals import *
 
-init_logger()
+init_logger('client.log')
 logging.info('Starting client...')
 pygame.init()
 logging.info('Pygame loaded')
@@ -49,14 +53,16 @@ title = TitleScreen()
 globals.game_connection = None
 globals.singleplayer_popen = None
 globals.singleplayer_pipe = None
-globals.loaded_chunks = {}
+globals.local_world = LocalWorld()
 
 
-globals.at_title = True
+globals.game_status = GameStatus.MAIN_MENU
 globals.running = True
 clock = pygame.time.Clock()
 while globals.running:
     try:
+        globals.delta = clock.tick(75) / 1000
+
         for event in pygame.event.get():
             if event.type == QUIT:
                 globals.running = False
@@ -72,8 +78,20 @@ while globals.running:
                     pygame.display.quit()
                     screen = reset_window()
 
-        if globals.at_title:
+        if globals.game_status == GameStatus.MAIN_MENU:
             title.render(screen)
+        elif globals.game_status == GameStatus.CONNECTING:
+            screen.fill((0, 0, 0))
+            text_render = GAME_FONT.render(globals.connecting_status, True, UI_FG)
+            x = screen.get_width() // 2 - text_render.get_width() // 2
+            y = screen.get_height() // 2 - text_render.get_height() // 2
+            area = text_render.get_rect().move(x, y)
+            screen.blit(text_render, area)
+        else:
+            globals.local_world.render(screen)
+            text_render = GAME_FONT.render(str(1 / globals.delta), True, UI_FG)
+            screen.fill((0, 0, 0), text_render.get_rect())
+            screen.blit(text_render, text_render.get_rect())
 
         pygame.display.update()
     except KeyboardInterrupt:

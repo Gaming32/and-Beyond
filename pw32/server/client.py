@@ -1,20 +1,19 @@
 import asyncio
 import logging
-from pw32.world import WorldChunk
 import uuid
 from asyncio import StreamReader, StreamWriter
 from asyncio.events import AbstractEventLoop
 from asyncio.exceptions import CancelledError
 from typing import TYPE_CHECKING, Optional
 
-from pw32.packet import (AuthenticatePacket, ChunkPacket, DisconnectPacket, read_packet,
-                         write_packet)
+from pw32.common import VIEW_DISTANCE
+from pw32.packet import (AuthenticatePacket, ChunkPacket, DisconnectPacket,
+                         read_packet, write_packet)
 from pw32.utils import spiral_loop, spiral_loop_async
+from pw32.world import WorldChunk
 
 if TYPE_CHECKING:
     from pw32.server.main import AsyncServer
-
-VIEW_DISTANCE = 16
 
 
 class Client:
@@ -58,15 +57,12 @@ class Client:
             if (x, y) in self.loaded_chunks:
                 return
             await self.load_chunk(cx + x, cy + y)
-        try:
-            while self.server.running:
-                x = 0
-                y = 0
-                cx = x >> 4
-                cy = y >> 4
-                await spiral_loop_async(VIEW_DISTANCE, VIEW_DISTANCE, load_chunk_rel)
-        except asyncio.CancelledError:
-            pass
+        x = 0
+        y = 0
+        cx = x >> 4
+        cy = y >> 4
+        box_view_distance = 2 * VIEW_DISTANCE + 1
+        await spiral_loop_async(box_view_distance, box_view_distance, load_chunk_rel)
 
     async def tick(self) -> None:
         pass

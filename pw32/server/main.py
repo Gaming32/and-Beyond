@@ -144,7 +144,7 @@ class AsyncServer:
 
 def main():
     threading.current_thread().name = 'ServerThread'
-    init_logger()
+    init_logger('server.log')
     AsyncServer().start()
 
 

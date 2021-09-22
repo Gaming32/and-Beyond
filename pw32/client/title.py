@@ -5,6 +5,8 @@ import subprocess
 import sys
 from typing import Callable
 
+from pw32.client import globals
+from pw32.client.globals import GameStatus
 from pw32.client.server_connection import ServerConnection
 from pw32.utils import DEBUG
 
@@ -34,7 +36,9 @@ class TitleScreen:
         button_ui.draw_buttons_and_call(surf, self.buttons)
 
     def singleplayer(self) -> None:
-        globals.at_title = False
+        globals.game_status = GameStatus.CONNECTING
+        logging.info('Starting singleplayer server')
+        globals.connecting_status = 'Starting singleplayer server'
         (r, w) = os.pipe()
         # Thanks to
         # https://www.digitalenginesoftware.com/blog/archives/47-Passing-pipes-to-subprocesses-in-Python-in-Windows.html
@@ -57,7 +61,7 @@ class TitleScreen:
         self.load_multiplayer('localhost')
 
     def multiplayer(self) -> None:
-        globals.at_title = False
+        globals.game_status = GameStatus.CONNECTING
 
     def load_multiplayer(self, server: str):
         conn = ServerConnection()

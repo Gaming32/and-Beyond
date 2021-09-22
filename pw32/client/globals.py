@@ -1,16 +1,18 @@
+import enum
 import json
 import logging
 import socket
 import subprocess
 import sys
-from typing import TYPE_CHECKING, Any, BinaryIO, TypedDict
+from typing import TYPE_CHECKING, Any, BinaryIO, Optional, TypedDict
 
 import janus
-from pw32.client.server_connection import ServerConnection
+from pw32.client.local_world import LocalWorld
 from pw32.pipe_commands import PipeCommands
 from pw32.world import WorldChunk
 
 if TYPE_CHECKING:
+    from pw32.client.server_connection import ServerConnection
     from pygame.display import _VidInfo
 
 
@@ -66,6 +68,12 @@ def close_singleplayer_server():
             logging.warn('Singleplayer server stopped with exit code %i', returncode)
 
 
+class GameStatus(enum.IntEnum):
+    MAIN_MENU = 0
+    CONNECTING = 1
+    IN_GAME = 2
+
+
 config: ConfigManager
 running: bool
 display_info: '_VidInfo'
@@ -73,12 +81,14 @@ display_info: '_VidInfo'
 fullscreen: bool
 w_width: int
 w_height: int
+delta: float
 
-at_title: bool
-game_connection: ServerConnection
+game_status: GameStatus
+game_connection: 'ServerConnection'
 singleplayer_popen: subprocess.Popen
 singleplayer_pipe: BinaryIO
 if sys.platform == 'win32':
-    singleplayer_pipe_ih: Any
+    singleplayer_pipe_ih: int
 
-loaded_chunks: dict[tuple[int, int], WorldChunk]
+connecting_status: str
+local_world: LocalWorld
