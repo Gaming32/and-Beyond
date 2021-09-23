@@ -4,8 +4,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import aiofiles
+from pw32.abstract_player import AbstractPlayer
 from pw32.common import REACH_DISTANCE_SQ
 from pw32.packet import PlayerPositionPacket, write_packet
+from pw32.physics import PlayerPhysics
 from pw32.utils import autoslots
 
 if TYPE_CHECKING:
@@ -13,11 +15,10 @@ if TYPE_CHECKING:
 
 
 @autoslots
-class Player:
-    x: float
-    y: float
+class Player(AbstractPlayer):
     data_path: Path
     client: 'Client'
+    physics: PlayerPhysics
 
     aloop: AbstractEventLoop
 
@@ -25,6 +26,8 @@ class Player:
         world = client.server.world
         self.data_path = world.players_path / f'{client.auth_uuid}.json'
         self.client = client
+        self.physics = PlayerPhysics(self)
+        self.loaded_chunks = client.loaded_chunks # Reference to fulfill AbstractPlayer
 
     async def ainit(self) -> None:
         self.aloop = self.client.aloop
@@ -56,19 +59,13 @@ class Player:
     async def move(self, x: float, y: float) -> None:
         self.x += x
         self.y += y
-        await self._send_position()
+        await self.send_position()
 
     async def set_position(self, x: float, y: float) -> None:
         self.x = x
         self.y = y
-        await self._send_position()
+        await self.send_position()
 
-    async def _send_position(self) -> None:
+    async def send_position(self) -> None:
         packet = PlayerPositionPacket(self.x, self.y)
         await write_packet(packet, self.client.writer)
-
-    def can_reach(self, x: float, y: float) -> bool:
-        rel_x = x - self.x
-        rel_y = y - self.y
-        dist = rel_x * rel_x + rel_y * rel_y
-        return dist <= REACH_DISTANCE_SQ

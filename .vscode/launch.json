@@ -19,8 +19,7 @@
             "console": "integratedTerminal",
             "args": [
                 "--debug"
-            ],
-            "justMyCode": false
+            ]
         },
         {
             "name": "PW32: Server",

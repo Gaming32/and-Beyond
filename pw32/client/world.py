@@ -38,13 +38,21 @@ class ClientWorld:
 
 
 @autoslots
-class ClientChunk:
-    chunk: WorldChunk
+class ClientChunk(WorldChunk):
     dirty: bool
     surf: Surface
 
     def __init__(self, chunk: WorldChunk) -> None:
-        self.chunk = chunk
+        # Copy self
+        self.section = chunk.section
+        self.x = chunk.x
+        self.y = chunk.y
+        self.abs_x = chunk.abs_x
+        self.abs_y = chunk.abs_y
+        self.address = chunk.address
+        self.fp = chunk.fp
+        self._has_generated = chunk._has_generated
+        # Initialization
         self.dirty = True
         self.surf = Surface((CHUNK_RENDER_SIZE, CHUNK_RENDER_SIZE)).convert_alpha() # type: ignore
 
@@ -53,7 +61,7 @@ class ClientChunk:
            self.surf.fill((0, 0, 0, 0))
            for x in range(16):
                 for y in range(16):
-                    block = self.chunk.get_tile_type(x, y)
+                    block = self.get_tile_type(x, y)
                     if block == BlockTypes.AIR:
                         continue
                     elif block == BlockTypes.DIRT:

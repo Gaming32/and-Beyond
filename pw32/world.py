@@ -265,6 +265,7 @@ class WorldChunk:
         self.abs_y = abs_y
         self.address = 0
         self.fp = data if isinstance(data, bytearray) else bytearray(data) # Copy if necessary, otherwise don't
+        self._has_generated = None
         return self
 
     def _get_tile_address(self, x: int, y: int) -> int:

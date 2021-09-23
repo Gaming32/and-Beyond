@@ -53,7 +53,7 @@ class ServerConnection:
         while True:
             try:
                 self.reader, self.writer = await asyncio.open_connection(server, PORT)
-            except ConnectionRefusedError: # Linux
+            except ConnectionError: # Linux and when debugging :)
                 await asyncio.sleep(0)
             else:
                 break
@@ -78,7 +78,7 @@ class ServerConnection:
                 chunk_pos = (packet.cx, packet.cy)
                 if chunk_pos in world.loaded_chunks:
                     chunk = world.loaded_chunks[chunk_pos]
-                    chunk.chunk.set_tile_type(packet.bx, packet.by, packet.block)
+                    chunk.set_tile_type(packet.bx, packet.by, packet.block)
                     chunk.dirty = True
             elif isinstance(packet, PlayerPositionPacket):
                 globals.player.x = packet.x

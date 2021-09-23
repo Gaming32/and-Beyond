@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Optional
 
 from pw32.common import MAX_LOADED_CHUNKS, VIEW_DISTANCE, VIEW_DISTANCE_BOX
 from pw32.packet import (AuthenticatePacket, ChunkPacket, ChunkUpdatePacket,
-                         DisconnectPacket, read_packet, write_packet)
+                         DisconnectPacket, Packet, read_packet, write_packet)
 from pw32.server.player import Player
 from pw32.utils import MaxSizedDict, spiral_loop, spiral_loop_async
 from pw32.world import WorldChunk
@@ -23,8 +23,12 @@ class Client:
     reader: StreamReader
     writer: StreamWriter
     aloop: AbstractEventLoop
+    packet_queue: asyncio.Queue[Packet]
+    ready: bool
+    disconnecting: bool
 
     auth_uuid: Optional[uuid.UUID]
+    packet_task: asyncio.Task
     load_chunks_task: asyncio.Task
     loaded_chunks: dict[tuple[int, int], WorldChunk]
 
@@ -39,6 +43,7 @@ class Client:
         self.loaded_chunks = MaxSizedDict(max_size=MAX_LOADED_CHUNKS)
 
     async def start(self):
+        self.ready = False
         try:
             auth_packet = await asyncio.wait_for(read_packet(self.reader), 3)
         except asyncio.TimeoutError:
@@ -48,8 +53,12 @@ class Client:
         self.auth_uuid = auth_packet.auth_id
         logging.info('Player logged in with UUID %s', self.auth_uuid)
         self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
+        self.disconnecting = False
+        self.packet_queue = asyncio.Queue()
+        self.packet_task = self.aloop.create_task(self.packet_tick())
         self.player = Player(self)
         await self.player.ainit()
+        self.ready = True
 
     async def load_chunk(self, x, y):
         chunk = self.server.world.get_generated_chunk(x, y, self.server.world_generator)
@@ -69,28 +78,51 @@ class Client:
         cy = y >> 4
         await spiral_loop_async(VIEW_DISTANCE_BOX, VIEW_DISTANCE_BOX, load_chunk_rel)
 
+    async def packet_tick(self):
+        while self.server.running:
+            try:
+                packet = await read_packet(self.reader)
+            except asyncio.IncompleteReadError:
+                await self.disconnect(f'{self} left the game')
+                return
+            await self.packet_queue.put(packet)
+
     async def tick(self) -> None:
-        pass
-        # while self.server.running:
-        #     await asyncio.sleep(0)
-        #     continue
-            # packet = await read_packet(self.reader)
-            # if isinstance(packet, ChunkUpdatePacket):
-            #     chunk_pos = (packet.cx, packet.cy)
-            #     if chunk_pos in self.loaded_chunks:
-            #         abs_x = (packet.cx << 4) + packet.bx
-            #         abs_y = (packet.cy << 4) + packet.by
-            #         chunk = self.loaded_chunks[chunk_pos]
-            #         if self.player.can_reach(abs_x, abs_y):
-            #             chunk.set_tile_type(packet.bx, packet.by, packet.block)
-            #         else:
-            #             packet.block = chunk.get_tile_type(packet.bx, packet.by)
-            #             await write_packet(packet, self.writer)
+        if not self.ready:
+            return
+        while True:
+            try:
+                packet = self.packet_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+            else:
+                if isinstance(packet, ChunkUpdatePacket):
+                    chunk_pos = (packet.cx, packet.cy)
+                    if chunk_pos in self.loaded_chunks:
+                        abs_x = (packet.cx << 4) + packet.bx
+                        abs_y = (packet.cy << 4) + packet.by
+                        chunk = self.loaded_chunks[chunk_pos]
+                        if self.player.can_reach(abs_x, abs_y):
+                            chunk.set_tile_type(packet.bx, packet.by, packet.block)
+                        else:
+                            packet.block = chunk.get_tile_type(packet.bx, packet.by)
+                            await write_packet(packet, self.writer)
+        physics = self.player.physics
+        physics.tick(0.05)
+        if physics.dirty:
+            await self.player.send_position()
 
     async def disconnect(self, reason: str = '') -> None:
+        if self.disconnecting:
+            logging.debug('Already disconnecting %s', self)
+            return
+        self.disconnecting = True
         logging.debug('Disconnecting player %s', self)
         packet = DisconnectPacket(reason)
-        await write_packet(packet, self.writer)
+        try:
+            await write_packet(packet, self.writer)
+        except ConnectionError:
+            logging.debug('Player was already disconnected')
         self.writer.close()
         await self.writer.wait_closed()
         try:
@@ -103,3 +135,4 @@ class Client:
         end = time.perf_counter()
         logging.debug('Player %s data saved in %f seconds', self, end - start)
         logging.info('Player %s disconnected for reason: %s', self, reason)
+        self.packet_task.cancel() # Must happen last, as this could cancel this method (if it was called from packet_tick)
