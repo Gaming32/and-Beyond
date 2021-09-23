@@ -127,6 +127,9 @@ class Client:
                         self.player.x = packet.x
                         self.player.y = packet.y
                 elif isinstance(packet, AddVelocityPacket):
+                    if packet.y > 0 and self.player.physics.air_time >= 2:
+                        # logging.warn('Player %s tried to mid-air jump. This is not allowed.')
+                        packet.y = 0
                     prev_x = self.player.physics.x_velocity
                     prev_y = self.player.physics.y_velocity
                     new_x = prev_x + packet.x

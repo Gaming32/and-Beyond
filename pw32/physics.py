@@ -17,7 +17,7 @@ class PlayerPhysics:
 
     fix_dx: float
     fix_dy: float
-    sequential_fixes: int
+    air_time: int
 
     def __init__(self, player: AbstractPlayer) -> None:
         self.x_velocity = 0
@@ -25,6 +25,7 @@ class PlayerPhysics:
         self.player = player
         self.dirty = True
         self.sequential_fixes = 0
+        self.air_time = 0
 
     def tick(self, delta: float) -> None:
         old_x = self.player.x
@@ -40,6 +41,9 @@ class PlayerPhysics:
         self.player.y += self.y_velocity
         if self.fix_collision_in_direction(0, self.y_velocity):
             self.y_velocity = 0
+            self.air_time = 0
+        else:
+            self.air_time += 1
         if self.y_velocity < -4:
             self.y_velocity = -4
         self.dirty = self.player.y != old_y or self.player.x != old_x
@@ -48,33 +52,14 @@ class PlayerPhysics:
     def fix_collision_in_direction(self, dx: float, dy: float) -> bool:
         self.fix_dx = dx
         self.fix_dy = dy
-        fixes = (
+        return any((
             self.fix_collision_at_point(self.player.x + 0.2, self.player.y - EPSILON),
             self.fix_collision_at_point(self.player.x + 0.2, self.player.y),
             self.fix_collision_at_point(self.player.x + 0.2, self.player.y + 1),
             self.fix_collision_at_point(self.player.x + 0.8, self.player.y - EPSILON),
             self.fix_collision_at_point(self.player.x + 0.8, self.player.y),
             self.fix_collision_at_point(self.player.x + 0.8, self.player.y + 1),
-        )
-        fix = any(fixes)
-        if fix and all(fixes):
-            self.sequential_fixes += 1
-            if self.sequential_fixes > 30:
-                # TODO: (in the far future) apply suffocation damage
-                # (not right here in the code, but this is a good place to say it)
-                x = math.floor(self.player.x)
-                y = math.floor(self.player.y)
-                i = 0
-                for i in range(128):
-                    y += 2
-                    self.player.y += 2
-                    if self._get_tile_type(x, y) == BlockTypes.AIR:
-                        break
-                if i < 127:
-                    self.sequential_fixes = 0
-        else:
-            self.sequential_fixes = 0
-        return fix
+        ))
 
     def fix_collision_at_point(self, x: float, y: float) -> bool:
         ix = math.floor(x)
