@@ -26,7 +26,7 @@ class TitleScreen:
     def __init__(self) -> None:
         self.buttons = [
             ('Singleplayer', self.singleplayer),
-            ('Multiplayer', self.multiplayer),
+            # ('Multiplayer', self.multiplayer),
             # ('Options', self.show_options),
             ('Quit', self.quit),
         ]

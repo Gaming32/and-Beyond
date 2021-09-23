@@ -5,7 +5,7 @@ from pw32.common import GRAVITY
 from pw32.utils import autoslots
 from pw32.world import BlockTypes
 
-EPSILON = 4.94065645841247E-324
+EPSILON = 0.001
 
 
 @autoslots
@@ -30,12 +30,12 @@ class PlayerPhysics:
         old_x = self.player.x
         old_y = self.player.y
         self.y_velocity += GRAVITY * delta
-        self.player.x += self.x_velocity
-        if self.fix_collision_in_direction(self.x_velocity, 0):
-            self.x_velocity = 0
         if self.x_velocity > 0.1 or self.x_velocity < -0.1:
             self.x_velocity *= 0.7
         else:
+            self.x_velocity = 0
+        self.player.x += self.x_velocity
+        if self.fix_collision_in_direction(self.x_velocity, 0):
             self.x_velocity = 0
         self.player.y += self.y_velocity
         if self.fix_collision_in_direction(0, self.y_velocity):
@@ -49,12 +49,12 @@ class PlayerPhysics:
         self.fix_dx = dx
         self.fix_dy = dy
         fixes = (
-            self.fix_collision_at_point(self.player.x, self.player.y - EPSILON),
-            self.fix_collision_at_point(self.player.x, self.player.y),
-            self.fix_collision_at_point(self.player.x, self.player.y + 1),
-            self.fix_collision_at_point(self.player.x + 1, self.player.y - EPSILON),
-            self.fix_collision_at_point(self.player.x + 1, self.player.y),
-            self.fix_collision_at_point(self.player.x + 1, self.player.y + 1),
+            self.fix_collision_at_point(self.player.x + 0.2, self.player.y - EPSILON),
+            self.fix_collision_at_point(self.player.x + 0.2, self.player.y),
+            self.fix_collision_at_point(self.player.x + 0.2, self.player.y + 1),
+            self.fix_collision_at_point(self.player.x + 0.8, self.player.y - EPSILON),
+            self.fix_collision_at_point(self.player.x + 0.8, self.player.y),
+            self.fix_collision_at_point(self.player.x + 0.8, self.player.y + 1),
         )
         fix = any(fixes)
         if fix and all(fixes):
@@ -95,9 +95,9 @@ class PlayerPhysics:
         if self.fix_dx < 0:
             self.player.x += 1 - mx
         if self.fix_dy > 0:
-            self.player.y += -EPSILON - my
+            self.player.y -= EPSILON + my
         if self.fix_dx > 0:
-            self.player.x += -EPSILON - mx
+            self.player.x -= EPSILON + mx
         return True
 
     def _get_tile_type(self, x: int, y: int) -> BlockTypes:

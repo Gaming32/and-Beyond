@@ -105,4 +105,5 @@ class ServerConnection:
         await self.writer.wait_closed()
 
     def write_packet_sync(self, packet: Packet) -> None:
-        self.outgoing_queue.sync_q.put(packet)
+        if hasattr(self, 'outgoing_queue') and not self.outgoing_queue.closed:
+            self.outgoing_queue.sync_q.put(packet) # Black hole for packets sent when not connected
