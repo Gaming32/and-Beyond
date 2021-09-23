@@ -30,7 +30,7 @@ class ClientWorld:
         half_size = Vector2(surf.get_size()) / 2
         for ((cx, cy), chunk) in render_chunks.items():
             chunk_render = chunk.render()
-            rpos = (Vector2(cx, cy) * 16 - globals.camera) * BLOCK_RENDER_SIZE
+            rpos = (Vector2(cx, cy + 1) * 16 - globals.camera) * BLOCK_RENDER_SIZE
             rpos += half_size
             rpos.y = surf.get_height() - rpos.y
             surf.blit(chunk_render, chunk_render.get_rect().move(rpos))

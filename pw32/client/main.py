@@ -58,7 +58,7 @@ globals.singleplayer_pipe = None
 globals.connecting_status = ''
 globals.local_world = ClientWorld()
 globals.player = ClientPlayer()
-globals.camera = Vector2(0, -48)
+globals.camera = Vector2(0, -34)
 # globals.camera = Vector2()
 
 
