@@ -33,9 +33,15 @@ class PlayerPhysics:
         self.player.x += self.x_velocity
         if self.fix_collision_in_direction(self.x_velocity, 0):
             self.x_velocity = 0
+        if self.x_velocity > 0.1 or self.x_velocity < -0.1:
+            self.x_velocity *= 0.7
+        else:
+            self.x_velocity = 0
         self.player.y += self.y_velocity
         if self.fix_collision_in_direction(0, self.y_velocity):
             self.y_velocity = 0
+        if self.y_velocity < -4:
+            self.y_velocity = -4
         self.dirty = self.player.y != old_y or self.player.x != old_x
 
     # Thanks to Griffpatch and his amazing Tile Scrolling Platformer series for this code :)
@@ -46,6 +52,9 @@ class PlayerPhysics:
             self.fix_collision_at_point(self.player.x, self.player.y - EPSILON),
             self.fix_collision_at_point(self.player.x, self.player.y),
             self.fix_collision_at_point(self.player.x, self.player.y + 1),
+            self.fix_collision_at_point(self.player.x + 1, self.player.y - EPSILON),
+            self.fix_collision_at_point(self.player.x + 1, self.player.y),
+            self.fix_collision_at_point(self.player.x + 1, self.player.y + 1),
         )
         fix = any(fixes)
         if fix and all(fixes):
@@ -55,12 +64,14 @@ class PlayerPhysics:
                 # (not right here in the code, but this is a good place to say it)
                 x = math.floor(self.player.x)
                 y = math.floor(self.player.y)
-                while True:
+                i = 0
+                for i in range(128):
                     y += 2
                     self.player.y += 2
                     if self._get_tile_type(x, y) == BlockTypes.AIR:
                         break
-                self.sequential_fixes = 0
+                if i < 127:
+                    self.sequential_fixes = 0
         else:
             self.sequential_fixes = 0
         return fix
@@ -84,9 +95,9 @@ class PlayerPhysics:
         if self.fix_dx < 0:
             self.player.x += 1 - mx
         if self.fix_dy > 0:
-            self.player.y -= my
+            self.player.y += -EPSILON - my
         if self.fix_dx > 0:
-            self.player.x -= mx
+            self.player.x += -EPSILON - mx
         return True
 
     def _get_tile_type(self, x: int, y: int) -> BlockTypes:

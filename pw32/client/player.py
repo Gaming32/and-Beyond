@@ -7,6 +7,7 @@ from pw32.abstract_player import AbstractPlayer
 from pw32.client import globals
 from pw32.client.consts import BLOCK_RENDER_SIZE
 from pw32.client.utils import world_to_screen
+from pw32.packet import AddVelocityPacket, PlayerPositionPacket
 from pw32.utils import autoslots
 from pygame import *
 from pygame.locals import *
@@ -30,6 +31,7 @@ class ClientPlayer(AbstractPlayer):
         self.loaded_chunks = globals.local_world.loaded_chunks # type: ignore
 
     def render(self, surf: Surface) -> None:
+        globals.camera = Vector2(self.x, self.y + 3)
         if self.x == inf or self.y == inf:
             return
         if self.is_local:
@@ -61,3 +63,11 @@ class ClientPlayer(AbstractPlayer):
         #     self.last_y = self.render_y = self.y
         # else:
         #     self.render_y += (self.y - self.last_y) * globals.delta
+
+    def send_position(self) -> None:
+        packet = PlayerPositionPacket(self.x, self.y)
+        globals.game_connection.write_packet_sync(packet)
+
+    def add_velocity(self, x: float = 0, y: float = 0) -> None:
+        packet = AddVelocityPacket(x, y)
+        globals.game_connection.write_packet_sync(packet)

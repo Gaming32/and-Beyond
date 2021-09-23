@@ -14,8 +14,11 @@ from pw32.client.assets import GAME_FONT
 from pw32.client.consts import UI_FG
 from pw32.client.globals import ConfigManager, GameStatus
 from pw32.client.player import ClientPlayer
+from pw32.client.server_connection import ServerConnection
 from pw32.client.title import TitleScreen
 from pw32.client.world import ClientWorld
+from pw32.common import JUMP_SPEED, MOVE_SPEED
+from pw32.packet import PlayerPositionPacket
 from pw32.utils import init_logger
 from pygame import *
 from pygame.locals import *
@@ -62,6 +65,9 @@ globals.camera = Vector2(0, -34)
 # globals.camera = Vector2()
 
 
+move_left = False
+move_right = False
+move_up = False
 globals.game_status = GameStatus.MAIN_MENU
 globals.running = True
 clock = pygame.time.Clock()
@@ -83,6 +89,24 @@ while globals.running:
                     logging.debug('Switching fullscreen mode...')
                     pygame.display.quit()
                     screen = reset_window()
+                elif event.key == K_d:
+                    move_right = True
+                elif event.key == K_a:
+                    move_left = True
+                elif event.key == K_SPACE:
+                    move_up = True
+            elif event.type == KEYUP:
+                if event.key == K_d:
+                    move_right = False
+                elif event.key == K_a:
+                    move_left = False
+
+        if globals.game_connection is not None:
+            if move_left ^ move_right:
+                globals.player.add_velocity(x=MOVE_SPEED * globals.delta * (move_right - move_left))
+            if move_up:
+                globals.player.add_velocity(y=JUMP_SPEED)
+                move_up = False
 
         if globals.game_status == GameStatus.MAIN_MENU:
             title.render(screen)

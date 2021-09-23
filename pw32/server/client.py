@@ -7,9 +7,11 @@ from asyncio.events import AbstractEventLoop
 from asyncio.exceptions import CancelledError
 from typing import TYPE_CHECKING, Optional
 
-from pw32.common import MAX_LOADED_CHUNKS, VIEW_DISTANCE, VIEW_DISTANCE_BOX
-from pw32.packet import (AuthenticatePacket, ChunkPacket, ChunkUpdatePacket,
-                         DisconnectPacket, Packet, read_packet, write_packet)
+from pw32.common import (MAX_LOADED_CHUNKS, MOVE_SPEED_CAP_SQ, VIEW_DISTANCE,
+                         VIEW_DISTANCE_BOX)
+from pw32.packet import (AddVelocityPacket, AuthenticatePacket, ChunkPacket,
+                         ChunkUpdatePacket, DisconnectPacket, Packet,
+                         PlayerPositionPacket, read_packet, write_packet)
 from pw32.server.player import Player
 from pw32.utils import MaxSizedDict, spiral_loop, spiral_loop_async
 from pw32.world import WorldChunk
@@ -107,6 +109,40 @@ class Client:
                         else:
                             packet.block = chunk.get_tile_type(packet.bx, packet.by)
                             await write_packet(packet, self.writer)
+                elif isinstance(packet, PlayerPositionPacket):
+                    logging.warn('Player %s used illegal packet: PLAYER_POSITION (this packet is deprecated and a security hole)', self)
+                    await self.disconnect('Used illegal packet: PLAYER_POSITION (this packet is deprecated and a security hole)')
+                    continue
+                    prev_x = self.player.x
+                    prev_y = self.player.y
+                    rel_x = packet.x - prev_x
+                    rel_y = packet.y - prev_y
+                    dist = rel_x * rel_x + rel_y * rel_y
+                    if dist > MOVE_SPEED_CAP_SQ:
+                        packet.x = prev_x
+                        packet.y = prev_y
+                        logging.warn('Player %s moved too quickly! %f, %f', self, rel_x, rel_y)
+                        await write_packet(packet, self.writer)
+                    else:
+                        self.player.x = packet.x
+                        self.player.y = packet.y
+                elif isinstance(packet, AddVelocityPacket):
+                    prev_x = self.player.physics.x_velocity
+                    prev_y = self.player.physics.y_velocity
+                    new_x = prev_x + packet.x
+                    new_y = prev_y + packet.y
+                    vel = new_x * new_x + new_y * new_y
+                    if vel > MOVE_SPEED_CAP_SQ:
+                        packet.x = prev_x
+                        packet.y = prev_y
+                        logging.warn('Player %s moved too quickly! %f, %f', self, new_x, new_y)
+                        packet = PlayerPositionPacket(self.player.x, self.player.y)
+                        self.player.physics.x_velocity = 0
+                        self.player.physics.y_velocity = 0
+                        await write_packet(packet, self.writer)
+                    else:
+                        self.player.physics.x_velocity = new_x
+                        self.player.physics.y_velocity = new_y
         physics = self.player.physics
         physics.tick(0.05)
         if physics.dirty:

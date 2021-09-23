@@ -20,6 +20,7 @@ class PacketType(enum.IntEnum):
     CHUNK_UPDATE = 3
     # PLAYER_INFO = 4 # Reserved for future use
     PLAYER_POS = 5
+    ADD_VELOCITY = 6
 
 
 class Packet(abc.ABC):
@@ -210,6 +211,25 @@ class PlayerPositionPacket(Packet):
         _write_double(self.y, writer)
 
 
+@autoslots
+class AddVelocityPacket(Packet):
+    type = PacketType.ADD_VELOCITY
+    x: float
+    y: float
+
+    def __init__(self, x: float = 0, y: float = 0) -> None:
+        self.x = x
+        self.y = y
+
+    async def read(self, reader: StreamReader) -> None:
+        self.x = await _read_double(reader)
+        self.y = await _read_double(reader)
+
+    def write(self, writer: StreamWriter) -> None:
+        _write_double(self.x, writer)
+        _write_double(self.y, writer)
+
+
 PACKET_CLASSES: list[type[Packet]] = [
     AuthenticatePacket,
     DisconnectPacket,
@@ -217,4 +237,5 @@ PACKET_CLASSES: list[type[Packet]] = [
     ChunkUpdatePacket,
     PlayerPositionPacket,
     PlayerPositionPacket,
+    AddVelocityPacket,
 ]

@@ -81,6 +81,8 @@ class ServerConnection:
                     chunk.set_tile_type(packet.bx, packet.by, packet.block)
                     chunk.dirty = True
             elif isinstance(packet, PlayerPositionPacket):
+                # globals.player.last_x = globals.player.render_x = globals.player.x
+                # globals.player.last_y = globals.player.render_y = globals.player.y
                 globals.player.x = packet.x
                 globals.player.y = packet.y
 
@@ -101,3 +103,6 @@ class ServerConnection:
             self.send_packets_task.cancel()
         self.writer.close()
         await self.writer.wait_closed()
+
+    def write_packet_sync(self, packet: Packet) -> None:
+        self.outgoing_queue.sync_q.put(packet)
