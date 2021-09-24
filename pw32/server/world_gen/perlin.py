@@ -1,6 +1,6 @@
 import math
 import random
-from typing import Optional
+from typing import Callable, Optional
 
 from pw32.utils import autoslots
 
@@ -41,12 +41,32 @@ class PerlinNoise:
         u = self._fade(x)
         return self._lerp(u, self._grad_1d(self.perm[x2], x), self._grad_1d(self.perm[x2 + 1], x - 1)) * 2
 
+    def noise_2d(self, x: float, y: float) -> float:
+        x2 = int(x) & 0xff
+        y2 = int(y) & 0xff
+        x -= math.floor(x)
+        y -= math.floor(y)
+        u = self._fade(x)
+        v = self._fade(y)
+        a = (self.perm[x2] + y2) & 0xff
+        b = (self.perm[x2 + 1] + y2) & 0xff
+        return self._lerp(v, self._lerp(u, self._grad_2d(self.perm[a], x, y), self._grad_2d(self.perm[b], x - 1, y)),
+                             self._lerp(u, self._grad_2d(self.perm[a + 1], x, y - 1), self._grad_2d(self.perm[b + 1], x - 1, y - 1)))
+
     def fbm_1d(self, x: float, octave: int) -> float:
+        return self._fbm(self.noise_1d, octave, x)
+
+    def fbm_2d(self, x: float, y: float, octave: int) -> float:
+        return self._fbm(self.noise_2d, octave, x, y)
+
+    def _fbm(self, noise_function: Callable[..., float], octave: int, *coords: float) -> float:
+        coords_l = list(coords)
         f = 0.0
         w = 0.5
         for i in range(octave):
-            f += w * self.noise_1d(x)
-            x *= 2.0
+            f += w * noise_function(*coords_l)
+            for j in range(len(coords_l)):
+                coords_l[j] *= 2.0
             w *= 0.5
         return f
 
@@ -58,3 +78,6 @@ class PerlinNoise:
 
     def _grad_1d(self, hash: int, x: float) -> float:
         return x if (hash & 1) else -x
+
+    def _grad_2d(self, hash: int, x: float, y: float) -> float:
+        return (x if (hash & 1) else -x) + (y if (hash & 2) else -y)
