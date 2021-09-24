@@ -1,8 +1,10 @@
 # pyright: reportWildcardImportFromLibrary=false
+import logging
 from typing import Callable
 
 import pygame
 from pw32.client import button_ui, globals
+from pw32.pipe_commands import PipeCommands
 from pygame import *
 from pygame.locals import *
 
@@ -23,7 +25,18 @@ class PauseMenu:
         surf.blit(gray, gray.get_rect())
         button_ui.draw_buttons_and_call(surf, self.buttons)
 
+    def pause_game(self) -> None:
+        logging.debug('Sending pause command...')
+        if globals.singleplayer_pipe is not None:
+            globals.singleplayer_pipe.write(PipeCommands.PAUSE.to_bytes(2, 'little'))
+            globals.singleplayer_pipe.flush()
+        globals.paused = True
+
     def continue_game(self) -> None:
+        logging.debug('Sending unpause command...')
+        if globals.singleplayer_pipe is not None:
+            globals.singleplayer_pipe.write(PipeCommands.UNPAUSE.to_bytes(2, 'little'))
+            globals.singleplayer_pipe.flush()
         globals.paused = False
 
     def save_and_quit(self) -> None:

@@ -21,14 +21,16 @@ if sys.platform == 'win32':
     import msvcrt
 
 import colorama
-from pw32.utils import init_logger
+from pw32.utils import autoslots, init_logger
 
 
+@autoslots
 class AsyncServer:
     loop: AbstractEventLoop
     singleplayer_pipe: Optional[BinaryIO]
     multiplayer: bool
     running: bool
+    paused: bool
     has_been_shutdown: bool
 
     async_server: Server
@@ -43,6 +45,7 @@ class AsyncServer:
         self.singleplayer_pipe = None
         self.multiplayer = True
         self.running = False
+        self.paused = False
         self.has_been_shutdown = False
         self.async_server = None # type: ignore
         self.clients = []
@@ -73,6 +76,12 @@ class AsyncServer:
             command = PipeCommands.from_bytes(command, 'little')
             if command == PipeCommands.SHUTDOWN:
                 self.running = False
+            elif command == PipeCommands.PAUSE:
+                if not self.multiplayer:
+                    self.paused = True
+            elif command == PipeCommands.UNPAUSE:
+                if not self.multiplayer:
+                    self.paused = False
 
     async def set_block(self, cx: int, cy: int, bx: int, by: int, block: BlockTypes) -> None:
         tasks: list[asyncio.Task] = []
@@ -119,6 +128,9 @@ class AsyncServer:
         logging.info('Server started')
         self.running = True
         while self.running:
+            if not self.multiplayer:
+                while self.paused and self.running:
+                    await asyncio.sleep(0)
             start = time.perf_counter()
             await self.tick()
             end = time.perf_counter()

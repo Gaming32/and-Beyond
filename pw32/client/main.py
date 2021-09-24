@@ -93,7 +93,10 @@ while globals.running:
                 elif event.key == K_SPACE:
                     move_up = True
                 elif event.key == K_ESCAPE:
-                    globals.paused = not globals.paused
+                    if globals.paused:
+                        pause_menu.continue_game()
+                    else:
+                        pause_menu.pause_game()
             elif event.type == KEYUP:
                 if event.key == K_d:
                     move_right = False
