@@ -14,7 +14,7 @@ from pw32.packet import (AddVelocityPacket, AuthenticatePacket, ChunkPacket,
                          PlayerPositionPacket, read_packet, write_packet)
 from pw32.server.player import Player
 from pw32.utils import MaxSizedDict, spiral_loop, spiral_loop_async
-from pw32.world import WorldChunk
+from pw32.world import BlockTypes, WorldChunk
 
 if TYPE_CHECKING:
     from pw32.server.main import AsyncServer
@@ -104,9 +104,10 @@ class Client:
                         abs_x = (packet.cx << 4) + packet.bx
                         abs_y = (packet.cy << 4) + packet.by
                         chunk = self.loaded_chunks[chunk_pos]
-                        if self.player.can_reach(abs_x, abs_y):
+                        if self.player.can_reach(abs_x, abs_y, packet.block != BlockTypes.AIR):
                             chunk.set_tile_type(packet.bx, packet.by, packet.block)
                         else:
+                            # logging.warn("Player %s can't reach block %i, %i, yet they tried to update it.", self, abs_x, abs_y)
                             packet.block = chunk.get_tile_type(packet.bx, packet.by)
                             await write_packet(packet, self.writer)
                 elif isinstance(packet, PlayerPositionPacket):

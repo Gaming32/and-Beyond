@@ -1,13 +1,14 @@
 # pyright: reportWildcardImportFromLibrary=false
 import math as pymath
 from math import inf
+from pw32.world import BlockTypes
 
 import pygame
 from pw32.abstract_player import AbstractPlayer
 from pw32.client import globals
 from pw32.client.consts import BLOCK_RENDER_SIZE
 from pw32.client.utils import world_to_screen
-from pw32.packet import AddVelocityPacket, PlayerPositionPacket
+from pw32.packet import AddVelocityPacket, ChunkUpdatePacket, PlayerPositionPacket
 from pw32.utils import autoslots
 from pygame import *
 from pygame.locals import *
@@ -70,4 +71,11 @@ class ClientPlayer(AbstractPlayer):
 
     def add_velocity(self, x: float = 0, y: float = 0) -> None:
         packet = AddVelocityPacket(x, y)
+        globals.game_connection.write_packet_sync(packet)
+
+    def set_block(self, cx: int, cy: int, bx: int, by: int, block: BlockTypes) -> None:
+        if (chunk := globals.local_world.loaded_chunks.get((cx, cy))) is not None:
+            chunk.set_tile_type(bx, by, block)
+            chunk.dirty = True
+        packet = ChunkUpdatePacket(cx, cy, bx, by, block)
         globals.game_connection.write_packet_sync(packet)

@@ -96,3 +96,5 @@ connecting_status: str
 local_world: ClientWorld
 player: ClientPlayer
 camera: Vector2
+mouse_screen: Vector2
+mouse_world: tuple[float, float]

@@ -54,11 +54,13 @@ class PlayerPhysics:
         self.fix_dy = dy
         return any((
             self.fix_collision_at_point(self.player.x + 0.2, self.player.y - EPSILON),
-            self.fix_collision_at_point(self.player.x + 0.2, self.player.y),
+            self.fix_collision_at_point(self.player.x + 0.2, self.player.y + 0.5),
             self.fix_collision_at_point(self.player.x + 0.2, self.player.y + 1),
+            self.fix_collision_at_point(self.player.x + 0.2, self.player.y + 1.5),
             self.fix_collision_at_point(self.player.x + 0.8, self.player.y - EPSILON),
-            self.fix_collision_at_point(self.player.x + 0.8, self.player.y),
+            self.fix_collision_at_point(self.player.x + 0.8, self.player.y + 0.5),
             self.fix_collision_at_point(self.player.x + 0.8, self.player.y + 1),
+            self.fix_collision_at_point(self.player.x + 0.8, self.player.y + 1.5),
         ))
 
     def fix_collision_at_point(self, x: float, y: float) -> bool:

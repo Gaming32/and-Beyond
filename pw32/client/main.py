@@ -8,6 +8,7 @@ import pygame
 import pygame.display
 import pygame.draw
 import pygame.event
+import pygame.mouse
 import pygame.time
 from pw32.client import globals
 from pw32.client.assets import GAME_FONT
@@ -16,6 +17,7 @@ from pw32.client.globals import ConfigManager, GameStatus
 from pw32.client.player import ClientPlayer
 from pw32.client.server_connection import ServerConnection
 from pw32.client.title import TitleScreen
+from pw32.client.utils import screen_to_world
 from pw32.client.world import ClientWorld
 from pw32.common import JUMP_SPEED, MOVE_SPEED
 from pw32.packet import PlayerPositionPacket
@@ -61,8 +63,9 @@ globals.singleplayer_pipe = None
 globals.connecting_status = ''
 globals.local_world = ClientWorld()
 globals.player = ClientPlayer()
-globals.camera = Vector2(0, -34)
-# globals.camera = Vector2()
+globals.camera = Vector2()
+globals.mouse_screen = Vector2()
+globals.mouse_world = Vector2()
 
 
 move_left = False
@@ -101,6 +104,8 @@ while globals.running:
                 elif event.key == K_a:
                     move_left = False
 
+        globals.mouse_screen = Vector2(pygame.mouse.get_pos())
+
         if globals.game_connection is not None:
             if move_left ^ move_right:
                 globals.player.add_velocity(x=MOVE_SPEED * globals.delta * (move_right - move_left))
@@ -118,11 +123,12 @@ while globals.running:
             area = text_render.get_rect().move(x, y)
             screen.blit(text_render, area)
         else:
-            globals.local_world.render(screen)
+            globals.local_world.tick(screen)
             globals.player.render(screen)
             text_render = GAME_FONT.render(str(1 / globals.delta), True, UI_FG)
             screen.fill((0, 0, 0), text_render.get_rect())
             screen.blit(text_render, text_render.get_rect())
+            globals.mouse_world = screen_to_world(globals.mouse_screen, screen)
 
         pygame.display.update()
     except KeyboardInterrupt:

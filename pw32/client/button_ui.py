@@ -20,7 +20,6 @@ Buttons = list[tuple[str, Callable[[], None]]]
 
 
 def draw_buttons_and_call(surf: Surface, buttons: Buttons) -> None:
-    mouse_pos = pygame.mouse.get_pos()
     is_click = pygame.mouse.get_pressed(3)[0]
 
     x = surf.get_width() // 2 - BUTTON_WIDTH // 2
@@ -37,7 +36,7 @@ def draw_buttons_and_call(surf: Surface, buttons: Buttons) -> None:
                 area.y + area.height // 2 - text_render.get_height() // 2,
             )
         )
-        if area.collidepoint(mouse_pos):
+        if area.collidepoint(globals.mouse_screen):
             pygame.draw.rect(surf, UI_FG, area, 5, 5)
             if is_click:
                 return action()

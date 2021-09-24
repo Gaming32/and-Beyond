@@ -1,7 +1,12 @@
 # pyright: reportWildcardImportFromLibrary=false
+import math as pymath
+
 import pygame
+import pygame.draw
+import pygame.mouse
 from pw32.client import globals
 from pw32.client.consts import BLOCK_RENDER_SIZE
+from pw32.client.utils import world_to_screen
 from pw32.common import MAX_LOADED_CHUNKS
 from pw32.utils import MaxSizedDict, autoslots
 from pw32.world import BlockTypes, WorldChunk
@@ -24,7 +29,7 @@ class ClientWorld:
     def unload(self) -> None:
         self.loaded_chunks.clear()
 
-    def render(self, surf: Surface) -> None:
+    def tick(self, surf: Surface) -> None:
         surf.fill((178, 255, 255)) # Sky blue
         render_chunks = self.loaded_chunks.copy()
         half_size = Vector2(surf.get_size()) / 2
@@ -34,7 +39,33 @@ class ClientWorld:
             rpos += half_size
             rpos.y = surf.get_height() - rpos.y
             surf.blit(chunk_render, chunk_render.get_rect().move(rpos))
-        self.dirty = len(self.loaded_chunks) != len(render_chunks)
+        if globals.mouse_world[0] == pymath.inf:
+            return
+        sel_x = pymath.ceil(globals.mouse_world[0]) - 1
+        sel_y = pymath.ceil(globals.mouse_world[1])
+        if not globals.player.can_reach(sel_x, sel_y):
+            return
+        sel_cx = sel_x >> 4
+        sel_cy = sel_y >> 4
+        sel_chunk = (sel_cx, sel_cy)
+        if sel_chunk not in render_chunks:
+            return
+        sel_bx = sel_x - (sel_cx << 4)
+        sel_by = sel_y - (sel_cy << 4)
+        pygame.draw.rect(
+            surf,
+            (0, 0, 0),
+            Rect(
+                world_to_screen(sel_x, sel_y, surf),
+                (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)
+            ),
+            3
+        )
+        buttons = pygame.mouse.get_pressed(3)
+        if buttons[0]:
+            globals.player.set_block(sel_cx, sel_cy, sel_bx, sel_by, BlockTypes.AIR)
+        elif buttons[2]:
+            globals.player.set_block(sel_cx, sel_cy, sel_bx, sel_by, BlockTypes.STONE)
 
 
 @autoslots
