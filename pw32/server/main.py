@@ -129,6 +129,8 @@ class AsyncServer:
 
         logging.info('Server started')
         self.running = True
+        logging.debug('Setting up section GC')
+        self.gc_task = self.loop.create_task(self.section_gc())
         while self.running:
             if not self.multiplayer:
                 while self.paused and self.running:
@@ -161,6 +163,8 @@ class AsyncServer:
     async def section_gc(self):
         while self.running:
             await asyncio.sleep(GC_TIME_SECONDS)
+            logging.debug('Starting section GC')
+            start = time.perf_counter()
             chunks: set[tuple[int, int]] = set()
             for client in self.clients:
                 chunks.update(client.loaded_chunks)
@@ -170,6 +174,8 @@ class AsyncServer:
             to_close = set(self.world.open_sections).difference(sections)
             for (sx, sy) in to_close:
                 self.world.get_section(sx, sy).close()
+            end = time.perf_counter()
+            logging.debug('Successfully closed %i section(s) in %f seconds', len(to_close), end - start)
 
     async def shutdown(self) -> None:
         logging.info('Shutting down...')
@@ -184,8 +190,11 @@ class AsyncServer:
             logging.debug('Closing singleplayer pipe...')
             self.singleplayer_pipe.close()
         logging.info('Saving world...')
+        section_count = len(self.world.open_sections)
+        start = time.perf_counter()
         await self.world.close()
-        logging.info('World saved')
+        end = time.perf_counter()
+        logging.info('World saved (with %i open section(s)) in %f seconds', section_count, end - start)
         await self.async_server.wait_closed()
 
 
