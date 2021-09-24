@@ -1,7 +1,7 @@
 import logging
 import sys
 from collections.abc import Collection
-from typing import (Any, Awaitable, Callable, Coroutine, Generic, MutableSequence, Optional,
+from typing import (Any, Awaitable, Callable, Coroutine, Generator, Generic, MutableSequence, Optional,
                     Sequence, TypeVar, Union)
 
 T = TypeVar('T', bound=type)
@@ -105,13 +105,25 @@ class MaxSizedDict(dict):
             del self[next(iter(self))]
 
 
-def spiral_loop(w: int, h: int, cb: Callable[[int, int], Any]):
+def spiral_loop(w: int, h: int, cb: Callable[[int, int], Any]) -> None:
     x = y = 0
     dx = 0
     dy = -1
     for i in range(max(w, h)**2):
         if (-w/2 < x <= w/2) and (-h/2 < y <= h/2):
             cb(x, y)
+        if x == y or (x < 0 and x == -y) or (x > 0 and x == 1-y):
+            dx, dy = -dy, dx
+        x, y = x+dx, y+dy
+
+
+def spiral_loop_gen(w: int, h: int, cb: Callable[[int, int], E]) -> Generator[E, None, None]:
+    x = y = 0
+    dx = 0
+    dy = -1
+    for i in range(max(w, h)**2):
+        if (-w/2 < x <= w/2) and (-h/2 < y <= h/2):
+            yield cb(x, y)
         if x == y or (x < 0 and x == -y) or (x > 0 and x == 1-y):
             dx, dy = -dy, dx
         x, y = x+dx, y+dy

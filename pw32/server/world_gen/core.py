@@ -19,7 +19,7 @@ class WorldGenerator:
         self.seed = seed
         self.phases = [
             GroundPhase(self),
-            # CavePhase(self),
+            CavePhase(self),
         ]
 
     def generate_chunk(self, chunk: 'WorldChunk') -> None:

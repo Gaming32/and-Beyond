@@ -8,7 +8,7 @@ from pw32.client import globals
 from pw32.client.consts import BLOCK_RENDER_SIZE
 from pw32.client.utils import world_to_screen
 from pw32.common import MAX_LOADED_CHUNKS
-from pw32.utils import MaxSizedDict, autoslots
+from pw32.utils import autoslots
 from pw32.world import BlockTypes, WorldChunk
 from pygame import *
 from pygame.locals import *
@@ -21,7 +21,7 @@ class ClientWorld:
     loaded_chunks: dict[tuple[int, int], 'ClientChunk']
 
     def __init__(self) -> None:
-        self.loaded_chunks = MaxSizedDict(max_size=MAX_LOADED_CHUNKS)
+        self.loaded_chunks = {}
 
     def load(self) -> None:
         pass
@@ -30,7 +30,10 @@ class ClientWorld:
         self.loaded_chunks.clear()
 
     def tick(self, surf: Surface) -> None:
-        surf.fill((178, 255, 255)) # Sky blue
+        if globals.player.y < -80: # or self._is_under_block_in_2_chunks(): # This just looks wrong
+            surf.fill((125, 179, 179)) # Darker blue
+        else:
+            surf.fill((178, 255, 255)) # Sky blue
         render_chunks = self.loaded_chunks.copy()
         half_size = Vector2(surf.get_size()) / 2
         for ((cx, cy), chunk) in render_chunks.items():
@@ -66,6 +69,30 @@ class ClientWorld:
             globals.player.set_block(sel_cx, sel_cy, sel_bx, sel_by, BlockTypes.AIR)
         elif buttons[2]:
             globals.player.set_block(sel_cx, sel_cy, sel_bx, sel_by, BlockTypes.STONE)
+
+    def _is_under_block_in_2_chunks(self) -> bool:
+        if globals.player.x == pymath.inf or globals.player.y == pymath.inf:
+            return False
+        x = int(globals.player.x)
+        y = int(globals.player.y)
+        cx = x >> 4
+        cy = y >> 4
+        if (cx, cy) not in self.loaded_chunks:
+            return False
+        chunk = self.loaded_chunks[(cx, cy)]
+        bx = x - (cx << 4)
+        for by in range(y - (cy << 4), 16):
+            block = chunk.get_tile_type(bx, by)
+            if block != BlockTypes.AIR:
+                return True
+        if (cx, cy + 1) not in self.loaded_chunks:
+            return False
+        chunk = self.loaded_chunks[(cx, cy + 1)]
+        for by in range(16):
+            block = chunk.get_tile_type(bx, by)
+            if block != BlockTypes.AIR:
+                return True
+        return False
 
 
 @autoslots

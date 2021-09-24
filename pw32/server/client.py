@@ -11,9 +11,10 @@ from pw32.common import (MAX_LOADED_CHUNKS, MOVE_SPEED_CAP_SQ, VIEW_DISTANCE,
                          VIEW_DISTANCE_BOX)
 from pw32.packet import (AddVelocityPacket, AuthenticatePacket, ChunkPacket,
                          ChunkUpdatePacket, DisconnectPacket, Packet,
-                         PlayerPositionPacket, read_packet, write_packet)
+                         PlayerPositionPacket, UnloadChunkPacket, read_packet,
+                         write_packet)
 from pw32.server.player import Player
-from pw32.utils import MaxSizedDict, spiral_loop, spiral_loop_async
+from pw32.utils import spiral_loop_async, spiral_loop_gen
 from pw32.world import BlockTypes, WorldChunk
 
 if TYPE_CHECKING:
@@ -31,7 +32,6 @@ class Client:
 
     auth_uuid: Optional[uuid.UUID]
     packet_task: asyncio.Task
-    load_chunks_task: asyncio.Task
     loaded_chunks: dict[tuple[int, int], WorldChunk]
 
     player: Player
@@ -42,9 +42,9 @@ class Client:
         self.writer = writer
         self.aloop = server.loop
         self.auth_uuid = None
-        self.loaded_chunks = MaxSizedDict(max_size=MAX_LOADED_CHUNKS)
+        self.loaded_chunks = {}
 
-    async def start(self):
+    async def start(self) -> None:
         self.ready = False
         try:
             auth_packet = await asyncio.wait_for(read_packet(self.reader), 3)
@@ -54,33 +54,55 @@ class Client:
             return await self.disconnect('Malformed authentication packet')
         self.auth_uuid = auth_packet.auth_id
         logging.info('Player logged in with UUID %s', self.auth_uuid)
-        self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
         self.disconnecting = False
         self.packet_queue = asyncio.Queue()
         self.packet_task = self.aloop.create_task(self.packet_tick())
         self.player = Player(self)
         await self.player.ainit()
+        await self.load_chunks_around_player()
         self.ready = True
 
-    async def load_chunk(self, x, y):
+    async def load_chunk(self, x: int, y: int) -> None:
         chunk = self.server.world.get_generated_chunk(x, y, self.server.world_generator)
         self.loaded_chunks[(x, y)] = chunk
         packet = ChunkPacket(chunk)
         await write_packet(packet, self.writer)
 
-    async def load_chunks_around_player(self):
+    async def unload_chunk(self, x: int, y: int) -> None:
+        self.loaded_chunks.pop((x, y))
+        packet = UnloadChunkPacket(x, y)
+        await write_packet(packet, self.writer)
+
+    async def load_chunks_around_player(self) -> None:
         async def load_chunk_rel(x, y):
             await asyncio.sleep(0) # Why do I have to do this? I *do* have to for some reason
+            x += cx
+            y += cy
+            loaded.add((x, y))
             if (x, y) in self.loaded_chunks:
                 return
-            await self.load_chunk(cx + x, cy + y)
-        x = 0
-        y = 0
-        cx = x >> 4
-        cy = y >> 4
-        await spiral_loop_async(VIEW_DISTANCE_BOX, VIEW_DISTANCE_BOX, load_chunk_rel)
+            await self.load_chunk(x, y)
+        loaded: set[tuple[int, int]] = set()
+        cx = int(self.player.x) >> 4
+        cy = int(self.player.y) >> 4
+        await asyncio.gather(*
+            spiral_loop_gen(
+                VIEW_DISTANCE_BOX,
+                VIEW_DISTANCE_BOX,
+                (
+                    lambda x, y:
+                        self.aloop.create_task(load_chunk_rel(x, y))
+                )
+            )
+        )
+        to_unload = set(self.loaded_chunks).difference(loaded)
+        tasks = []
+        for (cx, cy) in to_unload:
+            tasks.append(self.aloop.create_task(self.unload_chunk(cx, cy)))
+        if tasks:
+            await asyncio.gather(*tasks)
 
-    async def packet_tick(self):
+    async def packet_tick(self) -> None:
         while self.server.running:
             try:
                 packet = await read_packet(self.reader)
@@ -147,10 +169,18 @@ class Client:
                     else:
                         self.player.physics.x_velocity = new_x
                         self.player.physics.y_velocity = new_y
+                else:
+                    logging.warn('Client %s sent invalid packet: %s', self, packet.type.name)
         physics = self.player.physics
+        old_cx = int(self.player.x) >> 4
+        old_cy = int(self.player.y) >> 4
         physics.tick(0.05)
         if physics.dirty:
             await self.player.send_position()
+            cx = int(self.player.x) >> 4
+            cy = int(self.player.y) >> 4
+            if cx != old_cx or cy != old_cy:
+                await self.load_chunks_around_player()
 
     async def disconnect(self, reason: str = '') -> None:
         if self.disconnecting:
@@ -169,7 +199,6 @@ class Client:
             self.server.clients.remove(self)
         except ValueError:
             pass
-        self.load_chunks_task.cancel()
         start = time.perf_counter()
         await self.player.save()
         end = time.perf_counter()

@@ -17,10 +17,11 @@ class PacketType(enum.IntEnum):
     AUTHENTICATE = 0
     DISCONNECT = 1
     CHUNK = 2
-    CHUNK_UPDATE = 3
-    # PLAYER_INFO = 4 # Reserved for future use
-    PLAYER_POS = 5
-    ADD_VELOCITY = 6
+    CHUNK_UNLOAD = 3
+    CHUNK_UPDATE = 4
+    # PLAYER_INFO = 5 # Reserved for future use
+    PLAYER_POS = 6
+    ADD_VELOCITY = 7
 
 
 class Packet(abc.ABC):
@@ -163,6 +164,25 @@ class ChunkPacket(Packet):
 
 
 @autoslots
+class UnloadChunkPacket(Packet):
+    type = PacketType.CHUNK_UNLOAD
+    x: int
+    y: int
+
+    def __init__(self, x: int = 0, y: int = 0) -> None:
+        self.x = x
+        self.y = y
+
+    async def read(self, reader: StreamReader) -> None:
+        self.x = await _read_varint(reader)
+        self.y = await _read_varint(reader)
+
+    def write(self, writer: StreamWriter) -> None:
+        _write_varint(self.x, writer)
+        _write_varint(self.y, writer)
+
+
+@autoslots
 class ChunkUpdatePacket(Packet):
     type = PacketType.CHUNK_UPDATE
     cx: int
@@ -234,6 +254,7 @@ PACKET_CLASSES: list[type[Packet]] = [
     AuthenticatePacket,
     DisconnectPacket,
     ChunkPacket,
+    UnloadChunkPacket,
     ChunkUpdatePacket,
     PlayerPositionPacket,
     PlayerPositionPacket,

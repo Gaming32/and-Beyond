@@ -13,7 +13,7 @@ from pw32.client.globals import GameStatus
 from pw32.client.world import ClientChunk
 from pw32.common import PORT
 from pw32.packet import (AuthenticatePacket, ChunkPacket, ChunkUpdatePacket,
-                         Packet, PacketType, PlayerPositionPacket, read_packet, write_packet)
+                         Packet, PacketType, PlayerPositionPacket, UnloadChunkPacket, read_packet, write_packet)
 from pw32.world import WorldChunk
 
 
@@ -73,6 +73,9 @@ class ServerConnection:
                 chunk = packet.chunk
                 client_chunk = ClientChunk(chunk)
                 globals.local_world.loaded_chunks[(chunk.abs_x, chunk.abs_y)] = client_chunk
+            elif isinstance(packet, UnloadChunkPacket):
+                # The chunk is never None when recieved from the network
+                globals.local_world.loaded_chunks.pop((packet.x, packet.y))
             elif isinstance(packet, ChunkUpdatePacket):
                 world = globals.local_world
                 chunk_pos = (packet.cx, packet.cy)
