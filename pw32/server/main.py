@@ -14,6 +14,7 @@ from pw32.common import PORT
 from pw32.packet import ChunkUpdatePacket, read_packet, write_packet
 from pw32.pipe_commands import PipeCommands
 from pw32.server.client import Client
+from pw32.server.consts import GC_TIME_SECONDS
 from pw32.server.world_gen.core import WorldGenerator
 from pw32.world import BlockTypes, World
 
@@ -32,6 +33,7 @@ class AsyncServer:
     running: bool
     paused: bool
     has_been_shutdown: bool
+    gc_task: asyncio.Task
 
     async_server: Server
     clients: list[Client]
@@ -156,12 +158,30 @@ class AsyncServer:
         for client in self.clients:
             await client.tick()
 
+    async def section_gc(self):
+        while self.running:
+            await asyncio.sleep(GC_TIME_SECONDS)
+            chunks: set[tuple[int, int]] = set()
+            for client in self.clients:
+                chunks.update(client.loaded_chunks)
+            sections: set[tuple[int, int]] = set()
+            for (cx, cy) in chunks:
+                sections.add((cx >> 4, cy >> 4))
+            to_close = set(self.world.open_sections).difference(sections)
+            for (sx, sy) in to_close:
+                self.world.get_section(sx, sy).close()
+
     async def shutdown(self) -> None:
         logging.info('Shutting down...')
+        logging.debug('Cancelling GC task...')
+        self.gc_task.cancel()
+        logging.debug('Kicking clients...')
         await asyncio.gather(*(client.disconnect('Server closed') for client in self.clients))
+        logging.debug('Closing server...')
         self.async_server.close()
         logging.info('Server closed')
         if self.singleplayer_pipe is not None:
+            logging.debug('Closing singleplayer pipe...')
             self.singleplayer_pipe.close()
         logging.info('Saving world...')
         await self.world.close()
