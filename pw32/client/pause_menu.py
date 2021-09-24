@@ -23,6 +23,8 @@ class PauseMenu:
         gray = Surface(surf.get_size()).convert_alpha()
         gray.fill((0, 0, 0, 128))
         surf.blit(gray, gray.get_rect())
+        if globals.ui_override is not None:
+            return globals.ui_override.draw_and_call(surf)
         button_ui.draw_buttons_and_call(surf, self.buttons)
 
     def pause_game(self) -> None:

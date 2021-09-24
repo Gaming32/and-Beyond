@@ -7,6 +7,7 @@ from typing import Callable
 
 from pw32.client import globals
 from pw32.client.globals import GameStatus
+from pw32.client.options_menu import OptionsMenu
 from pw32.client.server_connection import ServerConnection
 from pw32.utils import DEBUG
 
@@ -27,12 +28,14 @@ class TitleScreen:
         self.buttons = [
             ('Singleplayer', self.singleplayer),
             # ('Multiplayer', self.multiplayer),
-            # ('Options', self.show_options),
+            ('Options', self.show_options),
             ('Quit', self.quit),
         ]
 
     def render(self, surf: Surface) -> None:
         surf.fill((0, 0, 0))
+        if globals.ui_override is not None:
+            return globals.ui_override.draw_and_call(surf)
         button_ui.draw_buttons_and_call(surf, self.buttons)
 
     def singleplayer(self) -> None:
@@ -62,6 +65,9 @@ class TitleScreen:
 
     def multiplayer(self) -> None:
         globals.game_status = GameStatus.CONNECTING
+
+    def show_options(self) -> None:
+        globals.ui_override = OptionsMenu()
 
     def load_multiplayer(self, server: str):
         conn = ServerConnection()

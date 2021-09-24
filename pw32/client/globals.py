@@ -15,6 +15,7 @@ from pygame import Vector2
 
 if TYPE_CHECKING:
     from pw32.client.server_connection import ServerConnection
+    from pw32.client.ui import Ui
     from pygame.display import _VidInfo
 
 
@@ -88,6 +89,7 @@ fullscreen: bool
 w_width: int
 w_height: int
 delta: float
+released_mouse_buttons: list[bool]
 
 game_status: GameStatus
 game_connection: Optional['ServerConnection'] = None
@@ -98,6 +100,7 @@ if sys.platform == 'win32':
 connecting_status: str = ''
 
 paused: bool = False
+ui_override: Optional['Ui'] = None
 
 local_world: ClientWorld
 player: ClientPlayer

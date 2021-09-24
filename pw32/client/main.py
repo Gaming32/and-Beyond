@@ -37,6 +37,7 @@ if sys.platform == 'win32':
 globals.display_info = pygame.display.Info()
 globals.config = config = ConfigManager(globals.display_info)
 
+
 def reset_window() -> Surface:
     pygame.display.init()
     globals.display_info = pygame.display.Info()
@@ -52,7 +53,9 @@ def reset_window() -> Surface:
         (FULLSCREEN if globals.fullscreen else 0) | RESIZABLE
     ) # type: ignore
 
+
 globals.fullscreen = config.config['fullscreen']
+old_fullscreen = globals.fullscreen
 screen = reset_window()
 
 title = TitleScreen()
@@ -71,6 +74,12 @@ clock = pygame.time.Clock()
 while globals.running:
     try:
         globals.delta = clock.tick(75) / 1000
+        globals.released_mouse_buttons = [False] * 5
+        if globals.fullscreen != old_fullscreen:
+            logging.debug('Switching fullscreen mode...')
+            pygame.display.quit()
+            screen = reset_window()
+        old_fullscreen = globals.fullscreen
 
         for event in pygame.event.get():
             if event.type == QUIT:
@@ -83,9 +92,6 @@ while globals.running:
             elif event.type == KEYDOWN:
                 if event.key == K_F11:
                     globals.fullscreen = not globals.fullscreen
-                    logging.debug('Switching fullscreen mode...')
-                    pygame.display.quit()
-                    screen = reset_window()
                 elif event.key == K_d:
                     move_right = True
                 elif event.key == K_a:
@@ -102,6 +108,8 @@ while globals.running:
                     move_right = False
                 elif event.key == K_a:
                     move_left = False
+            elif event.type == MOUSEBUTTONUP:
+                globals.released_mouse_buttons[event.button - 1] = True
 
         globals.mouse_screen = Vector2(pygame.mouse.get_pos())
 
@@ -144,7 +152,13 @@ while globals.running:
 
 
 logging.info('Quitting...')
-pygame.quit()
+
+# I can't use pygame.quit() because it segfaults for some reason when in fullscreen mode
+pygame.mixer.quit()
+pygame.font.quit()
+pygame.joystick.quit()
+pygame.display.quit()
+
 if globals.game_connection is not None:
     globals.game_connection.stop()
 globals.close_singleplayer_server()

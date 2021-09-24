@@ -1,0 +1,111 @@
+# pyright: reportWildcardImportFromLibrary=false
+import abc
+from typing import Any, Callable, Optional
+
+import pygame
+import pygame.draw
+import pygame.font
+import pygame.mouse
+from pw32.client import globals
+from pw32.client.assets import GAME_FONT
+from pw32.client.button_ui import (BUTTON_HEIGHT, BUTTON_HEIGHT_PAD,
+                                   BUTTON_WIDTH)
+from pw32.client.consts import UI_BG, UI_FG
+from pygame import *
+from pygame.locals import *
+
+ButtonCallback = Callable[[], Any]
+ToggleButtonCallback = Callable[[bool], Any]
+
+
+class UiElement(abc.ABC):
+    def __init__(self) -> None:
+        pass
+
+    @abc.abstractmethod
+    def draw_and_call(self, surf: Surface, at: Vector2, preseed: list[bool], released: list[bool]) -> Any:
+        pass
+
+
+class UiButton(UiElement):
+    label: str
+    callback: ButtonCallback
+
+    def __init__(self, label: str, callback: ButtonCallback) -> None:
+        self.label = label
+        self.callback = callback
+
+    def draw_and_call(self, surf: Surface, at: Vector2, pressed: list[bool], released: list[bool]) -> Any:
+        area = Rect(at, (BUTTON_WIDTH, BUTTON_HEIGHT))
+        pygame.draw.rect(surf, UI_BG, area, 0, 5)
+        text_render = GAME_FONT.render(self.label, True, UI_FG)
+        surf.blit(
+            text_render,
+            (
+                area.x + area.width // 2 - text_render.get_width() // 2,
+                area.y + area.height // 2 - text_render.get_height() // 2,
+            )
+        )
+        if area.collidepoint(globals.mouse_screen): # type: ignore
+            pygame.draw.rect(surf, UI_FG, area, 5, 5)
+            if released[0]:
+                return self.callback()
+
+
+class UiToggleButton(UiButton):
+    tb_label: str
+    tb_callback: ToggleButtonCallback
+    _toggled: bool
+
+    def __init__(self, label: str, callback: ToggleButtonCallback, toggled: bool = False) -> None:
+        super().__init__(label, self._callback)
+        self.tb_label = label
+        self.tb_callback = callback
+        self.toggled = toggled
+
+    def _set_label(self) -> None:
+        label = f'{self.tb_label}: '
+        if self._toggled:
+            label += ' On'
+        else:
+            label += ' Off'
+        self.label = label
+
+    def _callback(self) -> Any:
+        self.toggled = not self.toggled
+        return self.tb_callback(self.toggled)
+
+    @property
+    def toggled(self) -> bool:
+        return self._toggled
+
+    @toggled.setter
+    def toggled(self, toggled: bool) -> None:
+        self._toggled = toggled
+        self._set_label()
+
+
+class Ui:
+    parent: Optional['Ui']
+    elements: list[UiElement]
+
+    def __init__(self, elements: list[UiElement] = None) -> None:
+        if elements is None:
+            elements = []
+        self.parent = None
+        self.elements = elements
+
+    def close(self) -> None:
+        if globals.ui_override is self:
+            globals.ui_override = self.parent
+
+    def draw_and_call(self, surf: Surface):
+        pressed = list(pygame.mouse.get_pressed(5))
+        released = globals.released_mouse_buttons
+
+        x = surf.get_width() // 2 - BUTTON_WIDTH // 2
+        y = surf.get_height() // 2 - BUTTON_HEIGHT_PAD * len(self.elements) // 2
+
+        for element in self.elements:
+            element.draw_and_call(surf, Vector2(x, y), pressed, released)
+            y += BUTTON_HEIGHT_PAD

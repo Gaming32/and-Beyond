@@ -20,7 +20,7 @@ Buttons = list[tuple[str, Callable[[], Any]]]
 
 
 def draw_buttons_and_call(surf: Surface, buttons: Buttons) -> Any:
-    is_click = pygame.mouse.get_pressed(3)[0]
+    is_click = globals.released_mouse_buttons[0]
 
     x = surf.get_width() // 2 - BUTTON_WIDTH // 2
     y = surf.get_height() // 2 - BUTTON_HEIGHT_PAD * len(buttons) // 2
