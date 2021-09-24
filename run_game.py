@@ -50,6 +50,15 @@ if not has_aiofiles:
     missing_deps_text += ' - aiofiles (aiofiles)\n'
     missing_deps.append('aiofiles')
 
+has_opensimplex = True
+try:
+    import opensimplex
+except ModuleNotFoundError:
+    has_opensimplex = False
+if not has_opensimplex:
+    missing_deps_text += ' - OpenSimplex Noise (opensimplex)\n'
+    missing_deps.append('opensimplex')
+
 if missing_deps:
     print('You appear to be missing the following requirements for this game to run:')
     print(missing_deps_text, end='')

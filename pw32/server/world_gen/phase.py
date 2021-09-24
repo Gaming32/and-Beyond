@@ -1,12 +1,11 @@
 import abc
 from typing import TYPE_CHECKING
 
-from pw32.server.world_gen.perlin import PerlinNoise
 from pw32.utils import autoslots
-from pw32.world import WorldChunk
 
 if TYPE_CHECKING:
     from pw32.server.world_gen.core import WorldGenerator
+    from pw32.world import WorldChunk
 
 
 @autoslots

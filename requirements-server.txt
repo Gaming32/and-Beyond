@@ -1,2 +1,3 @@
 colorama
 aiofiles
+opensimplex # World generation

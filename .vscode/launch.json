@@ -5,6 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            // Requires the "Command Variable" extension be installed
+            // https://marketplace.visualstudio.com/items?itemName=rioj7.command-variable
+            "name": "Python: Current Module",
+            "type": "python",
+            "request": "launch",
+            "module": "${command:extension.commandvariable.file.relativeDirDots}.${fileBasenameNoExtension}"
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
