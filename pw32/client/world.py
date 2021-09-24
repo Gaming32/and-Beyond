@@ -42,6 +42,8 @@ class ClientWorld:
             rpos += half_size
             rpos.y = surf.get_height() - rpos.y
             surf.blit(chunk_render, chunk_render.get_rect().move(rpos))
+        if globals.paused:
+            return
         if globals.mouse_world[0] == pymath.inf:
             return
         sel_x = pymath.ceil(globals.mouse_world[0]) - 1

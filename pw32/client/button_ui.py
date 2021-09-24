@@ -1,5 +1,5 @@
 # pyright: reportWildcardImportFromLibrary=false
-from typing import Callable
+from typing import Any, Callable
 
 import pygame
 import pygame.draw
@@ -16,10 +16,10 @@ BUTTON_HEIGHT = 50
 
 BUTTON_HEIGHT_PAD = BUTTON_HEIGHT + 25
 
-Buttons = list[tuple[str, Callable[[], None]]]
+Buttons = list[tuple[str, Callable[[], Any]]]
 
 
-def draw_buttons_and_call(surf: Surface, buttons: Buttons) -> None:
+def draw_buttons_and_call(surf: Surface, buttons: Buttons) -> Any:
     is_click = pygame.mouse.get_pressed(3)[0]
 
     x = surf.get_width() // 2 - BUTTON_WIDTH // 2

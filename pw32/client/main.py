@@ -14,6 +14,7 @@ from pw32.client import globals
 from pw32.client.assets import GAME_FONT
 from pw32.client.consts import UI_FG
 from pw32.client.globals import ConfigManager, GameStatus
+from pw32.client.pause_menu import PauseMenu
 from pw32.client.player import ClientPlayer
 from pw32.client.server_connection import ServerConnection
 from pw32.client.title import TitleScreen
@@ -55,17 +56,10 @@ globals.fullscreen = config.config['fullscreen']
 screen = reset_window()
 
 title = TitleScreen()
+pause_menu = PauseMenu()
 
-globals.game_connection = None
-globals.singleplayer_popen = None
-globals.singleplayer_pipe = None
-
-globals.connecting_status = ''
 globals.local_world = ClientWorld()
 globals.player = ClientPlayer()
-globals.camera = Vector2()
-globals.mouse_screen = Vector2()
-globals.mouse_world = Vector2()
 
 
 move_left = False
@@ -98,6 +92,8 @@ while globals.running:
                     move_left = True
                 elif event.key == K_SPACE:
                     move_up = True
+                elif event.key == K_ESCAPE:
+                    globals.paused = not globals.paused
             elif event.type == KEYUP:
                 if event.key == K_d:
                     move_right = False
@@ -106,7 +102,7 @@ while globals.running:
 
         globals.mouse_screen = Vector2(pygame.mouse.get_pos())
 
-        if globals.game_connection is not None:
+        if globals.game_connection is not None and not globals.paused:
             if move_left ^ move_right:
                 globals.player.add_velocity(x=MOVE_SPEED * globals.delta * (move_right - move_left))
             if move_up:
@@ -115,20 +111,29 @@ while globals.running:
 
         if globals.game_status == GameStatus.MAIN_MENU:
             title.render(screen)
-        elif globals.game_status == GameStatus.CONNECTING:
+        elif globals.game_status in (GameStatus.CONNECTING, GameStatus.STOPPING):
             screen.fill((0, 0, 0))
             text_render = GAME_FONT.render(globals.connecting_status, True, UI_FG)
             x = screen.get_width() // 2 - text_render.get_width() // 2
             y = screen.get_height() // 2 - text_render.get_height() // 2
             area = text_render.get_rect().move(x, y)
             screen.blit(text_render, area)
+            if globals.game_status == GameStatus.STOPPING:
+                if globals.singleplayer_popen is not None:
+                    if (returncode := globals.singleplayer_popen.poll()) is not None:
+                        if returncode:
+                            logging.warn('Singleplayer server stopped with exit code %i', returncode)
+                        globals.singleplayer_popen = None
+                        globals.game_status = GameStatus.MAIN_MENU
         else:
+            globals.mouse_world = screen_to_world(globals.mouse_screen, screen)
             globals.local_world.tick(screen)
             globals.player.render(screen)
             text_render = GAME_FONT.render(str(1 / globals.delta), True, UI_FG)
             screen.fill((0, 0, 0), text_render.get_rect())
             screen.blit(text_render, text_render.get_rect())
-            globals.mouse_world = screen_to_world(globals.mouse_screen, screen)
+            if globals.paused:
+                pause_menu.render(screen)
 
         pygame.display.update()
     except KeyboardInterrupt:

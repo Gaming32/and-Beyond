@@ -57,23 +57,27 @@ class ConfigManager:
             logging.info('Saved config')
 
 
-def close_singleplayer_server():
+def close_singleplayer_server(wait: bool = True):
+    global singleplayer_pipe, singleplayer_popen
     logging.debug('Checking if singleplayer server needs shutdown...')
     if singleplayer_pipe is not None:
         logging.info('Shutting down singleplayer server...')
         singleplayer_pipe.write(PipeCommands.SHUTDOWN.to_bytes(2, 'little'))
         singleplayer_pipe.flush()
         singleplayer_pipe.close()
-    if singleplayer_popen is not None:
+        singleplayer_pipe = None
+    if wait and singleplayer_popen is not None:
         logging.info('Waiting for singleplayer server to stop...')
         if returncode := singleplayer_popen.wait():
             logging.warn('Singleplayer server stopped with exit code %i', returncode)
+        singleplayer_popen = None
 
 
 class GameStatus(enum.IntEnum):
     MAIN_MENU = 0
     CONNECTING = 1
-    IN_GAME = 2
+    STOPPING = 2
+    IN_GAME = 3
 
 
 config: ConfigManager
@@ -86,15 +90,17 @@ w_height: int
 delta: float
 
 game_status: GameStatus
-game_connection: 'ServerConnection'
-singleplayer_popen: subprocess.Popen
-singleplayer_pipe: BinaryIO
+game_connection: Optional['ServerConnection'] = None
+singleplayer_popen: Optional[subprocess.Popen] = None
+singleplayer_pipe: Optional[BinaryIO] = None
 if sys.platform == 'win32':
     singleplayer_pipe_ih: int
+connecting_status: str = ''
 
-connecting_status: str
+paused: bool = False
+
 local_world: ClientWorld
 player: ClientPlayer
-camera: Vector2
-mouse_screen: Vector2
-mouse_world: tuple[float, float]
+camera: Vector2 = Vector2()
+mouse_screen: Vector2 = Vector2()
+mouse_world: tuple[float, float] = (0, 0)
