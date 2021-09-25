@@ -56,7 +56,7 @@ class ServerConnection:
         while True:
             try:
                 self.reader, self.writer = await asyncio.open_connection(server, PORT)
-            except ConnectionError: # Linux and when debugging :)
+            except OSError: # Linux, macOS, and when debugging :)
                 await asyncio.sleep(0)
             else:
                 break
