@@ -34,7 +34,7 @@ def transform_assets() -> int:
     count = 0
     for (i, sprite) in enumerate(PERSON_SPRITES):
         sprite = sprite.convert_alpha()
-        PERSON_SPRITES[i] = pygame.transform.scale(sprite, (15, 37))
+        PERSON_SPRITES[i] = pygame.transform.scale(sprite, (25, 37))
         count += 1
     for (i, sprite) in enumerate(_BLOCK_SPRITES):
         BLOCK_SPRITES.append([sprite.convert_alpha()])

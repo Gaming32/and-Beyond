@@ -1,4 +1,5 @@
 # pyright: reportWildcardImportFromLibrary=false
+from and_beyond.client.assets import PERSON_SPRITES
 import math as pymath
 from math import inf
 
@@ -27,6 +28,8 @@ class ClientPlayer(AbstractPlayer):
     is_local: bool
     selected_block: BlockTypes
     selected_block_texture: Surface
+    dir: bool
+    frame: float
 
     def __init__(self) -> None:
         self.x = inf
@@ -39,6 +42,8 @@ class ClientPlayer(AbstractPlayer):
         # We know better than https://mypy.readthedocs.io/en/latest/generics.html#variance-of-generic-types here :)
         self.loaded_chunks = globals.local_world.loaded_chunks # type: ignore
         self.change_selected_block(BlockTypes.STONE)
+        self.dir = True
+        self.frame = 0
 
     def render(self, surf: Surface) -> None:
         if self.x == inf or self.y == inf:
@@ -49,19 +54,28 @@ class ClientPlayer(AbstractPlayer):
             self._render_other()
         globals.camera = Vector2(self.render_x, self.render_y + 3)
         draw_pos = world_to_screen(self.render_x, self.render_y + 1, surf)
-        surf.fill(
-            (128, 0, 128),
-            (
-                draw_pos + Vector2(BLOCK_RENDER_SIZE * 0.1, 0),
-                (BLOCK_RENDER_SIZE * 0.8, BLOCK_RENDER_SIZE * 2)
-            )
-        )
+        sprite = PERSON_SPRITES[int(self.frame) & 1]
+        if not self.dir:
+            sprite = pygame.transform.flip(sprite, True, False)
+        surf.blit(sprite, sprite.get_rect().move(draw_pos + Vector2(0, BLOCK_RENDER_SIZE / 2)))
+        # surf.fill(
+        #     (128, 0, 128),
+        #     (
+        #         draw_pos + Vector2(BLOCK_RENDER_SIZE * 0.1, 0),
+        #         (BLOCK_RENDER_SIZE * 0.8, BLOCK_RENDER_SIZE * 2)
+        #     )
+        # )
 
     def _render_local(self) -> None:
         if self.render_x == inf or pymath.isclose(self.render_x, self.x):
             self.render_x = self.x
         else:
             self.render_x = lerp(self.render_x, self.x, 0.5)
+            if self.render_x < self.x:
+                self.dir = True
+            else:
+                self.dir = False
+            self.frame += abs(self.render_x - self.x)
         if self.render_y == inf or pymath.isclose(self.render_y, self.y, abs_tol=0.1):
             self.last_y = self.render_y = self.y
         else:
