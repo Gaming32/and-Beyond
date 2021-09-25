@@ -37,8 +37,12 @@ class WorldScreen(Ui):
         else:
             self.worlds_path.mkdir()
             world_n = 1
-        self.elements.append(UiButton('(New world)', (lambda: self.new_world(world_n))))
-        self.elements.append(UiButton('Back', self.close))
+        self.elements.extend([
+            UiButton('(New world)', (lambda: self.new_world(world_n))),
+            UiButton('Back', self.close),
+        ])
+        if sys.platform == 'win32':
+            self.elements.insert(-1, UiButton('Open worlds folder', (lambda: os.startfile('worlds'))))
 
     def new_world(self, n: int) -> None:
         self.load_world(f'world{n}')

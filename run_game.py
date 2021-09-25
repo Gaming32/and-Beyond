@@ -1,13 +1,20 @@
+# The launching script needs to be Python 2.X compatible so that it can tell people to upgrade ;)
+from __future__ import print_function
+
 import shlex
 import subprocess
 import sys
-from typing import List
+
+if sys.version_info[0] > 2:
+    from typing import List
+    raw_input = input
 
 missing_deps_text = ''
-missing_deps: List[str] = []
+missing_deps = [] # type: List[str]
 
 if sys.version_info[:2] < (3, 9):
     print('Python 3.9 or later is required to run this game.')
+    raw_input('Press ENTER to exit...')
     sys.exit(1)
 
 has_pygame_20 = True
