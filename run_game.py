@@ -74,4 +74,4 @@ if missing_deps:
         print('Installation cancelled.')
         sys.exit(0)
 
-import pw32.client.main
+import and_beyond.client.main

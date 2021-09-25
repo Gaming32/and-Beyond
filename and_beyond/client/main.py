@@ -10,19 +10,19 @@ import pygame.draw
 import pygame.event
 import pygame.mouse
 import pygame.time
-from pw32.client import globals
-from pw32.client.assets import GAME_FONT
-from pw32.client.consts import UI_FG
-from pw32.client.globals import ConfigManager, GameStatus
-from pw32.client.ui.pause_menu import PauseMenu
-from pw32.client.player import ClientPlayer
-from pw32.client.server_connection import ServerConnection
-from pw32.client.ui.title_screen import TitleScreen
-from pw32.client.utils import screen_to_world
-from pw32.client.world import ClientWorld
-from pw32.common import JUMP_SPEED, MOVE_SPEED
-from pw32.packet import PlayerPositionPacket
-from pw32.utils import init_logger
+from and_beyond.client import globals
+from and_beyond.client.assets import GAME_FONT
+from and_beyond.client.consts import UI_FG
+from and_beyond.client.globals import ConfigManager, GameStatus
+from and_beyond.client.ui.pause_menu import PauseMenu
+from and_beyond.client.player import ClientPlayer
+from and_beyond.client.server_connection import ServerConnection
+from and_beyond.client.ui.title_screen import TitleScreen
+from and_beyond.client.utils import screen_to_world
+from and_beyond.client.world import ClientWorld
+from and_beyond.common import JUMP_SPEED, MOVE_SPEED
+from and_beyond.packet import PlayerPositionPacket
+from and_beyond.utils import init_logger
 from pygame import *
 from pygame.locals import *
 

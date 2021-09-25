@@ -2,12 +2,12 @@ import random
 from typing import TYPE_CHECKING
 
 from opensimplex import OpenSimplex
-from pw32.server.world_gen.phase import AbstractPhase
-from pw32.utils import autoslots
-from pw32.world import BlockTypes, WorldChunk
+from and_beyond.server.world_gen.phase import AbstractPhase
+from and_beyond.utils import autoslots
+from and_beyond.world import BlockTypes, WorldChunk
 
 if TYPE_CHECKING:
-    from pw32.server.world_gen.core import WorldGenerator
+    from and_beyond.server.world_gen.core import WorldGenerator
 
 BOUND = 0.2
 X_SCALE = 50

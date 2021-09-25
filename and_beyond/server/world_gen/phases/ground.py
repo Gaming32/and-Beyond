@@ -1,8 +1,8 @@
-from pw32.server.world_gen.core import WorldGenerator
-from pw32.server.world_gen.perlin import PerlinNoise
-from pw32.server.world_gen.phase import AbstractPhase
-from pw32.utils import autoslots
-from pw32.world import BlockTypes, WorldChunk
+from and_beyond.server.world_gen.core import WorldGenerator
+from and_beyond.server.world_gen.perlin import PerlinNoise
+from and_beyond.server.world_gen.phase import AbstractPhase
+from and_beyond.utils import autoslots
+from and_beyond.world import BlockTypes, WorldChunk
 
 OCTAVES = 3
 X_SCALE = 150

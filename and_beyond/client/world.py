@@ -4,12 +4,12 @@ import math as pymath
 import pygame
 import pygame.draw
 import pygame.mouse
-from pw32.client import globals
-from pw32.client.consts import BLOCK_RENDER_SIZE
-from pw32.client.utils import world_to_screen
-from pw32.common import MAX_LOADED_CHUNKS
-from pw32.utils import autoslots
-from pw32.world import BlockTypes, WorldChunk
+from and_beyond.client import globals
+from and_beyond.client.consts import BLOCK_RENDER_SIZE
+from and_beyond.client.utils import world_to_screen
+from and_beyond.common import MAX_LOADED_CHUNKS
+from and_beyond.utils import autoslots
+from and_beyond.world import BlockTypes, WorldChunk
 from pygame import *
 from pygame.locals import *
 

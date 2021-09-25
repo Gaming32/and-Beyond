@@ -1,15 +1,15 @@
 # pyright: reportWildcardImportFromLibrary=false
 import math as pymath
 from math import inf
-from pw32.world import BlockTypes
+from and_beyond.world import BlockTypes
 
 import pygame
-from pw32.abstract_player import AbstractPlayer
-from pw32.client import globals
-from pw32.client.consts import BLOCK_RENDER_SIZE
-from pw32.client.utils import world_to_screen
-from pw32.packet import AddVelocityPacket, ChunkUpdatePacket, PlayerPositionPacket
-from pw32.utils import autoslots
+from and_beyond.abstract_player import AbstractPlayer
+from and_beyond.client import globals
+from and_beyond.client.consts import BLOCK_RENDER_SIZE
+from and_beyond.client.utils import world_to_screen
+from and_beyond.packet import AddVelocityPacket, ChunkUpdatePacket, PlayerPositionPacket
+from and_beyond.utils import autoslots
 from pygame import *
 from pygame.locals import *
 

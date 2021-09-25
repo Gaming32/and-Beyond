@@ -2,10 +2,10 @@
 import logging
 
 import pygame
-from pw32.client import globals
-from pw32.client.ui import Ui, UiButton, UiLabel
-from pw32.client.ui.options_menu import OptionsMenu
-from pw32.pipe_commands import PipeCommands
+from and_beyond.client import globals
+from and_beyond.client.ui import Ui, UiButton, UiLabel
+from and_beyond.client.ui.options_menu import OptionsMenu
+from and_beyond.pipe_commands import PipeCommands
 from pygame import *
 from pygame.locals import *
 

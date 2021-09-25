@@ -10,19 +10,19 @@ from asyncio.events import AbstractEventLoop
 from asyncio.streams import StreamReader, StreamWriter
 from typing import Any, BinaryIO, Optional
 
-from pw32.common import PORT
-from pw32.packet import ChunkUpdatePacket, read_packet, write_packet
-from pw32.pipe_commands import PipeCommands
-from pw32.server.client import Client
-from pw32.server.consts import GC_TIME_SECONDS
-from pw32.server.world_gen.core import WorldGenerator
-from pw32.world import BlockTypes, World
+from and_beyond.common import PORT
+from and_beyond.packet import ChunkUpdatePacket, read_packet, write_packet
+from and_beyond.pipe_commands import PipeCommands
+from and_beyond.server.client import Client
+from and_beyond.server.consts import GC_TIME_SECONDS
+from and_beyond.server.world_gen.core import WorldGenerator
+from and_beyond.world import BlockTypes, World
 
 if sys.platform == 'win32':
     import msvcrt
 
 import colorama
-from pw32.utils import autoslots, init_logger
+from and_beyond.utils import autoslots, init_logger
 
 
 @autoslots

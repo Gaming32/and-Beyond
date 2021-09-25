@@ -8,13 +8,13 @@ from asyncio.streams import StreamReader, StreamWriter
 from typing import Optional
 
 import janus
-from pw32.client import globals
-from pw32.client.globals import GameStatus
-from pw32.client.world import ClientChunk
-from pw32.common import PORT
-from pw32.packet import (AuthenticatePacket, ChunkPacket, ChunkUpdatePacket,
+from and_beyond.client import globals
+from and_beyond.client.globals import GameStatus
+from and_beyond.client.world import ClientChunk
+from and_beyond.common import PORT
+from and_beyond.packet import (AuthenticatePacket, ChunkPacket, ChunkUpdatePacket,
                          Packet, PacketType, PlayerPositionPacket, UnloadChunkPacket, read_packet, write_packet)
-from pw32.world import WorldChunk
+from and_beyond.world import WorldChunk
 
 
 class ServerConnection:

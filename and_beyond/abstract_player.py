@@ -1,9 +1,9 @@
 import abc
 import math
 
-from pw32.common import REACH_DISTANCE_SQ
-from pw32.utils import autoslots
-from pw32.world import WorldChunk
+from and_beyond.common import REACH_DISTANCE_SQ
+from and_beyond.utils import autoslots
+from and_beyond.world import WorldChunk
 
 
 @autoslots

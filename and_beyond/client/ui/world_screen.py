@@ -4,11 +4,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-from pw32.client import globals
-from pw32.client.globals import GameStatus
-from pw32.client.ui import Ui, UiButton, UiElement, UiLabel
-from pw32.client.ui.title_screen import TitleScreen
-from pw32.utils import DEBUG
+from and_beyond.client import globals
+from and_beyond.client.globals import GameStatus
+from and_beyond.client.ui import Ui, UiButton, UiLabel
+from and_beyond.client.ui.title_screen import TitleScreen
+from and_beyond.utils import DEBUG
 
 if sys.platform == 'win32':
     import msvcrt
@@ -59,7 +59,7 @@ class WorldScreen(Ui):
             os.set_inheritable(r, True)
             pipe = r
         globals.singleplayer_pipe = os.fdopen(w, 'wb')
-        server_args = [sys.executable, '-m', 'pw32.server', '--singleplayer', str(pipe), '--world', name]
+        server_args = [sys.executable, '-m', 'and_beyond.server', '--singleplayer', str(pipe), '--world', name]
         if DEBUG:
             server_args.append('--debug')
         globals.singleplayer_popen = subprocess.Popen(server_args, close_fds=False)

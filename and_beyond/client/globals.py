@@ -7,15 +7,15 @@ import sys
 from typing import TYPE_CHECKING, Any, BinaryIO, Optional, TypedDict
 
 import janus
-from pw32.client.player import ClientPlayer
-from pw32.client.world import ClientWorld
-from pw32.pipe_commands import PipeCommands
-from pw32.world import WorldChunk
+from and_beyond.client.player import ClientPlayer
+from and_beyond.client.world import ClientWorld
+from and_beyond.pipe_commands import PipeCommands
+from and_beyond.world import WorldChunk
 from pygame import Vector2
 
 if TYPE_CHECKING:
-    from pw32.client.server_connection import ServerConnection
-    from pw32.client.ui import Ui
+    from and_beyond.client.server_connection import ServerConnection
+    from and_beyond.client.ui import Ui
     from pygame.display import _VidInfo
 
 

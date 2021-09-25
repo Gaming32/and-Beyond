@@ -2,7 +2,7 @@ import math
 import random
 from typing import Callable, Optional
 
-from pw32.utils import autoslots
+from and_beyond.utils import autoslots
 
 PERM = [
     151, 160, 137, 91, 90, 15,

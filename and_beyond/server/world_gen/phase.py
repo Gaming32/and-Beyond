@@ -1,11 +1,11 @@
 import abc
 from typing import TYPE_CHECKING
 
-from pw32.utils import autoslots
+from and_beyond.utils import autoslots
 
 if TYPE_CHECKING:
-    from pw32.server.world_gen.core import WorldGenerator
-    from pw32.world import WorldChunk
+    from and_beyond.server.world_gen.core import WorldGenerator
+    from and_beyond.world import WorldChunk
 
 
 @autoslots

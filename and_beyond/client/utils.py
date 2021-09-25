@@ -1,5 +1,5 @@
-from pw32.client import globals
-from pw32.client.consts import BLOCK_RENDER_SIZE
+from and_beyond.client import globals
+from and_beyond.client.consts import BLOCK_RENDER_SIZE
 from pygame import Surface, Vector2
 
 

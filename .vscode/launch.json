@@ -33,7 +33,7 @@
             "name": "PW32: Server",
             "type": "python",
             "request": "launch",
-            "module": "pw32.server",
+            "module": "and_beyond.server",
             "args": [
                 "--debug"
             ]

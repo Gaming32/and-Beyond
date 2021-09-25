@@ -6,8 +6,8 @@ from asyncio import StreamReader
 from asyncio.streams import StreamWriter
 from typing import Optional, TypeVar
 
-from pw32.utils import autoslots
-from pw32.world import BlockTypes, WorldChunk
+from and_beyond.utils import autoslots
+from and_beyond.world import BlockTypes, WorldChunk
 
 T = TypeVar('T', bound=int)
 _D = struct.Struct('<d')

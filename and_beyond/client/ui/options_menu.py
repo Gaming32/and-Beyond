@@ -1,8 +1,8 @@
 # pyright: reportWildcardImportFromLibrary=false
 from typing import Any
 
-from pw32.client import globals
-from pw32.client.ui import (SliderCallback, Ui, UiButton, UiLabel, UiSlider,
+from and_beyond.client import globals
+from and_beyond.client.ui import (SliderCallback, Ui, UiButton, UiLabel, UiSlider,
                             UiToggleButton)
 from pygame import *
 from pygame.locals import *

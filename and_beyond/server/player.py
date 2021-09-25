@@ -4,14 +4,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import aiofiles
-from pw32.abstract_player import AbstractPlayer
-from pw32.common import REACH_DISTANCE_SQ
-from pw32.packet import PlayerPositionPacket, write_packet
-from pw32.physics import PlayerPhysics
-from pw32.utils import autoslots
+from and_beyond.abstract_player import AbstractPlayer
+from and_beyond.common import REACH_DISTANCE_SQ
+from and_beyond.packet import PlayerPositionPacket, write_packet
+from and_beyond.physics import PlayerPhysics
+from and_beyond.utils import autoslots
 
 if TYPE_CHECKING:
-    from pw32.server.client import Client
+    from and_beyond.server.client import Client
 
 
 @autoslots

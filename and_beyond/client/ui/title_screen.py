@@ -1,12 +1,12 @@
 # pyright: reportWildcardImportFromLibrary=false
 
 import pygame
-from pw32.client import globals
-from pw32.client.globals import GameStatus
-from pw32.client.server_connection import ServerConnection
-from pw32.client.ui import Ui, UiButton, UiLabel
-from pw32.client.ui.options_menu import OptionsMenu
-from pw32.utils import DEBUG
+from and_beyond.client import globals
+from and_beyond.client.globals import GameStatus
+from and_beyond.client.server_connection import ServerConnection
+from and_beyond.client.ui import Ui, UiButton, UiLabel
+from and_beyond.client.ui.options_menu import OptionsMenu
+from and_beyond.utils import DEBUG
 from pygame import *
 from pygame.locals import *
 
@@ -46,4 +46,4 @@ class TitleScreen(Ui):
         globals.running = False
 
 
-from pw32.client.ui.world_screen import WorldScreen
+from and_beyond.client.ui.world_screen import WorldScreen

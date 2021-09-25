@@ -11,7 +11,7 @@ from typing import ByteString, Optional, TypedDict, TypeVar, Union
 
 import aiofiles
 
-from pw32.utils import MaxSizedDict, MutableView, View, autoslots
+from and_beyond.utils import MaxSizedDict, MutableView, View, autoslots
 
 ALLOWED_FILE_CHARS = ' ._'
 UINT32_MAX = 2 ** 32 - 1
@@ -350,4 +350,4 @@ class BlockTypes(enum.IntEnum):
     GRASS = 3
 
 
-from pw32.server.world_gen.core import WorldGenerator
+from and_beyond.server.world_gen.core import WorldGenerator

@@ -1,9 +1,9 @@
 import math
 
-from pw32.abstract_player import AbstractPlayer
-from pw32.common import GRAVITY
-from pw32.utils import autoslots
-from pw32.world import BlockTypes
+from and_beyond.abstract_player import AbstractPlayer
+from and_beyond.common import GRAVITY
+from and_beyond.utils import autoslots
+from and_beyond.world import BlockTypes
 
 EPSILON = 0.001
 

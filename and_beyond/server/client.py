@@ -7,18 +7,18 @@ from asyncio.events import AbstractEventLoop
 from asyncio.exceptions import CancelledError
 from typing import TYPE_CHECKING, Optional
 
-from pw32.common import (MAX_LOADED_CHUNKS, MOVE_SPEED_CAP_SQ, VIEW_DISTANCE,
+from and_beyond.common import (MAX_LOADED_CHUNKS, MOVE_SPEED_CAP_SQ, VIEW_DISTANCE,
                          VIEW_DISTANCE_BOX)
-from pw32.packet import (AddVelocityPacket, AuthenticatePacket, ChunkPacket,
+from and_beyond.packet import (AddVelocityPacket, AuthenticatePacket, ChunkPacket,
                          ChunkUpdatePacket, DisconnectPacket, Packet,
                          PlayerPositionPacket, UnloadChunkPacket, read_packet,
                          write_packet)
-from pw32.server.player import Player
-from pw32.utils import spiral_loop_async, spiral_loop_gen
-from pw32.world import BlockTypes, WorldChunk
+from and_beyond.server.player import Player
+from and_beyond.utils import spiral_loop_async, spiral_loop_gen
+from and_beyond.world import BlockTypes, WorldChunk
 
 if TYPE_CHECKING:
-    from pw32.server.main import AsyncServer
+    from and_beyond.server.main import AsyncServer
 
 
 class Client:

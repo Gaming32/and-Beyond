@@ -6,9 +6,9 @@ import pygame
 import pygame.draw
 import pygame.font
 import pygame.mouse
-from pw32.client import globals
-from pw32.client.assets import GAME_FONT
-from pw32.client.consts import UI_BG, UI_FG
+from and_beyond.client import globals
+from and_beyond.client.assets import GAME_FONT
+from and_beyond.client.consts import UI_BG, UI_FG
 from pygame import *
 from pygame.locals import *
 
