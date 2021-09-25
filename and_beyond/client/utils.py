@@ -16,3 +16,7 @@ def screen_to_world(pos: Vector2, surf: Surface) -> tuple[float, float]:
     pos -= Vector2(surf.get_size()) / 2 # type: ignore
     pos = pos / BLOCK_RENDER_SIZE + globals.camera # type: ignore
     return pos.x, pos.y - 1
+
+
+def lerp(a: float, b: float, f: float) -> float:
+    return a + f * (b - a)
