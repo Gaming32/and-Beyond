@@ -2,6 +2,7 @@
 import asyncio
 import logging
 import sys
+import time as pytime
 
 import janus
 import pygame
@@ -10,26 +11,32 @@ import pygame.draw
 import pygame.event
 import pygame.mouse
 import pygame.time
-from and_beyond.client import globals
-from and_beyond.client.assets import GAME_FONT
-from and_beyond.client.consts import UI_FG
-from and_beyond.client.globals import ConfigManager, GameStatus
-from and_beyond.client.ui.pause_menu import PauseMenu
-from and_beyond.client.player import ClientPlayer
-from and_beyond.client.server_connection import ServerConnection
-from and_beyond.client.ui.title_screen import TitleScreen
-from and_beyond.client.utils import screen_to_world
-from and_beyond.client.world import ClientWorld
-from and_beyond.common import JUMP_SPEED, MOVE_SPEED
-from and_beyond.packet import PlayerPositionPacket
 from and_beyond.utils import init_logger
-from pygame import *
-from pygame.locals import *
 
 init_logger('client.log')
 logging.info('Starting client...')
 pygame.init()
 logging.info('Pygame loaded')
+logging.info('Loading assets...')
+start = pytime.perf_counter()
+from and_beyond.client.assets import ASSET_COUNT, GAME_FONT, transform_assets
+
+end = pytime.perf_counter()
+logging.info('Loaded %i assets in %f seconds', ASSET_COUNT, end - start)
+
+from and_beyond.client import globals
+from and_beyond.client.consts import UI_FG
+from and_beyond.client.globals import ConfigManager, GameStatus
+from and_beyond.client.player import ClientPlayer
+from and_beyond.client.server_connection import ServerConnection
+from and_beyond.client.ui.pause_menu import PauseMenu
+from and_beyond.client.ui.title_screen import TitleScreen
+from and_beyond.client.utils import screen_to_world
+from and_beyond.client.world import ClientWorld
+from and_beyond.common import JUMP_SPEED, MOVE_SPEED
+from and_beyond.packet import PlayerPositionPacket
+from pygame import *
+from pygame.locals import *
 
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -58,6 +65,12 @@ globals.fullscreen = config.config['fullscreen']
 old_fullscreen = globals.fullscreen
 screen = reset_window()
 
+logging.info('Performing asset transformations...')
+start = pytime.perf_counter()
+count = transform_assets()
+end = pytime.perf_counter()
+logging.info('Transformed %i assets in %f seconds', count, end - start)
+
 title = TitleScreen()
 pause_menu = PauseMenu()
 
@@ -70,6 +83,7 @@ move_right = False
 move_up = False
 globals.game_status = GameStatus.MAIN_MENU
 globals.running = True
+globals.frame = 0
 clock = pygame.time.Clock()
 while globals.running:
     try:
@@ -147,6 +161,7 @@ while globals.running:
                 pause_menu.draw_and_call(screen)
 
         pygame.display.update()
+        globals.frame += 1
     except BaseException as e:
         if isinstance(e, Exception):
             logging.critical('Game crashed hard with exception', exc_info=True)

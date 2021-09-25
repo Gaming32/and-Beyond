@@ -86,6 +86,7 @@ class GameStatus(enum.IntEnum):
 config: ConfigManager
 running: bool
 display_info: '_VidInfo'
+frame: int
 
 fullscreen: bool
 w_width: int

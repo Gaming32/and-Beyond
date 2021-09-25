@@ -3,8 +3,10 @@ import math as pymath
 from math import inf
 
 import pygame
+import pygame.time
 from and_beyond.abstract_player import AbstractPlayer
 from and_beyond.client import globals
+from and_beyond.client.assets import PERSON_SPRITES
 from and_beyond.client.consts import BLOCK_RENDER_SIZE
 from and_beyond.client.utils import lerp, world_to_screen
 from and_beyond.packet import (AddVelocityPacket, ChunkUpdatePacket,
@@ -43,6 +45,8 @@ class ClientPlayer(AbstractPlayer):
             self._render_other()
         globals.camera = Vector2(self.render_x, self.render_y + 3)
         draw_pos = world_to_screen(self.render_x, self.render_y + 1, surf)
+        # image = PERSON_SPRITES[(pygame.time.get_ticks() // 200) & 1]
+        # surf.blit(image, Rect((draw_pos.x, draw_pos.y + BLOCK_RENDER_SIZE / 2), (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE * 2)))
         surf.fill((128, 0, 128), Rect(draw_pos, (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE * 2)))
 
     def _render_local(self) -> None:
