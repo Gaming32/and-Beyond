@@ -7,11 +7,14 @@ from functools import partial
 from json.decoder import JSONDecodeError
 from mmap import ACCESS_WRITE, mmap
 from pathlib import Path
-from typing import ByteString, Optional, TypedDict, TypeVar, Union
+from typing import TYPE_CHECKING, ByteString, Optional, TypedDict, Union
 
 import aiofiles
 
-from and_beyond.utils import MaxSizedDict, MutableView, View, autoslots
+from and_beyond.utils import MaxSizedDict, autoslots
+
+if TYPE_CHECKING:
+    from and_beyond.server.world_gen.core import WorldGenerator
 
 ALLOWED_FILE_CHARS = ' ._'
 UINT32_MAX = 2 ** 32 - 1
@@ -349,6 +352,3 @@ class BlockTypes(enum.IntEnum):
     STONE = 1
     DIRT = 2
     GRASS = 3
-
-
-from and_beyond.server.world_gen.core import WorldGenerator

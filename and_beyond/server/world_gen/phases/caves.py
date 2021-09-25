@@ -1,10 +1,10 @@
 import random
 from typing import TYPE_CHECKING
 
-from opensimplex import OpenSimplex
 from and_beyond.server.world_gen.phase import AbstractPhase
 from and_beyond.utils import autoslots
 from and_beyond.world import BlockTypes, WorldChunk
+from opensimplex import OpenSimplex
 
 if TYPE_CHECKING:
     from and_beyond.server.world_gen.core import WorldGenerator

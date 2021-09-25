@@ -1,16 +1,13 @@
 import enum
 import json
 import logging
-import socket
 import subprocess
 import sys
-from typing import TYPE_CHECKING, Any, BinaryIO, Optional, TypedDict
+from typing import TYPE_CHECKING, BinaryIO, Optional, TypedDict
 
-import janus
 from and_beyond.client.player import ClientPlayer
 from and_beyond.client.world import ClientWorld
 from and_beyond.pipe_commands import PipeCommands
-from and_beyond.world import WorldChunk
 from pygame import Vector2
 
 if TYPE_CHECKING:

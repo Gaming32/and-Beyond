@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import math
-import socket
 import threading
 import uuid
 from asyncio.exceptions import CancelledError
@@ -14,10 +13,8 @@ from and_beyond.client.globals import GameStatus
 from and_beyond.client.world import ClientChunk
 from and_beyond.common import PORT
 from and_beyond.packet import (AuthenticatePacket, ChunkPacket,
-                               ChunkUpdatePacket, Packet, PacketType,
-                               PlayerPositionPacket, UnloadChunkPacket,
-                               read_packet, write_packet)
-from and_beyond.world import WorldChunk
+                               ChunkUpdatePacket, Packet, PlayerPositionPacket,
+                               UnloadChunkPacket, read_packet, write_packet)
 
 
 class ServerConnection:

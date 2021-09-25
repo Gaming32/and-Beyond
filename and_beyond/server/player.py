@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any
 
 import aiofiles
 from and_beyond.abstract_player import AbstractPlayer
-from and_beyond.common import REACH_DISTANCE_SQ
 from and_beyond.packet import PlayerPositionPacket, write_packet
 from and_beyond.physics import PlayerPhysics
 from and_beyond.utils import autoslots

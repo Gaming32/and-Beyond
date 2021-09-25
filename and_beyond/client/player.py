@@ -7,7 +7,6 @@ import pygame.time
 import pygame.transform
 from and_beyond.abstract_player import AbstractPlayer
 from and_beyond.client import globals
-from and_beyond.client.assets import BLOCK_SPRITES, PERSON_SPRITES
 from and_beyond.client.consts import BLOCK_RENDER_SIZE
 from and_beyond.client.utils import lerp, world_to_screen
 from and_beyond.client.world import get_block_texture

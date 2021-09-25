@@ -5,7 +5,6 @@ import sys
 import time as pytime
 from math import inf
 
-import janus
 import pygame
 import pygame.display
 import pygame.draw
@@ -31,13 +30,11 @@ from and_beyond.client import globals
 from and_beyond.client.consts import UI_FG
 from and_beyond.client.globals import ConfigManager, GameStatus
 from and_beyond.client.player import ClientPlayer
-from and_beyond.client.server_connection import ServerConnection
 from and_beyond.client.ui.pause_menu import PauseMenu
 from and_beyond.client.ui.title_screen import TitleScreen
 from and_beyond.client.utils import screen_to_world
 from and_beyond.client.world import ClientWorld
 from and_beyond.common import JUMP_SPEED, MOVE_SPEED
-from and_beyond.packet import PlayerPositionPacket
 from pygame import *
 from pygame.locals import *
 

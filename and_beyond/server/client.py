@@ -4,17 +4,15 @@ import time
 import uuid
 from asyncio import StreamReader, StreamWriter
 from asyncio.events import AbstractEventLoop
-from asyncio.exceptions import CancelledError
 from typing import TYPE_CHECKING, Optional
 
-from and_beyond.common import (MAX_LOADED_CHUNKS, MOVE_SPEED_CAP_SQ, VIEW_DISTANCE,
-                         VIEW_DISTANCE_BOX)
-from and_beyond.packet import (AddVelocityPacket, AuthenticatePacket, ChunkPacket,
-                         ChunkUpdatePacket, DisconnectPacket, Packet,
-                         PlayerPositionPacket, UnloadChunkPacket, read_packet,
-                         write_packet)
+from and_beyond.common import MOVE_SPEED_CAP_SQ, VIEW_DISTANCE_BOX
+from and_beyond.packet import (AddVelocityPacket, AuthenticatePacket,
+                               ChunkPacket, ChunkUpdatePacket,
+                               DisconnectPacket, Packet, PlayerPositionPacket,
+                               UnloadChunkPacket, read_packet, write_packet)
 from and_beyond.server.player import Player
-from and_beyond.utils import spiral_loop_async, spiral_loop_gen
+from and_beyond.utils import spiral_loop_gen
 from and_beyond.world import BlockTypes, WorldChunk
 
 if TYPE_CHECKING:

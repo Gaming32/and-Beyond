@@ -8,10 +8,10 @@ import time
 from asyncio.base_events import Server
 from asyncio.events import AbstractEventLoop
 from asyncio.streams import StreamReader, StreamWriter
-from typing import Any, BinaryIO, Optional
+from typing import BinaryIO, Optional
 
 from and_beyond.common import PORT
-from and_beyond.packet import ChunkUpdatePacket, read_packet, write_packet
+from and_beyond.packet import ChunkUpdatePacket, write_packet
 from and_beyond.pipe_commands import PipeCommands
 from and_beyond.server.client import Client
 from and_beyond.server.consts import GC_TIME_SECONDS

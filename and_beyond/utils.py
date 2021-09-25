@@ -1,8 +1,7 @@
 import logging
 import sys
-from collections.abc import Collection
-from typing import (Any, Awaitable, Callable, Coroutine, Generator, Generic, MutableSequence, Optional,
-                    Sequence, TypeVar, Union)
+from typing import (Any, Awaitable, Callable, Generator, Generic,
+                    MutableSequence, Optional, Sequence, TypeVar, Union)
 
 T = TypeVar('T', bound=type)
 E = TypeVar('E')

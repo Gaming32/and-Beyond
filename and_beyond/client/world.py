@@ -10,7 +10,6 @@ from and_beyond.client.assets import (BLOCK_SPRITES, MISSING_TEXTURE,
                                       ROTATABLE_BLOCKS, SELECTED_ITEM_BG)
 from and_beyond.client.consts import BLOCK_RENDER_SIZE
 from and_beyond.client.utils import world_to_screen
-from and_beyond.common import MAX_LOADED_CHUNKS
 from and_beyond.utils import autoslots
 from and_beyond.world import BlockTypes, WorldChunk
 from pygame import *
