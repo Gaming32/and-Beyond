@@ -4,6 +4,7 @@ from typing import Callable
 
 import pygame
 from pw32.client import button_ui, globals
+from pw32.client.options_menu import OptionsMenu
 from pw32.pipe_commands import PipeCommands
 from pygame import *
 from pygame.locals import *
@@ -15,7 +16,7 @@ class PauseMenu:
     def __init__(self) -> None:
         self.buttons = [
             ('Continue Game', self.continue_game),
-            # ('Options', self.show_options),
+            ('Options', self.show_options),
             ('Save and Quit', self.save_and_quit),
         ]
 
@@ -40,6 +41,9 @@ class PauseMenu:
             globals.singleplayer_pipe.write(PipeCommands.UNPAUSE.to_bytes(2, 'little'))
             globals.singleplayer_pipe.flush()
         globals.paused = False
+
+    def show_options(self) -> None:
+        globals.ui_override = OptionsMenu()
 
     def save_and_quit(self) -> None:
         globals.game_status = globals.GameStatus.STOPPING

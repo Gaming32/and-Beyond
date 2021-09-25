@@ -16,6 +16,7 @@ from pygame.locals import *
 
 ButtonCallback = Callable[[], Any]
 ToggleButtonCallback = Callable[[bool], Any]
+SliderCallback = Callable[[int], Any]
 
 
 class UiElement(abc.ABC):
@@ -83,6 +84,53 @@ class UiToggleButton(UiButton):
     def toggled(self, toggled: bool) -> None:
         self._toggled = toggled
         self._set_label()
+
+
+class UiSlider(UiElement):
+    label: str
+    min: int
+    max: int
+    value: int
+    callback: SliderCallback
+
+    def __init__(self, label: str, callback: SliderCallback, min: int, max: int, value: int = None) -> None:
+        if value is None:
+            value = min
+        self.label = label
+        self.min = min
+        self.max = max
+        self.value = value
+        self.callback = callback
+
+    def draw_and_call_text(self, surf: Surface, at: Vector2, pressed: list[bool], released: list[bool], text: str) -> Any:
+        area = Rect(at, (BUTTON_WIDTH, BUTTON_HEIGHT))
+        pygame.draw.rect(surf, UI_BG, area, 0, 5)
+        text_render = GAME_FONT.render(text, True, UI_FG)
+        surf.blit(
+            text_render,
+            (
+                area.x + area.width // 2 - text_render.get_width() // 2,
+                area.y + area.height // 2 - text_render.get_height() // 2,
+            )
+        )
+        if area.collidepoint(globals.mouse_screen): # type: ignore
+            pygame.draw.rect(surf, UI_FG, area, 5, 5)
+            if pressed[0]:
+                self.value = self._screen_to_value(int(globals.mouse_screen.x - area.x))
+                self.callback(self.value)
+        surf.fill(UI_FG, Rect(area.x + self._value_to_screen() - 2, area.y, 5, BUTTON_HEIGHT))
+
+    def draw_and_call(self, surf: Surface, at: Vector2, preseed: list[bool], released: list[bool]) -> Any:
+        return self.draw_and_call_text(surf, at, preseed, released, f'{self.label}: {self.value}')
+
+    def _map_01(self) -> float:
+        return (self.value - self.min) / (self.max - self.min)
+
+    def _value_to_screen(self) -> int:
+        return int(self._map_01() * BUTTON_WIDTH)
+
+    def _screen_to_value(self, screen: int) -> int:
+        return int((screen / BUTTON_WIDTH) * (self.max - self.min) + self.min)
 
 
 class Ui:

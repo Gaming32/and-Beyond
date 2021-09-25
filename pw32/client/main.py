@@ -73,7 +73,7 @@ globals.running = True
 clock = pygame.time.Clock()
 while globals.running:
     try:
-        globals.delta = clock.tick(75) / 1000
+        globals.delta = clock.tick(globals.config.config['max_framerate']) / 1000
         globals.released_mouse_buttons = [False] * 5
         if globals.fullscreen != old_fullscreen:
             logging.debug('Switching fullscreen mode...')
@@ -147,7 +147,7 @@ while globals.running:
                 pause_menu.render(screen)
 
         pygame.display.update()
-    except KeyboardInterrupt:
+    except:
         globals.running = False
 
 
