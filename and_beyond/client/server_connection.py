@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import math
 import socket
 import threading
 import uuid
@@ -12,8 +13,10 @@ from and_beyond.client import globals
 from and_beyond.client.globals import GameStatus
 from and_beyond.client.world import ClientChunk
 from and_beyond.common import PORT
-from and_beyond.packet import (AuthenticatePacket, ChunkPacket, ChunkUpdatePacket,
-                         Packet, PacketType, PlayerPositionPacket, UnloadChunkPacket, read_packet, write_packet)
+from and_beyond.packet import (AuthenticatePacket, ChunkPacket,
+                               ChunkUpdatePacket, Packet, PacketType,
+                               PlayerPositionPacket, UnloadChunkPacket,
+                               read_packet, write_packet)
 from and_beyond.world import WorldChunk
 
 
@@ -101,10 +104,13 @@ class ServerConnection:
             raise
 
     async def shutdown(self) -> None:
-        globals.local_world.unload()
+        logging.info('Disconnecting from server...')
         if self.send_packets_task is not None:
             self.send_packets_task.cancel()
         self.writer.close()
+        globals.local_world.unload()
+        globals.player.x = globals.player.render_x = math.inf
+        globals.player.y = globals.player.render_y = math.inf
         await self.writer.wait_closed()
 
     def write_packet_sync(self, packet: Packet) -> None:

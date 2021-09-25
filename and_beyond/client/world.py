@@ -133,14 +133,7 @@ class ClientChunk(WorldChunk):
                             tex = random.choice(BLOCK_SPRITES[block - 1])
                         else:
                             tex = BLOCK_SPRITES[block - 1][0]
-                    # elif block == BlockTypes.DIRT:
-                    #     color = (155, 118, 83) # Dirt color
-                    # elif block == BlockTypes.GRASS:
-                    #     color = (65, 152, 10) # Grass color
-                    # elif block == BlockTypes.STONE:
-                    #     color = (119, 119, 119) # Stone color
                     rpos = Vector2(x, 15 - y) * BLOCK_RENDER_SIZE
                     self.surf.blit(tex, Rect(rpos, (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)))
-                    # self.surf.fill(color, Rect(rpos, (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)))
            self.dirty = False
         return self.surf

@@ -127,13 +127,6 @@ while globals.running:
 
         globals.mouse_screen = Vector2(pygame.mouse.get_pos())
 
-        if globals.game_connection is not None and not globals.paused:
-            if move_left ^ move_right:
-                globals.player.add_velocity(x=MOVE_SPEED * globals.delta * (move_right - move_left))
-            if move_up:
-                globals.player.add_velocity(y=JUMP_SPEED)
-                move_up = False
-
         if globals.game_status == GameStatus.MAIN_MENU:
             title.draw_and_call(screen)
         elif globals.game_status in (GameStatus.CONNECTING, GameStatus.STOPPING):
@@ -150,8 +143,16 @@ while globals.running:
                             logging.warn('Singleplayer server stopped with exit code %i', returncode)
                         globals.singleplayer_popen = None
                         globals.game_status = GameStatus.MAIN_MENU
+                else:
+                    globals.game_status = GameStatus.MAIN_MENU
         else:
             globals.mouse_world = screen_to_world(globals.mouse_screen, screen)
+            if globals.game_connection is not None and not globals.paused:
+                if move_left ^ move_right:
+                    globals.player.add_velocity(x=MOVE_SPEED * globals.delta * (move_right - move_left))
+                if move_up:
+                    globals.player.add_velocity(y=JUMP_SPEED)
+                    move_up = False
             globals.local_world.tick(screen)
             globals.player.render(screen)
             text_render = GAME_FONT.render(str(1 / globals.delta), True, UI_FG)

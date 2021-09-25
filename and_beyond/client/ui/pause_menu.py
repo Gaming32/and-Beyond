@@ -49,7 +49,9 @@ class PauseMenu(Ui):
         globals.connecting_status = 'Disconnecting'
         if globals.game_connection is not None:
             globals.game_connection.stop()
+            globals.game_connection = None
         if globals.singleplayer_pipe is not None:
             globals.connecting_status = 'Stopping singleplayer server'
             globals.close_singleplayer_server(False)
+            globals.singleplayer_pipe = None
         globals.paused = False
