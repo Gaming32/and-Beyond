@@ -14,10 +14,10 @@ from pw32.client import globals
 from pw32.client.assets import GAME_FONT
 from pw32.client.consts import UI_FG
 from pw32.client.globals import ConfigManager, GameStatus
-from pw32.client.pause_menu import PauseMenu
+from pw32.client.ui.pause_menu import PauseMenu
 from pw32.client.player import ClientPlayer
 from pw32.client.server_connection import ServerConnection
-from pw32.client.title import TitleScreen
+from pw32.client.ui.title_screen import TitleScreen
 from pw32.client.utils import screen_to_world
 from pw32.client.world import ClientWorld
 from pw32.common import JUMP_SPEED, MOVE_SPEED
@@ -121,7 +121,7 @@ while globals.running:
                 move_up = False
 
         if globals.game_status == GameStatus.MAIN_MENU:
-            title.render(screen)
+            title.draw_and_call(screen)
         elif globals.game_status in (GameStatus.CONNECTING, GameStatus.STOPPING):
             screen.fill((0, 0, 0))
             text_render = GAME_FONT.render(globals.connecting_status, True, UI_FG)
@@ -144,7 +144,7 @@ while globals.running:
             screen.fill((0, 0, 0), text_render.get_rect())
             screen.blit(text_render, text_render.get_rect())
             if globals.paused:
-                pause_menu.render(screen)
+                pause_menu.draw_and_call(screen)
 
         pygame.display.update()
     except:

@@ -8,11 +8,14 @@ import pygame.font
 import pygame.mouse
 from pw32.client import globals
 from pw32.client.assets import GAME_FONT
-from pw32.client.button_ui import (BUTTON_HEIGHT, BUTTON_HEIGHT_PAD,
-                                   BUTTON_WIDTH)
 from pw32.client.consts import UI_BG, UI_FG
 from pygame import *
 from pygame.locals import *
+
+BUTTON_WIDTH = 300
+BUTTON_HEIGHT = 50
+
+BUTTON_HEIGHT_PAD = BUTTON_HEIGHT + 25
 
 ButtonCallback = Callable[[], Any]
 ToggleButtonCallback = Callable[[bool], Any]
@@ -165,7 +168,7 @@ class Ui:
         if globals.ui_override is self:
             globals.ui_override = self.parent
 
-    def draw_and_call(self, surf: Surface):
+    def draw_and_call(self, surf: Surface) -> None:
         pressed = list(pygame.mouse.get_pressed(5))
         released = globals.released_mouse_buttons
 

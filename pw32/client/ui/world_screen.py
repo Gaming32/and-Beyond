@@ -6,15 +6,14 @@ from pathlib import Path
 
 from pw32.client import globals
 from pw32.client.globals import GameStatus
-from pw32.client.title import TitleScreen
 from pw32.client.ui import Ui, UiButton, UiElement, UiLabel
+from pw32.client.ui.title_screen import TitleScreen
 from pw32.utils import DEBUG
 
 if sys.platform == 'win32':
     import msvcrt
 
     import _winapi
-
 
 
 class WorldScreen(Ui):

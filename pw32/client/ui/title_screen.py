@@ -1,36 +1,31 @@
 # pyright: reportWildcardImportFromLibrary=false
-import logging
-import os
-import subprocess
-import sys
-from typing import Callable
 
 import pygame
-from pw32.client import button_ui, globals
+from pw32.client import globals
 from pw32.client.globals import GameStatus
 from pw32.client.server_connection import ServerConnection
-from pw32.client.ui_menus.options_menu import OptionsMenu
+from pw32.client.ui import Ui, UiButton, UiLabel
+from pw32.client.ui.options_menu import OptionsMenu
 from pw32.utils import DEBUG
 from pygame import *
 from pygame.locals import *
 
 
-class TitleScreen:
-    buttons: button_ui.Buttons
-
+class TitleScreen(Ui):
     def __init__(self) -> None:
-        self.buttons = [
-            ('Singleplayer', self.singleplayer),
-            # ('Multiplayer', self.multiplayer),
-            ('Options', self.show_options),
-            ('Quit', self.quit),
-        ]
+        super().__init__([
+            UiLabel('...and BEYOND'),
+            UiButton('Singleplayer', self.singleplayer),
+            # UiButton('Multiplayer', self.multiplayer),
+            UiButton('Options', self.show_options),
+            UiButton('Quit', self.quit),
+        ])
 
-    def render(self, surf: Surface) -> None:
+    def draw_and_call(self, surf: Surface) -> None:
         surf.fill((0, 0, 0))
         if globals.ui_override is not None:
             return globals.ui_override.draw_and_call(surf)
-        button_ui.draw_buttons_and_call(surf, self.buttons)
+        return super().draw_and_call(surf)
 
     def singleplayer(self) -> None:
         globals.ui_override = WorldScreen()
@@ -51,4 +46,4 @@ class TitleScreen:
         globals.running = False
 
 
-from pw32.client.ui_menus.world_screen import WorldScreen
+from pw32.client.ui.world_screen import WorldScreen

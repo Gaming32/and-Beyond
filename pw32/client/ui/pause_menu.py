@@ -1,32 +1,31 @@
 # pyright: reportWildcardImportFromLibrary=false
 import logging
-from typing import Callable
 
 import pygame
-from pw32.client import button_ui, globals
-from pw32.client.ui_menus.options_menu import OptionsMenu
+from pw32.client import globals
+from pw32.client.ui import Ui, UiButton, UiLabel
+from pw32.client.ui.options_menu import OptionsMenu
 from pw32.pipe_commands import PipeCommands
 from pygame import *
 from pygame.locals import *
 
 
-class PauseMenu:
-    buttons: button_ui.Buttons
-
+class PauseMenu(Ui):
     def __init__(self) -> None:
-        self.buttons = [
-            ('Continue Game', self.continue_game),
-            ('Options', self.show_options),
-            ('Save and Quit', self.save_and_quit),
-        ]
+        super().__init__([
+            UiLabel('Game Paused'),
+            UiButton('Continue Game', self.continue_game),
+            UiButton('Options', self.show_options),
+            UiButton('Save and Quit', self.save_and_quit),
+        ])
 
-    def render(self, surf: Surface) -> None:
+    def draw_and_call(self, surf: Surface):
         gray = Surface(surf.get_size()).convert_alpha()
         gray.fill((0, 0, 0, 128))
         surf.blit(gray, gray.get_rect())
         if globals.ui_override is not None:
             return globals.ui_override.draw_and_call(surf)
-        button_ui.draw_buttons_and_call(surf, self.buttons)
+        return super().draw_and_call(surf)
 
     def pause_game(self) -> None:
         logging.debug('Sending pause command...')
