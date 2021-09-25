@@ -51,8 +51,7 @@ class Player(AbstractPlayer):
         else:
             self.x = spawn_x
             self.y = spawn_y
-        packet = PlayerPositionPacket(self.x, self.y)
-        await write_packet(packet, self.client.writer)
+        await self.send_position()
 
     async def save(self) -> None:
         data = {
@@ -76,5 +75,5 @@ class Player(AbstractPlayer):
         await self.send_position()
 
     async def send_position(self) -> None:
-        packet = PlayerPositionPacket(self.x, self.y)
+        packet = PlayerPositionPacket(self.x, self.y, self.physics.x_velocity, self.physics.y_velocity)
         await write_packet(packet, self.client.writer)

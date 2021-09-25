@@ -103,6 +103,9 @@ while globals.running:
                         pause_menu.continue_game()
                     else:
                         pause_menu.pause_game()
+                elif event.key == K_F4:
+                    globals.player.x = globals.player.last_x
+                    globals.player.y = globals.player.last_y
             elif event.type == KEYUP:
                 if event.key == K_d:
                     move_right = False
@@ -115,7 +118,7 @@ while globals.running:
 
         if globals.game_connection is not None and not globals.paused:
             if move_left ^ move_right:
-                globals.player.add_velocity(x=MOVE_SPEED * globals.delta * (move_right - move_left))
+                globals.player.add_velocity(x=MOVE_SPEED * (move_right - move_left))
             if move_up:
                 globals.player.add_velocity(y=JUMP_SPEED)
                 move_up = False

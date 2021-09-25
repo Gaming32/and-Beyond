@@ -86,8 +86,10 @@ class ServerConnection:
             elif isinstance(packet, PlayerPositionPacket):
                 # globals.player.last_x = globals.player.render_x = globals.player.x
                 # globals.player.last_y = globals.player.render_y = globals.player.y
-                globals.player.x = packet.x
-                globals.player.y = packet.y
+                globals.player.last_x = packet.x
+                globals.player.last_y = packet.y
+                # globals.player.physics.x_velocity = packet.x_vel
+                # globals.player.physics.y_velocity = packet.y_vel
 
     async def send_outgoing_packets(self) -> None:
         self.outgoing_queue = janus.Queue()

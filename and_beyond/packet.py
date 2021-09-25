@@ -217,18 +217,26 @@ class PlayerPositionPacket(Packet):
     type = PacketType.PLAYER_POS
     x: float
     y: float
+    x_vel: float
+    y_vel: float
 
-    def __init__(self, x: float = 0, y: float = 0) -> None:
+    def __init__(self, x: float = 0, y: float = 0, x_veL: float = 0, y_vel: float = 0) -> None:
         self.x = x
         self.y = y
+        self.x_vel = x_veL
+        self.y_vel = y_vel
 
     async def read(self, reader: StreamReader) -> None:
         self.x = await _read_double(reader)
         self.y = await _read_double(reader)
+        self.x_vel = await _read_double(reader)
+        self.y_vel = await _read_double(reader)
 
     def write(self, writer: StreamWriter) -> None:
         _write_double(self.x, writer)
         _write_double(self.y, writer)
+        _write_double(self.x_vel, writer)
+        _write_double(self.y_vel, writer)
 
 
 @autoslots

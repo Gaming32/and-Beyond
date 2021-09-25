@@ -159,13 +159,8 @@ class Client:
                     new_y = prev_y + packet.y
                     vel = new_x * new_x + new_y * new_y
                     if vel > MOVE_SPEED_CAP_SQ:
-                        packet.x = prev_x
-                        packet.y = prev_y
                         logging.warn('Player %s moved too quickly! %f, %f', self, new_x, new_y)
-                        packet = PlayerPositionPacket(self.player.x, self.player.y)
-                        self.player.physics.x_velocity = 0
-                        self.player.physics.y_velocity = 0
-                        await write_packet(packet, self.writer)
+                        await self.player.send_position()
                     else:
                         self.player.physics.x_velocity = new_x
                         self.player.physics.y_velocity = new_y

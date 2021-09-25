@@ -1,3 +1,4 @@
+import logging
 import math
 
 from and_beyond.abstract_player import AbstractPlayer
@@ -6,6 +7,8 @@ from and_beyond.utils import autoslots
 from and_beyond.world import BlockTypes
 
 EPSILON = 0.001
+FRICTION = 0.4
+CLIENT_FRICTION = 0.7106
 
 
 @autoslots
@@ -18,6 +21,7 @@ class PlayerPhysics:
     fix_dx: float
     fix_dy: float
     air_time: int
+    tick_time: float
 
     def __init__(self, player: AbstractPlayer) -> None:
         self.x_velocity = 0
@@ -26,26 +30,34 @@ class PlayerPhysics:
         self.dirty = True
         self.sequential_fixes = 0
         self.air_time = 0
+        self.tick_time = 0
 
     def tick(self, delta: float) -> None:
         old_x = self.player.x
         old_y = self.player.y
         self.y_velocity += GRAVITY * delta
-        if self.x_velocity > 0.1 or self.x_velocity < -0.1:
-            self.x_velocity *= 0.7
-        else:
+        self.tick_time += delta
+        # if delta == 0.05:
+        #     self.x_velocity *= FRICTION
+        # else:
+        #     self.x_velocity *= CLIENT_FRICTION
+        while self.tick_time >= 0.1:
+            if self.x_velocity > 0.1 or self.x_velocity < -0.1:
+                self.x_velocity *= 0.4
+            else:
+                self.x_velocity = 0
+            self.tick_time -= 0.1
+        self.player.x += self.x_velocity * delta
+        if self.fix_collision_in_direction(self.x_velocity * delta, 0):
             self.x_velocity = 0
-        self.player.x += self.x_velocity
-        if self.fix_collision_in_direction(self.x_velocity, 0):
-            self.x_velocity = 0
-        self.player.y += self.y_velocity
-        if self.fix_collision_in_direction(0, self.y_velocity):
+        self.player.y += self.y_velocity * delta
+        if self.fix_collision_in_direction(0, self.y_velocity * delta):
             self.y_velocity = 0
             self.air_time = 0
         else:
             self.air_time += 1
-        if self.y_velocity < -4:
-            self.y_velocity = -4
+        if self.y_velocity < -200:
+            self.y_velocity = -200
         self.dirty = self.player.y != old_y or self.player.x != old_x
 
     # Thanks to Griffpatch and his amazing Tile Scrolling Platformer series for this code :)
