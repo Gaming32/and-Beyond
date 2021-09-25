@@ -200,9 +200,10 @@ class WorldSection:
         self.x = x
         self.y = y
         self.path = world.sections_path / f'section_{x}_{y}.dat'
-        fp = open(self.path, 'a+b')
-        self.fp = mmap(fp.fileno(), SECTION_SIZE, access=ACCESS_WRITE)
-        fp.close()
+        with open(self.path, 'a+b') as fp:
+            if fp.tell() < SECTION_SIZE:
+                fp.write(bytes(SECTION_SIZE - fp.tell()))
+            self.fp = mmap(fp.fileno(), SECTION_SIZE, access=ACCESS_WRITE)
         world.open_sections[(x, y)] = self
         self.cached_chunks = MaxSizedDict(max_size=8)
 
