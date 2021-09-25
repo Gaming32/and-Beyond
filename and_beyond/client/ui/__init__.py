@@ -12,7 +12,7 @@ from and_beyond.client.consts import UI_BG, UI_FG
 from pygame import *
 from pygame.locals import *
 
-BUTTON_WIDTH = 300
+BUTTON_WIDTH = 350
 BUTTON_HEIGHT = 50
 
 BUTTON_HEIGHT_PAD = BUTTON_HEIGHT + 25
