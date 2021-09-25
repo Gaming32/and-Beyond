@@ -28,15 +28,15 @@ class PauseMenu(Ui):
         return super().draw_and_call(surf)
 
     def pause_game(self) -> None:
-        logging.debug('Sending pause command...')
         if globals.singleplayer_pipe is not None:
+            logging.debug('Sending pause command...')
             globals.singleplayer_pipe.write(PipeCommands.PAUSE.to_bytes(2, 'little'))
             globals.singleplayer_pipe.flush()
         globals.paused = True
 
     def continue_game(self) -> None:
-        logging.debug('Sending unpause command...')
         if globals.singleplayer_pipe is not None:
+            logging.debug('Sending unpause command...')
             globals.singleplayer_pipe.write(PipeCommands.UNPAUSE.to_bytes(2, 'little'))
             globals.singleplayer_pipe.flush()
         globals.paused = False

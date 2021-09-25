@@ -6,7 +6,8 @@ import pygame
 import pygame.draw
 import pygame.mouse
 from and_beyond.client import globals
-from and_beyond.client.assets import BLOCK_SPRITES, MISSING_TEXTURE, ROTATABLE_BLOCKS
+from and_beyond.client.assets import (BLOCK_SPRITES, MISSING_TEXTURE,
+                                      ROTATABLE_BLOCKS)
 from and_beyond.client.consts import BLOCK_RENDER_SIZE
 from and_beyond.client.utils import world_to_screen
 from and_beyond.common import MAX_LOADED_CHUNKS
@@ -44,6 +45,12 @@ class ClientWorld:
             rpos += half_size
             rpos.y = surf.get_height() - rpos.y
             surf.blit(chunk_render, chunk_render.get_rect().move(rpos))
+        surf.blit(
+            globals.player.selected_block_texture,
+            Rect(
+                25, surf.get_height() - 25 - 50, 50, 50
+            )
+        )
         if globals.paused:
             return
         if globals.mouse_world[0] == pymath.inf:
@@ -72,7 +79,7 @@ class ClientWorld:
         if buttons[0]:
             globals.player.set_block(sel_cx, sel_cy, sel_bx, sel_by, BlockTypes.AIR)
         elif buttons[2]:
-            globals.player.set_block(sel_cx, sel_cy, sel_bx, sel_by, BlockTypes.STONE)
+            globals.player.set_block(sel_cx, sel_cy, sel_bx, sel_by, globals.player.selected_block)
 
     def _is_under_block_in_2_chunks(self) -> bool:
         if globals.player.x == pymath.inf or globals.player.y == pymath.inf:
@@ -126,14 +133,19 @@ class ClientChunk(WorldChunk):
                     block = self.get_tile_type(x, y)
                     if block == BlockTypes.AIR:
                         continue
-                    if block > len(BLOCK_SPRITES):
-                        tex = MISSING_TEXTURE[0]
-                    else:
-                        if ROTATABLE_BLOCKS[block]:
-                            tex = random.choice(BLOCK_SPRITES[block - 1])
-                        else:
-                            tex = BLOCK_SPRITES[block - 1][0]
+                    tex = get_block_texture(block)
                     rpos = Vector2(x, 15 - y) * BLOCK_RENDER_SIZE
                     self.surf.blit(tex, Rect(rpos, (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)))
            self.dirty = False
         return self.surf
+
+
+def get_block_texture(block: BlockTypes) -> Surface:
+    if block > len(BLOCK_SPRITES):
+        tex = MISSING_TEXTURE[0]
+    else:
+        if ROTATABLE_BLOCKS[block]:
+            tex = random.choice(BLOCK_SPRITES[block - 1])
+        else:
+            tex = BLOCK_SPRITES[block - 1][0]
+    return tex # type: ignore

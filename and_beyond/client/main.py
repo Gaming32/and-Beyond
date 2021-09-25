@@ -12,6 +12,7 @@ import pygame.event
 import pygame.mouse
 import pygame.time
 from and_beyond.utils import init_logger
+from and_beyond.world import BlockTypes
 
 init_logger('client.log')
 logging.info('Starting client...')
@@ -117,6 +118,12 @@ while globals.running:
                         pause_menu.continue_game()
                     else:
                         pause_menu.pause_game()
+                elif event.key == K_1:
+                    globals.player.change_selected_block(BlockTypes.STONE)
+                elif event.key == K_2:
+                    globals.player.change_selected_block(BlockTypes.DIRT)
+                elif event.key == K_3:
+                    globals.player.change_selected_block(BlockTypes.GRASS)
             elif event.type == KEYUP:
                 if event.key == K_d:
                     move_right = False
