@@ -1,10 +1,12 @@
 # pyright: reportWildcardImportFromLibrary=false
 import math as pymath
+import random
 
 import pygame
 import pygame.draw
 import pygame.mouse
 from and_beyond.client import globals
+from and_beyond.client.assets import BLOCK_SPRITES, MISSING_TEXTURE, ROTATABLE_BLOCKS
 from and_beyond.client.consts import BLOCK_RENDER_SIZE
 from and_beyond.client.utils import world_to_screen
 from and_beyond.common import MAX_LOADED_CHUNKS
@@ -64,7 +66,7 @@ class ClientWorld:
                 world_to_screen(sel_x, sel_y, surf),
                 (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)
             ),
-            3
+            2
         )
         buttons = pygame.mouse.get_pressed(3)
         if buttons[0]:
@@ -124,13 +126,21 @@ class ClientChunk(WorldChunk):
                     block = self.get_tile_type(x, y)
                     if block == BlockTypes.AIR:
                         continue
-                    elif block == BlockTypes.DIRT:
-                        color = (155, 118, 83) # Dirt color
-                    elif block == BlockTypes.GRASS:
-                        color = (65, 152, 10) # Grass color
-                    elif block == BlockTypes.STONE:
-                        color = (119, 119, 119) # Stone color
+                    if block > len(BLOCK_SPRITES):
+                        tex = MISSING_TEXTURE[0]
+                    else:
+                        if ROTATABLE_BLOCKS[block]:
+                            tex = random.choice(BLOCK_SPRITES[block - 1])
+                        else:
+                            tex = BLOCK_SPRITES[block - 1][0]
+                    # elif block == BlockTypes.DIRT:
+                    #     color = (155, 118, 83) # Dirt color
+                    # elif block == BlockTypes.GRASS:
+                    #     color = (65, 152, 10) # Grass color
+                    # elif block == BlockTypes.STONE:
+                    #     color = (119, 119, 119) # Stone color
                     rpos = Vector2(x, 15 - y) * BLOCK_RENDER_SIZE
-                    self.surf.fill(color, Rect(rpos, (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)))
+                    self.surf.blit(tex, Rect(rpos, (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)))
+                    # self.surf.fill(color, Rect(rpos, (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)))
            self.dirty = False
         return self.surf

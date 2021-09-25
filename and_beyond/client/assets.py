@@ -3,6 +3,7 @@
 import pygame
 import pygame.font
 import pygame.image
+import pygame.surface
 import pygame.transform
 from pygame import *
 from pygame.locals import *
@@ -15,12 +16,32 @@ PERSON_SPRITES = [
     pygame.image.load('assets/sprites/person2.png'),
 ]
 
+_BLOCK_SPRITES = [
+    pygame.image.load('assets/sprites/stone.png'),
+    pygame.image.load('assets/sprites/dirt.png'),
+    pygame.image.load('assets/sprites/grass.png'),
+]
+
+BLOCK_SPRITES: list[list[pygame.surface.Surface]] = []
+ROTATABLE_BLOCKS = [False, True, True, False]
+
+MISSING_TEXTURE = [pygame.image.load('assets/sprites/unknown.png')]
+
 def transform_assets() -> int:
     count = 0
     for (i, sprite) in enumerate(PERSON_SPRITES):
-        PERSON_SPRITES[i] = sprite.convert_alpha()
+        sprite = sprite.convert_alpha()
         PERSON_SPRITES[i] = pygame.transform.scale(sprite, (15, 37))
         count += 1
+    for (i, sprite) in enumerate(_BLOCK_SPRITES):
+        BLOCK_SPRITES.append([sprite.convert_alpha()])
+        if ROTATABLE_BLOCKS[i + 1]:
+            for j in range(1, 4):
+                rot = pygame.transform.rotate(sprite, j * 90)
+                BLOCK_SPRITES[i].append(rot.convert_alpha())
+        count += 1
+    MISSING_TEXTURE[0] = MISSING_TEXTURE[0].convert()
+    count += 1
     return count
 
 ASSET_COUNT = 3
