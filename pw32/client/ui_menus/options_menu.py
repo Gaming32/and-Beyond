@@ -2,7 +2,7 @@
 from typing import Any
 
 from pw32.client import globals
-from pw32.client.ui import (SliderCallback, Ui, UiButton, UiSlider,
+from pw32.client.ui import (SliderCallback, Ui, UiButton, UiLabel, UiSlider,
                             UiToggleButton)
 from pygame import *
 from pygame.locals import *
@@ -25,6 +25,7 @@ class OptionsMenu(Ui):
         self.fullscreen_toggle = UiToggleButton('Fullscreen', self.fullscreen_toggle_cb)
         self.framerate_slider = FramerateSlider(self.framerate_slider_cb)
         super().__init__([
+            UiLabel('Options'),
             self.fullscreen_toggle,
             self.framerate_slider,
             UiButton('Back', self.close_option_menu),

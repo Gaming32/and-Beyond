@@ -4,7 +4,7 @@ from typing import Callable
 
 import pygame
 from pw32.client import button_ui, globals
-from pw32.client.options_menu import OptionsMenu
+from pw32.client.ui_menus.options_menu import OptionsMenu
 from pw32.pipe_commands import PipeCommands
 from pygame import *
 from pygame.locals import *

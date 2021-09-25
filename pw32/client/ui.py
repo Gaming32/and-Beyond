@@ -28,6 +28,24 @@ class UiElement(abc.ABC):
         pass
 
 
+class UiLabel(UiElement):
+    text: str
+
+    def __init__(self, text: str) -> None:
+        self.text = text
+
+    def draw_and_call(self, surf: Surface, at: Vector2, preseed: list[bool], released: list[bool]) -> Any:
+        area = Rect(at, (BUTTON_WIDTH, BUTTON_HEIGHT))
+        text_render = GAME_FONT.render(self.text, True, UI_FG)
+        surf.blit(
+            text_render,
+            (
+                area.x + area.width // 2 - text_render.get_width() // 2,
+                area.y + area.height // 2 - text_render.get_height() // 2,
+            )
+        )
+
+
 class UiButton(UiElement):
     label: str
     callback: ButtonCallback

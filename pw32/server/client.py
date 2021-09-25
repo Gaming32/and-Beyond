@@ -107,7 +107,7 @@ class Client:
             try:
                 packet = await read_packet(self.reader)
             except asyncio.IncompleteReadError:
-                await self.disconnect(f'{self} left the game')
+                await self.disconnect(f'{self} left the game', False)
                 return
             await self.packet_queue.put(packet)
 
@@ -182,17 +182,18 @@ class Client:
             if cx != old_cx or cy != old_cy:
                 await self.load_chunks_around_player()
 
-    async def disconnect(self, reason: str = '') -> None:
+    async def disconnect(self, reason: str = '', kick: bool = True) -> None:
         if self.disconnecting:
             logging.debug('Already disconnecting %s', self)
             return
         self.disconnecting = True
         logging.debug('Disconnecting player %s', self)
-        packet = DisconnectPacket(reason)
-        try:
-            await write_packet(packet, self.writer)
-        except ConnectionError:
-            logging.debug('Player was already disconnected')
+        if kick:
+            packet = DisconnectPacket(reason)
+            try:
+                await write_packet(packet, self.writer)
+            except ConnectionError:
+                logging.debug('Player was already disconnected')
         self.writer.close()
         await self.writer.wait_closed()
         try:

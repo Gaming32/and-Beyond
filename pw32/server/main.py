@@ -116,7 +116,13 @@ class AsyncServer:
             self.multiplayer = False
             host = '127.0.0.1'
 
-        self.world = World('world')
+        try:
+            world_name = sys.argv[sys.argv.index('--world') + 1]
+        except IndexError:
+            world_name = 'world'
+        logging.info('Loading world "%s"', world_name)
+
+        self.world = World(world_name)
         await self.world.ainit()
         self.world_generator = WorldGenerator(self.world.meta['seed'])
         logging.info('Locating spawn location for world...')
