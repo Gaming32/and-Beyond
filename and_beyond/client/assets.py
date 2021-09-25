@@ -27,6 +27,8 @@ ROTATABLE_BLOCKS = [False, True, True, False]
 
 MISSING_TEXTURE = [pygame.image.load('assets/sprites/unknown.png')]
 
+SELECTED_ITEM_BG = [Surface((70, 70))]
+
 def transform_assets() -> int:
     count = 0
     for (i, sprite) in enumerate(PERSON_SPRITES):
@@ -41,6 +43,8 @@ def transform_assets() -> int:
                 BLOCK_SPRITES[i].append(rot.convert_alpha())
         count += 1
     MISSING_TEXTURE[0] = MISSING_TEXTURE[0].convert()
+    SELECTED_ITEM_BG[0] = SELECTED_ITEM_BG[0].convert_alpha() # type: ignore
+    SELECTED_ITEM_BG[0].fill((0, 0, 0, 192))
     count += 1
     return count
 

@@ -50,7 +50,13 @@ class ClientPlayer(AbstractPlayer):
             self._render_other()
         globals.camera = Vector2(self.render_x, self.render_y + 3)
         draw_pos = world_to_screen(self.render_x, self.render_y + 1, surf)
-        surf.fill((128, 0, 128), Rect(draw_pos, (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE * 2)))
+        surf.fill(
+            (128, 0, 128),
+            (
+                draw_pos + Vector2(BLOCK_RENDER_SIZE * 0.1, 0),
+                (BLOCK_RENDER_SIZE * 0.8, BLOCK_RENDER_SIZE * 2)
+            )
+        )
 
     def _render_local(self) -> None:
         if self.render_x == inf or pymath.isclose(self.render_x, self.x):

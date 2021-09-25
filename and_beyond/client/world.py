@@ -7,7 +7,7 @@ import pygame.draw
 import pygame.mouse
 from and_beyond.client import globals
 from and_beyond.client.assets import (BLOCK_SPRITES, MISSING_TEXTURE,
-                                      ROTATABLE_BLOCKS)
+                                      ROTATABLE_BLOCKS, SELECTED_ITEM_BG)
 from and_beyond.client.consts import BLOCK_RENDER_SIZE
 from and_beyond.client.utils import world_to_screen
 from and_beyond.common import MAX_LOADED_CHUNKS
@@ -45,11 +45,10 @@ class ClientWorld:
             rpos += half_size
             rpos.y = surf.get_height() - rpos.y
             surf.blit(chunk_render, chunk_render.get_rect().move(rpos))
+        surf.blit(SELECTED_ITEM_BG[0], (15, surf.get_height() - 85, 70, 70)) # type: ignore
         surf.blit(
             globals.player.selected_block_texture,
-            Rect(
-                25, surf.get_height() - 25 - 50, 50, 50
-            )
+            (25, surf.get_height() - 75, 50, 50)
         )
         if globals.paused:
             return
