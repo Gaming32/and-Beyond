@@ -10,6 +10,7 @@ from pygame.locals import *
 
 pygame.font.init()
 GAME_FONT = pygame.font.SysFont('Calibri', 30)
+DEBUG_FONT = pygame.font.SysFont('Courier', 20, bold=True)
 
 PERSON_SPRITES = [
     pygame.image.load('assets/sprites/person1.png'),

@@ -24,6 +24,7 @@ class _Config(TypedDict):
     w_height: int
     fullscreen: bool
     max_framerate: int
+    always_show_fps: bool
 
 
 class ConfigManager:
@@ -34,7 +35,7 @@ class ConfigManager:
         self.load_default_config(winfo)
         try:
             with open('config.json', encoding='utf-8') as fp:
-                self.config = json.load(fp)
+                self.config.update(json.load(fp))
         except (OSError, json.JSONDecodeError):
             logging.warn('Unable to load config. Loading default config...', exc_info=True)
         logging.info('Loaded config')
@@ -44,7 +45,8 @@ class ConfigManager:
             'w_width': winfo.current_w // 2,
             'w_height': winfo.current_h // 2,
             'fullscreen': False,
-            'max_framerate': 75
+            'max_framerate': 75,
+            'always_show_fps': False,
         }
 
     def save(self, reassign: bool = True) -> None:

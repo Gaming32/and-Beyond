@@ -3,6 +3,7 @@ import asyncio
 import logging
 import sys
 import time as pytime
+from math import inf
 
 import janus
 import pygame
@@ -11,7 +12,7 @@ import pygame.draw
 import pygame.event
 import pygame.mouse
 import pygame.time
-from and_beyond.utils import init_logger
+from and_beyond.utils import DEBUG, init_logger
 from and_beyond.world import BlockTypes
 
 init_logger('client.log')
@@ -20,7 +21,8 @@ pygame.init()
 logging.info('Pygame loaded')
 logging.info('Loading assets...')
 start = pytime.perf_counter()
-from and_beyond.client.assets import ASSET_COUNT, GAME_FONT, transform_assets
+from and_beyond.client.assets import (ASSET_COUNT, DEBUG_FONT, GAME_FONT,
+                                      transform_assets)
 
 end = pytime.perf_counter()
 logging.info('Loaded %i assets in %f seconds', ASSET_COUNT, end - start)
@@ -62,6 +64,28 @@ def reset_window() -> Surface:
     ) # type: ignore
 
 
+def render_debug() -> None:
+    y = 0
+    lines = [
+        f'FPS: {clock.get_fps():.2f}',
+        f'X/Y: {globals.player.x:.1f}/{globals.player.y:.1f}',
+    ]
+    if globals.player.x != inf and globals.player.y != inf:
+        cx = int(globals.player.x) >> 4
+        cy = int(globals.player.y) >> 4
+        lines.extend([
+            f'CX/CY: {cx}/{cy}',
+            f'SX/SY: {cx >> 4}/{cy >> 4}',
+        ])
+    lines.extend([
+        f'Loaded chunks: {len(globals.local_world.loaded_chunks)}',
+    ])
+    for line in lines:
+        text_render = DEBUG_FONT.render(line, False, (0, 0, 0))
+        screen.blit(text_render, text_render.get_rect().move(0, y))
+        y += text_render.get_height()
+
+
 globals.fullscreen = config.config['fullscreen']
 old_fullscreen = globals.fullscreen
 screen = reset_window()
@@ -74,6 +98,7 @@ logging.info('Transformed %i assets in %f seconds', count, end - start)
 
 title = TitleScreen()
 pause_menu = PauseMenu()
+should_show_debug = DEBUG
 
 globals.local_world = ClientWorld()
 globals.player = ClientPlayer()
@@ -89,7 +114,7 @@ clock = pygame.time.Clock()
 while globals.running:
     try:
         globals.delta = clock.tick(globals.config.config['max_framerate']) / 1000
-        globals.released_mouse_buttons = [False] * 5
+        globals.released_mouse_buttons = [False] * 7
         if globals.fullscreen != old_fullscreen:
             logging.debug('Switching fullscreen mode...')
             pygame.display.quit()
@@ -107,6 +132,8 @@ while globals.running:
             elif event.type == KEYDOWN:
                 if event.key == K_F11:
                     globals.fullscreen = not globals.fullscreen
+                elif event.key == K_F3:
+                    should_show_debug = not should_show_debug
                 elif event.key == K_d:
                     move_right = True
                 elif event.key == K_a:
@@ -114,7 +141,9 @@ while globals.running:
                 elif event.key == K_SPACE:
                     move_up = True
                 elif event.key == K_ESCAPE:
-                    if globals.paused:
+                    if globals.ui_override is not None:
+                        globals.ui_override.close()
+                    elif globals.paused:
                         pause_menu.continue_game()
                     else:
                         pause_menu.pause_game()
@@ -130,6 +159,8 @@ while globals.running:
                 elif event.key == K_a:
                     move_left = False
             elif event.type == MOUSEBUTTONUP:
+                if event.button == 6 and globals.ui_override is not None:
+                    globals.ui_override.close()
                 globals.released_mouse_buttons[event.button - 1] = True
 
         globals.mouse_screen = Vector2(pygame.mouse.get_pos())
@@ -162,9 +193,11 @@ while globals.running:
                     move_up = False
             globals.local_world.tick(screen)
             globals.player.render(screen)
-            text_render = GAME_FONT.render(str(1 / globals.delta), True, UI_FG)
-            screen.fill((0, 0, 0), text_render.get_rect())
-            screen.blit(text_render, text_render.get_rect())
+            if should_show_debug:
+                render_debug()
+            elif globals.config.config['always_show_fps']:
+                text_render = DEBUG_FONT.render(f'{int(clock.get_fps())} FPS', False, (0, 0, 0))
+                screen.blit(text_render, text_render.get_rect())
             if globals.paused:
                 pause_menu.draw_and_call(screen)
 
