@@ -61,8 +61,11 @@ class AsyncServer:
             self.loop = asyncio.get_event_loop()
             try:
                 self.loop.run_until_complete(self.main())
-            except KeyboardInterrupt:
-                raise
+            except BaseException as e:
+                if isinstance(e, Exception):
+                    logging.critical('Server crashed hard with exception', exc_info=True)
+                else:
+                    raise
             finally:
                 self.loop.run_until_complete(self.shutdown())
             logging.info('Server closed')

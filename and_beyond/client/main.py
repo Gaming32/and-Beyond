@@ -147,7 +147,9 @@ while globals.running:
                 pause_menu.draw_and_call(screen)
 
         pygame.display.update()
-    except:
+    except BaseException as e:
+        if isinstance(e, Exception):
+            logging.critical('Game crashed hard with exception', exc_info=True)
         globals.running = False
 
 
