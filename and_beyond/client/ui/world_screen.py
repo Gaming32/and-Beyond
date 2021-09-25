@@ -24,15 +24,19 @@ class WorldScreen(Ui):
             UiLabel('Select a world')
         ])
         self.worlds_path = Path('worlds')
-        worlds: list[Path] = []
-        for subdir in self.worlds_path.iterdir():
-            if subdir.name.startswith('world'):
-                worlds.append(subdir)
-        worlds.sort(key=(lambda path: int(path.name.removeprefix('world') or '0')))
-        for world in worlds:
-            text = f'{world.name.capitalize()}'
-            self.elements.append(UiButton(text, (lambda world=world: self.load_world(world.name))))
-        world_n = (int(worlds[-1].name.removeprefix('world') or '0') + 1) if worlds else 1
+        if self.worlds_path.exists():
+            worlds: list[Path] = []
+            for subdir in self.worlds_path.iterdir():
+                if subdir.name.startswith('world'):
+                    worlds.append(subdir)
+            worlds.sort(key=(lambda path: int(path.name.removeprefix('world') or '0')))
+            for world in worlds:
+                text = f'{world.name.capitalize()}'
+                self.elements.append(UiButton(text, (lambda world=world: self.load_world(world.name))))
+            world_n = (int(worlds[-1].name.removeprefix('world') or '0') + 1) if worlds else 1
+        else:
+            self.worlds_path.mkdir()
+            world_n = 1
         self.elements.append(UiButton('(New world)', (lambda: self.new_world(world_n))))
         self.elements.append(UiButton('Back', self.close))
 
