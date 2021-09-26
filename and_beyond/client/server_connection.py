@@ -64,6 +64,8 @@ class ServerConnection:
         logging.info('Connected to server')
         globals.connecting_status = 'Connected'
         globals.game_status = GameStatus.IN_GAME
+        globals.mixer.stop_all_music()
+        globals.mixer.play_song()
         globals.local_world.load()
         self.send_packets_task = self.aio_loop.create_task(self.send_outgoing_packets())
         while self.running:

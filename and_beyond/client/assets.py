@@ -1,5 +1,5 @@
 # pyright: reportWildcardImportFromLibrary=false
-
+import and_beyond.client.mixer
 import pygame
 import pygame.font
 import pygame.image

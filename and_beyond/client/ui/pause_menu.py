@@ -46,6 +46,8 @@ class PauseMenu(Ui):
 
     def save_and_quit(self) -> None:
         globals.game_status = globals.GameStatus.STOPPING
+        globals.mixer.stop_all_music()
+        globals.mixer.play_song()
         globals.connecting_status = 'Disconnecting'
         if globals.game_connection is not None:
             globals.game_connection.stop()

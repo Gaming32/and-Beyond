@@ -21,16 +21,19 @@ class OptionsMenu(Ui):
     fullscreen_toggle: UiToggleButton
     framerate_slider: UiSlider
     fps_toggle: UiToggleButton
+    volume_slider: UiSlider
 
     def __init__(self) -> None:
         self.fullscreen_toggle = UiToggleButton('Fullscreen', self.fullscreen_toggle_cb)
         self.framerate_slider = FramerateSlider(self.framerate_slider_cb)
         self.fps_toggle = UiToggleButton('Always Show FPS', self.fps_toggle_cb)
+        self.volume_slider = UiSlider('Volume', self.volume_slider_cb, 0, 101)
         super().__init__([
             UiLabel('Options'),
             self.fullscreen_toggle,
             self.framerate_slider,
             self.fps_toggle,
+            self.volume_slider,
             UiButton('Back', self.close_option_menu),
         ])
 
@@ -39,6 +42,7 @@ class OptionsMenu(Ui):
         framerate = globals.config.config['max_framerate']
         self.framerate_slider.value = 121 if framerate == 0 else framerate
         self.fps_toggle.toggled = globals.config.config['always_show_fps']
+        self.volume_slider.value = int(globals.config.config['volume'] * 100)
         return super().draw_and_call(surf)
 
     def close_option_menu(self) -> None:
@@ -52,3 +56,8 @@ class OptionsMenu(Ui):
 
     def fps_toggle_cb(self, show: bool) -> None:
         globals.config.config['always_show_fps'] = show
+
+    def volume_slider_cb(self, value: int) -> None:
+        volume = value / 100
+        globals.config.config['volume'] = volume
+        globals.mixer.set_volume(volume)

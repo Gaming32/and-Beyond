@@ -5,14 +5,15 @@ import subprocess
 import sys
 from typing import TYPE_CHECKING, BinaryIO, Optional, TypedDict
 
-from and_beyond.client.player import ClientPlayer
-from and_beyond.client.world import ClientWorld
 from and_beyond.pipe_commands import PipeCommands
 from pygame import Vector2
 
 if TYPE_CHECKING:
+    from and_beyond.client.mixer import Mixer
+    from and_beyond.client.player import ClientPlayer
     from and_beyond.client.server_connection import ServerConnection
     from and_beyond.client.ui import Ui
+    from and_beyond.client.world import ClientWorld
     from pygame.display import _VidInfo
 
 
@@ -22,6 +23,7 @@ class _Config(TypedDict):
     fullscreen: bool
     max_framerate: int
     always_show_fps: bool
+    volume: float
 
 
 class ConfigManager:
@@ -44,6 +46,7 @@ class ConfigManager:
             'fullscreen': False,
             'max_framerate': 75,
             'always_show_fps': False,
+            'volume': 1.0,
         }
 
     def save(self, reassign: bool = True) -> None:
@@ -86,6 +89,7 @@ config: ConfigManager
 running: bool
 display_info: '_VidInfo'
 frame: int
+mixer: 'Mixer'
 
 fullscreen: bool
 w_width: int
@@ -104,8 +108,8 @@ connecting_status: str = ''
 paused: bool = False
 ui_override: Optional['Ui'] = None
 
-local_world: ClientWorld
-player: ClientPlayer
+local_world: 'ClientWorld'
+player: 'ClientPlayer'
 camera: Vector2 = Vector2()
 mouse_screen: Vector2 = Vector2()
 mouse_world: tuple[float, float] = (0, 0)

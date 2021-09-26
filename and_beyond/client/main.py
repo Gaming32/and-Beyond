@@ -29,6 +29,7 @@ logging.info('Loaded %i assets in %f seconds', ASSET_COUNT, end - start)
 from and_beyond.client import globals
 from and_beyond.client.consts import UI_FG
 from and_beyond.client.globals import ConfigManager, GameStatus
+from and_beyond.client.mixer import Mixer
 from and_beyond.client.player import ClientPlayer
 from and_beyond.client.ui.pause_menu import PauseMenu
 from and_beyond.client.ui.title_screen import TitleScreen
@@ -100,11 +101,14 @@ should_show_debug = DEBUG
 globals.local_world = ClientWorld()
 globals.player = ClientPlayer()
 
+globals.game_status = GameStatus.MAIN_MENU
+globals.mixer = Mixer()
+globals.mixer.set_volume(globals.config.config['volume'])
+globals.mixer.play_song()
 
 move_left = False
 move_right = False
 move_up = False
-globals.game_status = GameStatus.MAIN_MENU
 globals.running = True
 globals.frame = 0
 clock = pygame.time.Clock()
@@ -160,6 +164,8 @@ while globals.running:
                     globals.ui_override.close()
                 globals.released_mouse_buttons[event.button - 1] = True
 
+        if globals.mixer.music_channel is not None and not globals.mixer.music_channel.get_busy():
+            globals.mixer.play_song()
         globals.mouse_screen = Vector2(pygame.mouse.get_pos())
 
         if globals.game_status == GameStatus.MAIN_MENU:
