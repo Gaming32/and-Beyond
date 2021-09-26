@@ -10,8 +10,8 @@ from pygame import *
 from pygame.locals import *
 
 TITLE_TRACKS = [
-    pygame.mixer.Sound('assets/music/Evening Fall - Harp.mp3'),
-    pygame.mixer.Sound('assets/music/Enchanted Valley.mp3'),
+    pygame.mixer.Sound('assets/music/Evening Fall - Harp.ogg'),
+    pygame.mixer.Sound('assets/music/Enchanted Valley.ogg'),
 ]
 
 OVERWORLD_TRACKS = [
@@ -21,7 +21,7 @@ OVERWORLD_TRACKS = [
 
 CAVE_TRACKS = [
     TITLE_TRACKS[0],
-    pygame.mixer.Sound('assets/music/Terminal D - Silent Partner.mp3'),
+    pygame.mixer.Sound('assets/music/Terminal D - Silent Partner.ogg'),
 ]
 
 SONG_NAMES = {
