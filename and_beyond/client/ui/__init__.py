@@ -12,10 +12,10 @@ from and_beyond.client.consts import UI_BG, UI_FG
 from pygame import *
 from pygame.locals import *
 
-BUTTON_WIDTH = 350
-BUTTON_HEIGHT = 50
+DEFAULT_ELEMENT_WIDTH = 350
+DEFAULT_ELEMENT_HEIGHT = 50
 
-BUTTON_HEIGHT_PAD = BUTTON_HEIGHT + 25
+ELEMENT_Y_PADDING = 25
 
 ButtonCallback = Callable[[], Any]
 ToggleButtonCallback = Callable[[bool], Any]
@@ -26,27 +26,46 @@ class UiElement(abc.ABC):
     def __init__(self) -> None:
         pass
 
+    def get_height(self) -> float:
+        return DEFAULT_ELEMENT_HEIGHT
+
     @abc.abstractmethod
     def draw_and_call(self, surf: Surface, at: Vector2, preseed: list[bool], released: list[bool]) -> Any:
         pass
 
 
 class UiLabel(UiElement):
-    text: str
+    _lines: list[str]
+    _text: str
 
     def __init__(self, text: str) -> None:
         self.text = text
 
+    def get_height(self) -> float:
+        return 40 * len(self._lines) + 10
+
     def draw_and_call(self, surf: Surface, at: Vector2, preseed: list[bool], released: list[bool]) -> Any:
-        area = Rect(at, (BUTTON_WIDTH, BUTTON_HEIGHT))
-        text_render = GAME_FONT.render(self.text, True, UI_FG)
-        surf.blit(
-            text_render,
-            (
-                area.x + area.width // 2 - text_render.get_width() // 2,
-                area.y + area.height // 2 - text_render.get_height() // 2,
+        y_offset = self.get_height() - len(self._lines) * 40
+        area = Rect(at, (DEFAULT_ELEMENT_WIDTH, DEFAULT_ELEMENT_HEIGHT))
+        for line in self._lines:
+            text_render = GAME_FONT.render(line, True, UI_FG)
+            surf.blit(
+                text_render,
+                (
+                    area.x + area.width // 2 - text_render.get_width() // 2,
+                    area.y + y_offset + area.height // 2 - text_render.get_height() // 2,
+                )
             )
-        )
+            y_offset += 40
+
+    @property
+    def text(self) -> str:
+        return self._text
+
+    @text.setter
+    def text(self, text: str) -> None:
+        self._text = text
+        self._lines = text.split('\n')
 
 
 class UiButton(UiElement):
@@ -58,7 +77,7 @@ class UiButton(UiElement):
         self.callback = callback
 
     def draw_and_call(self, surf: Surface, at: Vector2, pressed: list[bool], released: list[bool]) -> Any:
-        area = Rect(at, (BUTTON_WIDTH, BUTTON_HEIGHT))
+        area = Rect(at, (DEFAULT_ELEMENT_WIDTH, DEFAULT_ELEMENT_HEIGHT))
         pygame.draw.rect(surf, UI_BG, area, 0, 5)
         text_render = GAME_FONT.render(self.label, True, UI_FG)
         surf.blit(
@@ -124,7 +143,7 @@ class UiSlider(UiElement):
         self.callback = callback
 
     def draw_and_call_text(self, surf: Surface, at: Vector2, pressed: list[bool], released: list[bool], text: str) -> Any:
-        area = Rect(at, (BUTTON_WIDTH, BUTTON_HEIGHT))
+        area = Rect(at, (DEFAULT_ELEMENT_WIDTH, DEFAULT_ELEMENT_HEIGHT))
         pygame.draw.rect(surf, UI_BG, area, 0, 5)
         text_render = GAME_FONT.render(text, True, UI_FG)
         surf.blit(
@@ -139,7 +158,7 @@ class UiSlider(UiElement):
             if pressed[0]:
                 self.value = self._screen_to_value(int(globals.mouse_screen.x - area.x))
                 self.callback(self.value)
-        surf.fill(UI_FG, Rect(area.x + self._value_to_screen() - 2, area.y, 5, BUTTON_HEIGHT))
+        surf.fill(UI_FG, Rect(area.x + self._value_to_screen() - 2, area.y, 5, DEFAULT_ELEMENT_HEIGHT))
 
     def draw_and_call(self, surf: Surface, at: Vector2, preseed: list[bool], released: list[bool]) -> Any:
         return self.draw_and_call_text(surf, at, preseed, released, f'{self.label}: {self.value}')
@@ -148,10 +167,10 @@ class UiSlider(UiElement):
         return (self.value - self.min) / (self.max - self.min)
 
     def _value_to_screen(self) -> int:
-        return int(self._map_01() * BUTTON_WIDTH)
+        return int(self._map_01() * DEFAULT_ELEMENT_WIDTH)
 
     def _screen_to_value(self, screen: int) -> int:
-        return int((screen / BUTTON_WIDTH) * (self.max - self.min) + self.min)
+        return int((screen / DEFAULT_ELEMENT_WIDTH) * (self.max - self.min) + self.min)
 
 
 class Ui:
@@ -172,9 +191,10 @@ class Ui:
         pressed = list(pygame.mouse.get_pressed(5))
         released = globals.released_mouse_buttons
 
-        x = surf.get_width() // 2 - BUTTON_WIDTH // 2
-        y = surf.get_height() // 2 - BUTTON_HEIGHT_PAD * len(self.elements) // 2
+        total_height = sum(e.get_height() + ELEMENT_Y_PADDING for e in self.elements)
+        x = surf.get_width() // 2 - DEFAULT_ELEMENT_WIDTH // 2
+        y = surf.get_height() // 2 - total_height // 2
 
         for element in self.elements:
             element.draw_and_call(surf, Vector2(x, y), pressed, released)
-            y += BUTTON_HEIGHT_PAD
+            y += element.get_height() + ELEMENT_Y_PADDING
