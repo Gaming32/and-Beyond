@@ -4,6 +4,7 @@ import logging
 import sys
 import time as pytime
 from math import inf
+from typing import Optional
 
 import pygame
 import pygame.display
@@ -12,7 +13,6 @@ import pygame.event
 import pygame.mouse
 import pygame.time
 from and_beyond.utils import DEBUG, init_logger
-from and_beyond.world import BlockTypes
 
 init_logger('client.log')
 logging.info('Starting client...')
@@ -27,15 +27,17 @@ end = pytime.perf_counter()
 logging.info('Loaded %i assets in %f seconds', ASSET_COUNT, end - start)
 
 from and_beyond.client import globals
-from and_beyond.client.consts import UI_FG
+from and_beyond.client.consts import SERVER_DISCONNECT_EVENT, UI_FG
 from and_beyond.client.globals import ConfigManager, GameStatus
 from and_beyond.client.mixer import Mixer
 from and_beyond.client.player import ClientPlayer
+from and_beyond.client.ui.label_screen import LabelScreen
 from and_beyond.client.ui.pause_menu import PauseMenu
 from and_beyond.client.ui.title_screen import TitleScreen
 from and_beyond.client.utils import screen_to_world
 from and_beyond.client.world import ClientWorld
 from and_beyond.common import JUMP_SPEED, MOVE_SPEED
+from and_beyond.world import BlockTypes
 from pygame import *
 from pygame.locals import *
 
@@ -106,6 +108,7 @@ globals.mixer = Mixer()
 globals.mixer.set_volume(globals.config.config['volume'])
 globals.mixer.play_song()
 
+disconnect_reason: Optional[str] = None
 move_left = False
 move_right = False
 move_up = False
@@ -163,6 +166,19 @@ while globals.running:
                 if event.button == 6 and globals.ui_override is not None:
                     globals.ui_override.close()
                 globals.released_mouse_buttons[event.button - 1] = True
+            elif event.type == SERVER_DISCONNECT_EVENT:
+                globals.game_status = globals.GameStatus.STOPPING
+                globals.mixer.stop_all_music()
+                globals.mixer.play_song()
+                globals.connecting_status = 'Disconnecting'
+                if globals.game_connection is not None:
+                    globals.game_connection.stop()
+                    globals.game_connection = None
+                if globals.singleplayer_pipe is not None:
+                    globals.connecting_status = 'Stopping singleplayer server'
+                    globals.close_singleplayer_server(False)
+                    globals.singleplayer_pipe = None
+                disconnect_reason = event.reason
 
         if globals.mixer.music_channel is not None and not globals.mixer.music_channel.get_busy():
             globals.mixer.play_song()
@@ -184,8 +200,15 @@ while globals.running:
                             logging.warn('Singleplayer server stopped with exit code %i', returncode)
                         globals.singleplayer_popen = None
                         globals.game_status = GameStatus.MAIN_MENU
+                        if disconnect_reason is not None:
+                            if disconnect_reason.lower() != 'Server closed':
+                                globals.ui_override = LabelScreen(disconnect_reason)
+                            disconnect_reason = None
                 else:
                     globals.game_status = GameStatus.MAIN_MENU
+                    if disconnect_reason is not None:
+                        globals.ui_override = LabelScreen(disconnect_reason)
+                        disconnect_reason = None
         else:
             globals.mouse_world = screen_to_world(globals.mouse_screen, screen)
             if globals.game_connection is not None and not globals.paused:

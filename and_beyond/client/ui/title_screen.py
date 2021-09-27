@@ -31,6 +31,7 @@ class TitleScreen(Ui):
 
     def multiplayer(self) -> None:
         globals.game_status = GameStatus.CONNECTING
+        TitleScreen.load_multiplayer('localhost')
 
     def show_options(self) -> None:
         globals.ui_override = OptionsMenu()

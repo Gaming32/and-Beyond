@@ -2,24 +2,29 @@ import asyncio
 import logging
 import math
 import threading
+import time
 import uuid
 from asyncio.exceptions import CancelledError
 from asyncio.streams import StreamReader, StreamWriter
 from typing import Optional
 
 import janus
+import pygame
+import pygame.event
 from and_beyond.client import globals
+from and_beyond.client.consts import SERVER_DISCONNECT_EVENT
 from and_beyond.client.globals import GameStatus
 from and_beyond.client.world import ClientChunk
 from and_beyond.common import PORT
 from and_beyond.packet import (AuthenticatePacket, ChunkPacket,
-                               ChunkUpdatePacket, Packet, PlayerPositionPacket,
+                               ChunkUpdatePacket, DisconnectPacket, Packet,
+                               PingPacket, PlayerPositionPacket,
                                UnloadChunkPacket, read_packet, write_packet)
 
 
 class ServerConnection:
-    reader: StreamReader
-    writer: StreamWriter
+    reader: Optional[StreamReader]
+    writer: Optional[StreamWriter]
     thread: threading.Thread
     aio_loop: asyncio.AbstractEventLoop
 
@@ -27,9 +32,16 @@ class ServerConnection:
     outgoing_queue: janus.Queue[Packet]
     send_packets_task: Optional[asyncio.Task]
 
+    disconnect_reason: Optional[str]
+    _should_post_event: bool
+
     def __init__(self) -> None:
+        self.reader = None
+        self.writer = None
         self.running = False
         self.send_packets_task = None
+        self.disconnect_reason = None
+        self._should_post_event = True
 
     def start(self, server: str) -> None:
         logging.debug('Starting connection thread...')
@@ -38,6 +50,7 @@ class ServerConnection:
 
     def stop(self) -> None:
         self.running = False
+        self._should_post_event = False
 
     def start_thread(self, server: str) -> None:
         self.running = True
@@ -68,16 +81,30 @@ class ServerConnection:
         globals.mixer.play_song()
         globals.local_world.load()
         self.send_packets_task = self.aio_loop.create_task(self.send_outgoing_packets())
+        time_since_ping = 0
+        it_start = time.perf_counter()
         while self.running:
-            packet = await read_packet(self.reader)
+            it_end = time.perf_counter()
+            time_since_ping += it_end - it_start
+            if time_since_ping > 10: # Server hasn't responded for 10 seconds, it's probably down
+                self.disconnect_reason = 'The server stopped responding'
+                self.running = False
+                break
+            it_start = time.perf_counter()
+            try:
+                packet = await read_packet(self.reader)
+            except ConnectionError as e:
+                self.disconnect_reason = f'Connection lost ({e})'
+                self.running = False
+                break
+            await asyncio.sleep(0)
             if isinstance(packet, ChunkPacket):
                 # The chunk is never None when recieved from the network
                 chunk = packet.chunk
                 client_chunk = ClientChunk(chunk)
                 globals.local_world.loaded_chunks[(chunk.abs_x, chunk.abs_y)] = client_chunk
             elif isinstance(packet, UnloadChunkPacket):
-                # The chunk is never None when recieved from the network
-                globals.local_world.loaded_chunks.pop((packet.x, packet.y))
+                globals.local_world.loaded_chunks.pop((packet.x, packet.y), None)
             elif isinstance(packet, ChunkUpdatePacket):
                 world = globals.local_world
                 chunk_pos = (packet.cx, packet.cy)
@@ -90,28 +117,63 @@ class ServerConnection:
                 # globals.player.last_y = globals.player.render_y = globals.player.y
                 globals.player.x = packet.x
                 globals.player.y = packet.y
+            elif isinstance(packet, DisconnectPacket):
+                logging.info('Disconnected from server: %s', packet.reason)
+                self.disconnect_reason = packet.reason
+                self.running = False
+            elif isinstance(packet, PingPacket):
+                time_since_ping = 0
 
     async def send_outgoing_packets(self) -> None:
         self.outgoing_queue = janus.Queue()
         try:
             while self.running:
+                if self.writer is None:
+                    await asyncio.sleep(0)
+                    continue
                 await write_packet(await self.outgoing_queue.async_q.get(), self.writer)
         except CancelledError:
             while not self.outgoing_queue.async_q.empty():
-                await write_packet(await self.outgoing_queue.async_q.get(), self.writer)
+                if self.writer is None:
+                    await asyncio.sleep(0)
+                    break
+                try:
+                    await write_packet(await self.outgoing_queue.async_q.get(), self.writer)
+                except ConnectionError:
+                    await asyncio.sleep(0)
+                    break
             self.outgoing_queue.close()
             raise
 
     async def shutdown(self) -> None:
-        logging.info('Disconnecting from server...')
+        if self.disconnect_reason is None:
+            logging.info('Disconnecting from server...')
+        else:
+            logging.info('Disconnected from server: %s', self.disconnect_reason)
         if self.send_packets_task is not None:
             self.send_packets_task.cancel()
-        self.writer.close()
+        if self.writer is not None:
+            self.writer.close()
+        self.outgoing_queue.close()
         globals.local_world.unload()
         globals.player.x = globals.player.render_x = math.inf
         globals.player.y = globals.player.render_y = math.inf
-        await self.writer.wait_closed()
+        if self.writer is not None:
+            try:
+                await self.writer.wait_closed()
+            except ConnectionError:
+                pass
+        self.writer = None
+        if self._should_post_event:
+            try:
+                pygame.event.post(pygame.event.Event(SERVER_DISCONNECT_EVENT, reason=self.disconnect_reason))
+            except pygame.error: # When the close button (on the window) is used, the event system has been shutdown already
+                pass
+        globals.game_connection = None
 
     def write_packet_sync(self, packet: Packet) -> None:
-        if hasattr(self, 'outgoing_queue') and not self.outgoing_queue.closed:
-            self.outgoing_queue.sync_q.put(packet) # Black hole for packets sent when not connected
+        if hasattr(self, 'outgoing_queue'):
+            try:
+                self.outgoing_queue.sync_q.put(packet)
+            except RuntimeError:
+                pass

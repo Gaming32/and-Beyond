@@ -35,7 +35,8 @@
             "request": "launch",
             "module": "and_beyond.server",
             "args": [
-                "--debug"
+                "--debug",
+                "--world", "server_world"
             ]
         }
     ]

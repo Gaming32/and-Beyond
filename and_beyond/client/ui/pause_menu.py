@@ -2,7 +2,9 @@
 import logging
 
 import pygame
+import pygame.event
 from and_beyond.client import globals
+from and_beyond.client.consts import SERVER_DISCONNECT_EVENT
 from and_beyond.client.ui import Ui, UiButton, UiLabel
 from and_beyond.client.ui.options_menu import OptionsMenu
 from and_beyond.pipe_commands import PipeCommands
@@ -11,13 +13,16 @@ from pygame.locals import *
 
 
 class PauseMenu(Ui):
+    disconnect_button: UiButton
+
     def __init__(self) -> None:
         super().__init__([
             UiLabel('Game Paused'),
             UiButton('Continue Game', self.continue_game),
             UiButton('Options', self.show_options),
-            UiButton('Save and Quit', self.save_and_quit),
         ])
+        self.disconnect_button = UiButton('Disconnect', self.disconnect)
+        self.elements.append(self.disconnect_button)
 
     def draw_and_call(self, surf: Surface):
         gray = Surface(surf.get_size()).convert_alpha()
@@ -25,6 +30,7 @@ class PauseMenu(Ui):
         surf.blit(gray, gray.get_rect())
         if globals.ui_override is not None:
             return globals.ui_override.draw_and_call(surf)
+        self.disconnect_button.label = 'Disconnect' if globals.singleplayer_popen is None else 'Save and Quit'
         return super().draw_and_call(surf)
 
     def pause_game(self) -> None:
@@ -44,16 +50,6 @@ class PauseMenu(Ui):
     def show_options(self) -> None:
         globals.ui_override = OptionsMenu()
 
-    def save_and_quit(self) -> None:
-        globals.game_status = globals.GameStatus.STOPPING
-        globals.mixer.stop_all_music()
-        globals.mixer.play_song()
-        globals.connecting_status = 'Disconnecting'
-        if globals.game_connection is not None:
-            globals.game_connection.stop()
-            globals.game_connection = None
-        if globals.singleplayer_pipe is not None:
-            globals.connecting_status = 'Stopping singleplayer server'
-            globals.close_singleplayer_server(False)
-            globals.singleplayer_pipe = None
+    def disconnect(self) -> None:
+        pygame.event.post(pygame.event.Event(SERVER_DISCONNECT_EVENT, reason=None))
         globals.paused = False

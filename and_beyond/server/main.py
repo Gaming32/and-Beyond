@@ -64,6 +64,8 @@ class AsyncServer:
             except BaseException as e:
                 if isinstance(e, Exception):
                     logging.critical('Server crashed hard with exception', exc_info=True)
+                elif isinstance(e, KeyboardInterrupt):
+                    logging.info('Closing due to keyboard interrupt.')
                 else:
                     raise
             finally:
@@ -121,7 +123,7 @@ class AsyncServer:
 
         try:
             world_name = sys.argv[sys.argv.index('--world') + 1]
-        except IndexError:
+        except (ValueError, IndexError):
             world_name = 'world'
         logging.info('Loading world "%s"', world_name)
 
@@ -166,8 +168,11 @@ class AsyncServer:
         await client.start()
 
     async def tick(self) -> None:
-        for client in self.clients:
-            await client.tick()
+        if self.clients:
+            for client in self.clients:
+                await client.tick()
+        else:
+            await asyncio.sleep(0)
 
     async def section_gc(self):
         while self.running:

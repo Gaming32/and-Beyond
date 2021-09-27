@@ -16,12 +16,13 @@ _D = struct.Struct('<d')
 class PacketType(enum.IntEnum):
     AUTHENTICATE = 0
     DISCONNECT = 1
-    CHUNK = 2
-    CHUNK_UNLOAD = 3
-    CHUNK_UPDATE = 4
-    # PLAYER_INFO = 5 # Reserved for future use
-    PLAYER_POS = 6
-    ADD_VELOCITY = 7
+    PING = 2
+    CHUNK = 3
+    CHUNK_UNLOAD = 4
+    CHUNK_UPDATE = 5
+    # PLAYER_INFO = 6 # Reserved for future use
+    PLAYER_POS = 7
+    ADD_VELOCITY = 8
 
 
 class Packet(abc.ABC):
@@ -107,6 +108,10 @@ def _write_uuid(value: uuid.UUID, writer: StreamWriter) -> None:
 
 
 # Packet classes
+
+class PingPacket(Packet):
+    type = PacketType.PING
+
 
 class AuthenticatePacket(Packet):
     type = PacketType.AUTHENTICATE
@@ -253,6 +258,7 @@ class AddVelocityPacket(Packet):
 PACKET_CLASSES: list[type[Packet]] = [
     AuthenticatePacket,
     DisconnectPacket,
+    PingPacket,
     ChunkPacket,
     UnloadChunkPacket,
     ChunkUpdatePacket,

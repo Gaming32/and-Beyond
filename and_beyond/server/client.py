@@ -4,13 +4,15 @@ import time
 import uuid
 from asyncio import StreamReader, StreamWriter
 from asyncio.events import AbstractEventLoop
+from asyncio.tasks import shield
 from typing import TYPE_CHECKING, Optional
 
 from and_beyond.common import MOVE_SPEED_CAP_SQ, VIEW_DISTANCE_BOX
 from and_beyond.packet import (AddVelocityPacket, AuthenticatePacket,
                                ChunkPacket, ChunkUpdatePacket,
-                               DisconnectPacket, Packet, PlayerPositionPacket,
-                               UnloadChunkPacket, read_packet, write_packet)
+                               DisconnectPacket, Packet, PingPacket,
+                               PlayerPositionPacket, UnloadChunkPacket,
+                               read_packet, write_packet)
 from and_beyond.server.player import Player
 from and_beyond.utils import spiral_loop_gen
 from and_beyond.world import BlockTypes, WorldChunk
@@ -29,6 +31,7 @@ class Client:
     disconnecting: bool
 
     auth_uuid: Optional[uuid.UUID]
+    ping_task: asyncio.Task
     packet_task: asyncio.Task
     loaded_chunks: dict[tuple[int, int], WorldChunk]
 
@@ -54,11 +57,13 @@ class Client:
         logging.info('Player logged in with UUID %s', self.auth_uuid)
         self.disconnecting = False
         self.packet_queue = asyncio.Queue()
+        self.ping_task = self.aloop.create_task(self.periodic_ping())
         self.packet_task = self.aloop.create_task(self.packet_tick())
         self.player = Player(self)
         await self.player.ainit()
         await self.load_chunks_around_player()
         self.ready = True
+        logging.info('%s joined the game', self.player)
 
     async def load_chunk(self, x: int, y: int) -> None:
         chunk = self.server.world.get_generated_chunk(x, y, self.server.world_generator)
@@ -67,7 +72,7 @@ class Client:
         await write_packet(packet, self.writer)
 
     async def unload_chunk(self, x: int, y: int) -> None:
-        self.loaded_chunks.pop((x, y))
+        self.loaded_chunks.pop((x, y), None)
         packet = UnloadChunkPacket(x, y)
         await write_packet(packet, self.writer)
 
@@ -100,11 +105,21 @@ class Client:
         if tasks:
             await asyncio.gather(*tasks)
 
+    async def periodic_ping(self) -> None:
+        while self.server.running:
+            await asyncio.sleep(1)
+            try:
+                await write_packet(PingPacket(), self.writer)
+            except ConnectionError:
+                logging.debug('Client failed ping, removing player from list of connected players')
+                await self.disconnect(f'{self} left the game', False)
+                return
+
     async def packet_tick(self) -> None:
         while self.server.running:
             try:
                 packet = await read_packet(self.reader)
-            except asyncio.IncompleteReadError:
+            except (asyncio.IncompleteReadError, ConnectionError):
                 await self.disconnect(f'{self} left the game', False)
                 return
             await self.packet_queue.put(packet)
@@ -133,7 +148,7 @@ class Client:
                 elif isinstance(packet, PlayerPositionPacket):
                     logging.warn('Player %s used illegal packet: PLAYER_POSITION (this packet is deprecated and a security hole)', self)
                     await self.disconnect('Used illegal packet: PLAYER_POSITION (this packet is deprecated and a security hole)')
-                    continue
+                    return
                     prev_x = self.player.x
                     prev_y = self.player.y
                     rel_x = packet.x - prev_x
@@ -181,11 +196,23 @@ class Client:
                 await self.load_chunks_around_player()
 
     async def disconnect(self, reason: str = '', kick: bool = True) -> None:
+        # Shield is necessary, as this shutdown method *must* be called.
+        # It used to cancel in the middle of this method, preventing player
+        # data from being saved.
+        await shield(self._disconnect(reason, kick))
+
+    async def _disconnect(self, reason: str, kick: bool) -> None:
         if self.disconnecting:
             logging.debug('Already disconnecting %s', self)
             return
         self.disconnecting = True
-        logging.debug('Disconnecting player %s', self)
+        logging.debug('Disconnecting player %s for reason "%s"', self, reason)
+        try:
+            self.server.clients.remove(self)
+        except ValueError:
+            pass
+        self.packet_task.cancel()
+        self.ping_task.cancel()
         if kick:
             packet = DisconnectPacket(reason)
             try:
@@ -193,14 +220,10 @@ class Client:
             except ConnectionError:
                 logging.debug('Player was already disconnected')
         self.writer.close()
-        await self.writer.wait_closed()
-        try:
-            self.server.clients.remove(self)
-        except ValueError:
-            pass
         start = time.perf_counter()
         await self.player.save()
         end = time.perf_counter()
         logging.debug('Player %s data saved in %f seconds', self, end - start)
+        await self.writer.wait_closed()
         logging.info('Player %s disconnected for reason: %s', self, reason)
-        self.packet_task.cancel() # Must happen last, as this could cancel this method (if it was called from packet_tick)
+        logging.info('%s left the game', self.player)

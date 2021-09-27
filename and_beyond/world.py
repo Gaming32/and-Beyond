@@ -212,7 +212,7 @@ class WorldSection:
 
     def close(self) -> None:
         self._close()
-        self.world.open_sections.pop((self.x, self.y))
+        self.world.open_sections.pop((self.x, self.y), None)
 
     def _close(self) -> None:
         self.fp.close()
