@@ -187,6 +187,12 @@ class World:
             s._close()
         self.open_sections.clear()
 
+    def __str__(self) -> str:
+        return self.name
+
+    def __repr__(self) -> str:
+        return f'<World {self.name!r} safe_name={self.safe_name!r} len(open_sections)={len(self.open_sections)}>'
+
 
 @autoslots
 class WorldSection:

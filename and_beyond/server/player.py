@@ -77,3 +77,9 @@ class Player(AbstractPlayer):
     async def send_position(self) -> None:
         packet = PlayerPositionPacket(self.x, self.y)
         await write_packet(packet, self.client.writer)
+
+    def __str__(self) -> str:
+        return str(self.client.auth_uuid) # TODO: Use player name
+
+    def __repr__(self) -> str:
+        return f'<Player uuid={self.client.auth_uuid!r} x={self.x} y={self.y}>'

@@ -35,6 +35,8 @@ class AsyncServer:
     has_been_shutdown: bool
     gc_task: asyncio.Task
 
+    host: str
+    port: int
     async_server: Server
     clients: list[Client]
 
@@ -136,7 +138,7 @@ class AsyncServer:
         end = time.perf_counter()
         logging.info('Found spawn location (%i, %i) in %f seconds', spawn_x, spawn_y, end - start)
 
-        await self.listen(host)
+        await self.listen(host, PORT)
 
         logging.info('Server started')
         self.running = True
@@ -154,10 +156,12 @@ class AsyncServer:
             if self.last_spt > 1:
                 logging.warn('Is the server overloaded? Running %f seconds behind (%i ticks)', self.last_spt, self.last_spt // 0.05)
 
-    async def listen(self, host: str) -> None:
-        self.async_server = await asyncio.start_server(self.client_connected, host, PORT)
+    async def listen(self, host: str, port: int) -> None:
+        self.host = host
+        self.port = port
+        self.async_server = await asyncio.start_server(self.client_connected, host, port)
         self.loop.create_task(self.async_server.start_serving())
-        logging.info('Listening on %s:%i', host, PORT)
+        logging.info('Listening on %s:%i', host, port)
 
     async def client_connected(self, reader: StreamReader, writer: StreamWriter) -> None:
         client = Client(self, reader, writer)
@@ -210,6 +214,16 @@ class AsyncServer:
         end = time.perf_counter()
         logging.info('World saved (with %i open section(s)) in %f seconds', section_count, end - start)
         await self.async_server.wait_closed()
+
+    def get_tps(self) -> int:
+        return int(1 / self.last_spt)
+
+    def get_tps_str(self) -> str:
+        tps = self.get_tps()
+        return f'>20.0' if tps > 20.0 else f'{tps:.1f}'
+
+    def __repr__(self) -> str:
+        return f'<AsyncServer{" SINGLEPLAYER" * (not self.multiplayer)} interface={self.host}:{self.port} world={str(self.world)!r} tps={self.get_tps_str()}>'
 
 
 def main():

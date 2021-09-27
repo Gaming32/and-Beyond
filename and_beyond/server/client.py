@@ -52,7 +52,7 @@ class Client:
         except asyncio.TimeoutError:
             return await self.disconnect('Authentication timeout')
         if not isinstance(auth_packet, AuthenticatePacket):
-            return await self.disconnect('Malformed authentication packet')
+            return await self.disconnect(f'Packet type not AUTHENTICATE type: {auth_packet.type.name}')
         self.auth_uuid = auth_packet.auth_id
         logging.info('Player logged in with UUID %s', self.auth_uuid)
         self.disconnecting = False
@@ -112,7 +112,7 @@ class Client:
                 await write_packet(PingPacket(), self.writer)
             except ConnectionError:
                 logging.debug('Client failed ping, removing player from list of connected players')
-                await self.disconnect(f'{self} left the game', False)
+                await self.disconnect(f'{self.player} left the game', False)
                 return
 
     async def packet_tick(self) -> None:
@@ -120,7 +120,7 @@ class Client:
             try:
                 packet = await read_packet(self.reader)
             except (asyncio.IncompleteReadError, ConnectionError):
-                await self.disconnect(f'{self} left the game', False)
+                await self.disconnect(f'{self.player} left the game', False)
                 return
             await self.packet_queue.put(packet)
 
@@ -183,7 +183,9 @@ class Client:
                         self.player.physics.x_velocity = new_x
                         self.player.physics.y_velocity = new_y
                 else:
-                    logging.warn('Client %s sent invalid packet: %s', self, packet.type.name)
+                    logging.warn('Client %s sent illegal packet: %s', self, packet.type.name)
+                    await self.disconnect(f'Packet type not legal for C->S: {packet.type.name}')
+                    return
         physics = self.player.physics
         old_cx = int(self.player.x) >> 4
         old_cy = int(self.player.y) >> 4
@@ -227,3 +229,7 @@ class Client:
         await self.writer.wait_closed()
         logging.info('Player %s disconnected for reason: %s', self, reason)
         logging.info('%s left the game', self.player)
+
+    def __repr__(self) -> str:
+        peername = self.writer.get_extra_info('peername')
+        return f'<Client host={peername[0]}:{peername[1]} player={self.player!r} server={self.server!r}>'
