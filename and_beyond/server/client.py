@@ -14,7 +14,7 @@ from and_beyond.packet import (AddVelocityPacket, AuthenticatePacket,
                                PlayerPositionPacket, UnloadChunkPacket,
                                read_packet, write_packet)
 from and_beyond.server.player import Player
-from and_beyond.utils import spiral_loop_gen
+from and_beyond.utils import spiral_loop_async, spiral_loop_gen
 from and_beyond.world import BlockTypes, WorldChunk
 
 if TYPE_CHECKING:
@@ -88,16 +88,21 @@ class Client:
         loaded: set[tuple[int, int]] = set()
         cx = int(self.player.x) >> 4
         cy = int(self.player.y) >> 4
-        await asyncio.gather(*
-            spiral_loop_gen(
-                VIEW_DISTANCE_BOX,
-                VIEW_DISTANCE_BOX,
-                (
-                    lambda x, y:
-                        self.aloop.create_task(load_chunk_rel(x, y))
-                )
-            )
-        )
+        await spiral_loop_async(
+            VIEW_DISTANCE_BOX,
+            VIEW_DISTANCE_BOX,
+            load_chunk_rel
+        ) # bpo-29930
+        # await asyncio.gather(*
+        #     spiral_loop_gen(
+        #         VIEW_DISTANCE_BOX,
+        #         VIEW_DISTANCE_BOX,
+        #         (
+        #             lambda x, y:
+        #                 self.aloop.create_task(load_chunk_rel(x, y))
+        #         )
+        #     )
+        # )
         to_unload = set(self.loaded_chunks).difference(loaded)
         tasks = []
         for (cx, cy) in to_unload:
