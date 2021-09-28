@@ -16,7 +16,7 @@ from and_beyond.pipe_commands import PipeCommands
 from and_beyond.server.client import Client
 from and_beyond.server.consts import GC_TIME_SECONDS
 from and_beyond.server.world_gen.core import WorldGenerator
-from and_beyond.world import BlockTypes, World
+from and_beyond.world import BlockTypes, World, WorldChunk
 
 if sys.platform == 'win32':
     import msvcrt
@@ -215,6 +215,18 @@ class AsyncServer:
         logging.info('World saved (with %i open section(s)) in %f seconds', section_count, end - start)
         await self.async_server.wait_closed()
 
+    async def set_tile_type_global(self, chunk: WorldChunk, x: int, y: int, type: BlockTypes, exclude_player: Client = None):
+        chunk.set_tile_type(x, y, type)
+        cpos = (chunk.abs_x, chunk.abs_y)
+        packet = ChunkUpdatePacket(chunk.abs_x, chunk.abs_y, x, y, type)
+        tasks: list[asyncio.Task] = []
+        for player in self.clients:
+            if player == exclude_player:
+                continue
+            if cpos in player.loaded_chunks:
+                tasks.append(self.loop.create_task(write_packet(packet, player.writer)))
+        await asyncio.gather(*tasks)
+
     def get_tps(self) -> int:
         return int(1 / self.last_spt)
 
@@ -223,7 +235,7 @@ class AsyncServer:
         return f'>20.0' if tps > 20.0 else f'{tps:.1f}'
 
     def __repr__(self) -> str:
-        return f'<AsyncServer{" SINGLEPLAYER" * (not self.multiplayer)} interface={self.host}:{self.port} world={str(self.world)!r} tps={self.get_tps_str()}>'
+        return f'<AsyncServer{" SINGLEPLAYER" * (not self.multiplayer)} bind={self.host}:{self.port} world={str(self.world)!r} tps={self.get_tps_str()}>'
 
 
 def main():

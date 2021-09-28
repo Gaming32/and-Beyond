@@ -145,7 +145,7 @@ class Client:
                         abs_y = (packet.cy << 4) + packet.by
                         chunk = self.loaded_chunks[chunk_pos]
                         if self.player.can_reach(abs_x, abs_y, packet.block != BlockTypes.AIR):
-                            chunk.set_tile_type(packet.bx, packet.by, packet.block)
+                            await self.server.set_tile_type_global(chunk, packet.bx, packet.by, packet.block, self)
                         else:
                             # logging.warn("Player %s can't reach block %i, %i, yet they tried to update it.", self, abs_x, abs_y)
                             packet.block = chunk.get_tile_type(packet.bx, packet.by)
