@@ -22,6 +22,12 @@ DATA_FORMAT = '%H:%M:%S'
 DEBUG = '--debug' in sys.argv
 
 
+def no_op(return_val: E) -> Callable[..., E]:
+    return (lambda *args, **kwargs: return_val)
+
+NO_OP = no_op(None)
+
+
 class ColoredFormatter(logging.Formatter):
     use_color: bool
 

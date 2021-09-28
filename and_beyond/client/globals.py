@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from and_beyond.client.ui import Ui
     from and_beyond.client.world import ClientWorld
     from pygame.display import _VidInfo
+    from pygame.event import Event
 
 
 class _Config(TypedDict):
@@ -96,6 +97,7 @@ w_width: int
 w_height: int
 delta: float
 released_mouse_buttons: list[bool]
+events: list['Event']
 
 game_status: GameStatus
 game_connection: Optional['ServerConnection'] = None

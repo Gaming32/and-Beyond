@@ -100,6 +100,7 @@ title = TitleScreen()
 pause_menu = PauseMenu()
 should_show_debug = DEBUG
 
+globals.events = []
 globals.local_world = ClientWorld()
 globals.player = ClientPlayer()
 
@@ -125,7 +126,9 @@ while globals.running:
             screen = reset_window()
         old_fullscreen = globals.fullscreen
 
+        globals.events.clear()
         for event in pygame.event.get():
+            globals.events.append(event)
             if event.type == QUIT:
                 globals.running = False
             elif event.type == VIDEORESIZE:

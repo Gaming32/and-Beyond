@@ -29,7 +29,7 @@ class ServerConnection:
     aio_loop: asyncio.AbstractEventLoop
 
     running: bool
-    outgoing_queue: janus.Queue[Packet]
+    outgoing_queue: Optional[janus.Queue[Packet]]
     send_packets_task: Optional[asyncio.Task]
 
     disconnect_reason: Optional[str]
@@ -39,6 +39,7 @@ class ServerConnection:
         self.reader = None
         self.writer = None
         self.running = False
+        self.outgoing_queue = None
         self.send_packets_task = None
         self.disconnect_reason = None
         self._should_post_event = True
@@ -66,8 +67,13 @@ class ServerConnection:
         while True:
             try:
                 self.reader, self.writer = await asyncio.open_connection(server, PORT)
-            except OSError: # Linux, macOS, and when debugging :)
-                await asyncio.sleep(0)
+            except OSError as e: # Singleplayer mode
+                if globals.singleplayer_popen is not None:
+                    await asyncio.sleep(0)
+                else:
+                    self.disconnect_reason = f'Failed to connect:\n{e}'
+                    logging.info('Failed to connect to server %s', server, exc_info=True)
+                    return
             else:
                 break
         logging.debug('Authenticating with server...')
@@ -154,7 +160,8 @@ class ServerConnection:
             self.send_packets_task.cancel()
         if self.writer is not None:
             self.writer.close()
-        self.outgoing_queue.close()
+        if self.outgoing_queue is not None:
+            self.outgoing_queue.close()
         globals.local_world.unload()
         globals.player.x = globals.player.render_x = math.inf
         globals.player.y = globals.player.render_y = math.inf
@@ -172,7 +179,7 @@ class ServerConnection:
         globals.game_connection = None
 
     def write_packet_sync(self, packet: Packet) -> None:
-        if hasattr(self, 'outgoing_queue'):
+        if self.outgoing_queue is not None:
             try:
                 self.outgoing_queue.sync_q.put(packet)
             except RuntimeError:

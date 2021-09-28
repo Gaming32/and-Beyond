@@ -20,6 +20,7 @@ ELEMENT_Y_PADDING = 25
 ButtonCallback = Callable[[], Any]
 ToggleButtonCallback = Callable[[bool], Any]
 SliderCallback = Callable[[int], Any]
+TextInputCallback = Callable[[str], Any]
 
 
 class UiElement(abc.ABC):
@@ -66,6 +67,62 @@ class UiLabel(UiElement):
     def text(self, text: str) -> None:
         self._text = text
         self._lines = text.split('\n')
+
+
+class UiTextInput(UiElement):
+    text: str
+    callback: TextInputCallback
+    selected: bool
+    width: int
+    show_time: float
+
+    def __init__(self, update_cb: TextInputCallback, default_text: str = '') -> None:
+        self.text = default_text
+        self.callback = update_cb
+        self.selected = False
+        self.width = DEFAULT_ELEMENT_WIDTH
+        self.show_time = 0
+
+    def draw_and_call(self, surf: Surface, at: Vector2, pressed: list[bool], released: list[bool]) -> Any:
+        self.show_time += globals.delta
+        text_render = GAME_FONT.render(self.text, True, UI_FG)
+        if text_render.get_width() > self.width - 20 or (text_render.get_width() < self.width - 20 and self.width > DEFAULT_ELEMENT_WIDTH):
+            self.width = max(text_render.get_width() + 20, DEFAULT_ELEMENT_WIDTH)
+        area = Rect(at + Vector2(DEFAULT_ELEMENT_WIDTH // 2 - self.width // 2, 0), (self.width, DEFAULT_ELEMENT_HEIGHT))
+        pygame.draw.rect(surf, UI_BG, area, 0, 5)
+        if pressed[0]:
+            if area.collidepoint(globals.mouse_screen): # type: ignore
+                self.selected = True
+            else:
+                self.selected = False
+        changed = False
+        if self.selected:
+            for event in globals.events:
+                if event.type == pygame.TEXTINPUT:
+                    self.text += event.text
+                    changed = True
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_BACKSPACE:
+                        if self.text:
+                            if event.mod & pygame.KMOD_CTRL:
+                                pos = self.text.rfind(' ')
+                                if pos == -1:
+                                    pos = 1
+                                self.text = self.text[:pos - 1]
+                            else:
+                                self.text = self.text[:-1]
+                            changed = True
+        surf.blit(
+            text_render,
+            (
+                area.x + 10,
+                area.y + area.height // 2 - text_render.get_height() // 2,
+            )
+        )
+        if self.selected and (int(self.show_time * 2) & 1):
+            surf.fill(UI_FG, (area.x + text_render.get_width() + 10, area.y + 10, 3, area.height - 20))
+        if changed:
+            self.callback(self.text)
 
 
 class UiButton(UiElement):
