@@ -25,6 +25,10 @@ import colorama
 from and_beyond.utils import autoslots, init_logger
 
 
+def get_opt(opt: str, offset: int = 1) -> str:
+    return sys.argv[sys.argv.index(opt) + offset]
+
+
 @autoslots
 class AsyncServer:
     loop: AbstractEventLoop
@@ -53,7 +57,9 @@ class AsyncServer:
         self.running = False
         self.paused = False
         self.has_been_shutdown = False
+        self.gc_task = None # type: ignore
         self.async_server = None # type: ignore
+        self.world = None # type: ignore
         self.clients = []
         self.last_spt = 0
 
@@ -108,8 +114,9 @@ class AsyncServer:
         self.loop = asyncio.get_running_loop()
 
         try:
-            singleplayer_fd_in = int(sys.argv[sys.argv.index('--singleplayer') + 1])
-            singleplayer_fd_out = int(sys.argv[sys.argv.index('--singleplayer') + 2])
+            singleplayer_pos = sys.argv.index('--singleplayer')
+            singleplayer_fd_in = int(sys.argv[singleplayer_pos + 1])
+            singleplayer_fd_out = int(sys.argv[singleplayer_pos + 2])
         except (ValueError, IndexError):
             logging.debug('Server running in multiplayer mode')
             self.singleplayer_pipe_in = None
@@ -131,7 +138,27 @@ class AsyncServer:
             port = None
 
         try:
-            world_name = sys.argv[sys.argv.index('--world') + 1]
+            listen_addr = get_opt('--listen')
+        except ValueError:
+            pass
+        else:
+            try:
+                host_arg, port_arg = listen_addr.rsplit(':', 1)
+            except ValueError:
+                logging.critical('Invalid --listen argument: %s', listen_addr)
+                return
+            else:
+                if host_arg:
+                    host = host_arg
+                if port_arg:
+                    try:
+                        port = int(port_arg)
+                    except ValueError:
+                        logging.critical('Port not integer: %s', port_arg)
+                        return
+
+        try:
+            world_name = get_opt('--world')
         except (ValueError, IndexError):
             world_name = 'world'
         logging.info('Loading world "%s"', world_name)
@@ -169,9 +196,15 @@ class AsyncServer:
                 logging.warn('Is the server overloaded? Running %f seconds behind (%i ticks)', self.last_spt, self.last_spt // 0.05)
 
     async def listen(self, host: str, port: Optional[int] = None) -> None:
-        self.async_server = await asyncio.start_server(self.client_connected, host, port)
-        self.host, self.port = self.async_server.sockets[0].getsockname()
-        logging.info('Listening on %s:%i', host, self.port)
+        logging.debug('Trying to listen on %s:%s', host, port)
+        try:
+            self.async_server = await asyncio.start_server(self.client_connected, host, port)
+        except Exception:
+            logging.critical('Failed to listen on %s:%s', host, port, exc_info=True)
+            raise SystemExit # This feels more proper than sys.exit(), since we know that it won't exit right away anyway
+        else:
+            self.host, self.port, *_ = self.async_server.sockets[0].getsockname()
+            logging.info('Listening on %s:%i', self.host, self.port)
 
     async def client_connected(self, reader: StreamReader, writer: StreamWriter) -> None:
         client = Client(self, reader, writer)
@@ -207,28 +240,28 @@ class AsyncServer:
 
     async def shutdown(self) -> None:
         logging.info('Shutting down...')
-        logging.debug('Cancelling GC task...')
-        try:
+        if self.gc_task is not None:
+            logging.debug('Cancelling GC task...')
             self.gc_task.cancel()
-        except AttributeError:
-            pass
         logging.debug('Kicking clients...')
         await asyncio.gather(*(client.disconnect('Server closed') for client in self.clients))
-        logging.debug('Closing server...')
-        self.async_server.close()
-        logging.info('Server closed')
+        if self.async_server is not None:
+            logging.debug('Closing server...')
+            self.async_server.close()
         logging.debug('Closing singleplayer pipes...')
         if self.singleplayer_pipe_in is not None:
             self.singleplayer_pipe_in.close()
         if self.singleplayer_pipe_out is not None:
             self.singleplayer_pipe_out.close()
-        logging.info('Saving world...')
-        section_count = len(self.world.open_sections)
-        start = time.perf_counter()
-        await self.world.close()
-        end = time.perf_counter()
-        logging.info('World saved (with %i open section(s)) in %f seconds', section_count, end - start)
-        await self.async_server.wait_closed()
+        if self.world is not None:
+            logging.info('Saving world...')
+            section_count = len(self.world.open_sections)
+            start = time.perf_counter()
+            await self.world.close()
+            end = time.perf_counter()
+            logging.info('World saved (with %i open section(s)) in %f seconds', section_count, end - start)
+        if self.async_server is not None:
+            await self.async_server.wait_closed()
 
     async def set_tile_type_global(self, chunk: WorldChunk, x: int, y: int, type: BlockTypes, exclude_player: Client = None):
         chunk.set_tile_type(x, y, type)

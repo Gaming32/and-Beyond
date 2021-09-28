@@ -1,5 +1,8 @@
 # pyright: reportWildcardImportFromLibrary=false
 
+from and_beyond.client.ui.label_screen import LabelScreen
+import ipaddress
+
 import pygame
 from and_beyond.client import globals
 from and_beyond.client.globals import GameStatus
@@ -33,9 +36,26 @@ class TitleScreen(Ui):
 
     def multiplayer(self) -> None:
         def connect_clicked(ip: str) -> None:
+            if ':' in ip:
+                try:
+                    ipaddress.IPv6Address(ip)
+                except ValueError:
+                    host, port = ip.rsplit(':', 1)
+                    try:
+                        port = int(port)
+                    except ValueError:
+                        globals.ui_override = LabelScreen(f'Invalid address or host:port pair: {ip}')
+                        globals.ui_override.parent = screen
+                        return
+                else:
+                    host = ip
+                    port = PORT
+            else:
+                host = ip
+                port = PORT
             globals.game_status = GameStatus.CONNECTING
-            TitleScreen.load_multiplayer(ip)
-        globals.ui_override = QuestionScreen(
+            TitleScreen.load_multiplayer(host, port)
+        screen = globals.ui_override = QuestionScreen(
             'Enter Server Address/IP:',
             'Connect',
             ok_callback=connect_clicked,

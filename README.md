@@ -32,4 +32,5 @@ Argument | Action
 Argument | Action
 -------- | ------
 `--world <name>` | Use the world called `<name>`
-`--singleplayer <fd>` | **Internal use only**
+`--listen <[host]:[port]>` | Listen on the specified host and port (default host: `0.0.0.0`, default port: `7932`)
+`--singleplayer <fd_in> <fd_out>` | **Internal use only**
