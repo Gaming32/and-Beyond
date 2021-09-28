@@ -7,6 +7,7 @@ from and_beyond.client.server_connection import ServerConnection
 from and_beyond.client.ui import Ui, UiButton, UiLabel, UiTextInput
 from and_beyond.client.ui.options_menu import OptionsMenu
 from and_beyond.client.ui.question_screen import QuestionScreen
+from and_beyond.common import PORT
 from pygame import *
 from pygame.locals import *
 
@@ -45,10 +46,10 @@ class TitleScreen(Ui):
         globals.ui_override = OptionsMenu()
 
     @staticmethod
-    def load_multiplayer(server: str):
+    def load_multiplayer(server: str, port: int = PORT):
         conn = ServerConnection()
         globals.game_connection = conn
-        conn.start(server)
+        conn.start(server, port)
 
     def quit(self) -> None:
         globals.running = False

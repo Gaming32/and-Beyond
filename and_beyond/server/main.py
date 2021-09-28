@@ -12,7 +12,7 @@ from typing import BinaryIO, Optional
 
 from and_beyond.common import PORT
 from and_beyond.packet import ChunkUpdatePacket, write_packet
-from and_beyond.pipe_commands import PipeCommands
+from and_beyond.pipe_commands import PipeCommandsToClient, PipeCommandsToServer
 from and_beyond.server.client import Client
 from and_beyond.server.consts import GC_TIME_SECONDS
 from and_beyond.server.world_gen.core import WorldGenerator
@@ -28,7 +28,8 @@ from and_beyond.utils import autoslots, init_logger
 @autoslots
 class AsyncServer:
     loop: AbstractEventLoop
-    singleplayer_pipe: Optional[BinaryIO]
+    singleplayer_pipe_in: Optional[BinaryIO]
+    singleplayer_pipe_out: Optional[BinaryIO]
     multiplayer: bool
     running: bool
     paused: bool
@@ -46,7 +47,8 @@ class AsyncServer:
 
     def __init__(self) -> None:
         self.loop = None # type: ignore
-        self.singleplayer_pipe = None
+        self.singleplayer_pipe_in = None
+        self.singleplayer_pipe_out = None
         self.multiplayer = True
         self.running = False
         self.paused = False
@@ -82,13 +84,13 @@ class AsyncServer:
             await asyncio.sleep(0)
         while self.running:
             command = await self.loop.run_in_executor(None, singleplayer_pipe.read, 2)
-            command = PipeCommands.from_bytes(command, 'little')
-            if command == PipeCommands.SHUTDOWN:
+            command = PipeCommandsToServer.from_bytes(command, 'little')
+            if command == PipeCommandsToServer.SHUTDOWN:
                 self.running = False
-            elif command == PipeCommands.PAUSE:
+            elif command == PipeCommandsToServer.PAUSE:
                 if not self.multiplayer:
                     self.paused = True
-            elif command == PipeCommands.UNPAUSE:
+            elif command == PipeCommandsToServer.UNPAUSE:
                 if not self.multiplayer:
                     self.paused = False
 
@@ -106,22 +108,27 @@ class AsyncServer:
         self.loop = asyncio.get_running_loop()
 
         try:
-            singleplayer_fd = int(sys.argv[sys.argv.index('--singleplayer') + 1])
+            singleplayer_fd_in = int(sys.argv[sys.argv.index('--singleplayer') + 1])
+            singleplayer_fd_out = int(sys.argv[sys.argv.index('--singleplayer') + 2])
         except (ValueError, IndexError):
             logging.debug('Server running in multiplayer mode')
-            self.singleplayer_pipe = None
+            self.singleplayer_pipe_in = None
             self.multiplayer = True
             host = '0.0.0.0'
+            port = PORT
         else:
-            logging.debug('Server running in singleplayer mode (fd/handle: %i)', singleplayer_fd)
+            logging.debug('Server running in singleplayer mode (fd/handle: %i (in), %i (out))', singleplayer_fd_in, singleplayer_fd_out)
             if sys.platform == 'win32':
-                singleplayer_fd = msvcrt.open_osfhandle(singleplayer_fd, os.O_RDONLY)
+                singleplayer_fd_in = msvcrt.open_osfhandle(singleplayer_fd_in, os.O_RDONLY)
+                singleplayer_fd_out = msvcrt.open_osfhandle(singleplayer_fd_out, os.O_WRONLY)
             else:
-                os.set_blocking(singleplayer_fd, True)
-            self.singleplayer_pipe = os.fdopen(singleplayer_fd, 'rb', closefd=False)
-            self.loop.create_task(self.receive_singleplayer_commands(self.singleplayer_pipe))
+                os.set_blocking(singleplayer_fd_in, True)
+            self.singleplayer_pipe_in = os.fdopen(singleplayer_fd_in, 'rb', closefd=False)
+            self.singleplayer_pipe_out = os.fdopen(singleplayer_fd_out, 'wb', closefd=False)
+            self.loop.create_task(self.receive_singleplayer_commands(self.singleplayer_pipe_in))
             self.multiplayer = False
             host = '127.0.0.1'
+            port = None
 
         try:
             world_name = sys.argv[sys.argv.index('--world') + 1]
@@ -138,7 +145,12 @@ class AsyncServer:
         end = time.perf_counter()
         logging.info('Found spawn location (%i, %i) in %f seconds', spawn_x, spawn_y, end - start)
 
-        await self.listen(host, PORT)
+        await self.listen(host, port)
+        if self.singleplayer_pipe_out is not None:
+            self.singleplayer_pipe_out.write(
+                self.port.to_bytes(2, 'little', signed=False)
+            )
+            self.singleplayer_pipe_out.flush()
 
         logging.info('Server started')
         self.running = True
@@ -156,12 +168,10 @@ class AsyncServer:
             if self.last_spt > 1:
                 logging.warn('Is the server overloaded? Running %f seconds behind (%i ticks)', self.last_spt, self.last_spt // 0.05)
 
-    async def listen(self, host: str, port: int) -> None:
-        self.host = host
-        self.port = port
+    async def listen(self, host: str, port: Optional[int] = None) -> None:
         self.async_server = await asyncio.start_server(self.client_connected, host, port)
-        self.loop.create_task(self.async_server.start_serving())
-        logging.info('Listening on %s:%i', host, port)
+        self.host, self.port = self.async_server.sockets[0].getsockname()
+        logging.info('Listening on %s:%i', host, self.port)
 
     async def client_connected(self, reader: StreamReader, writer: StreamWriter) -> None:
         client = Client(self, reader, writer)
@@ -198,15 +208,20 @@ class AsyncServer:
     async def shutdown(self) -> None:
         logging.info('Shutting down...')
         logging.debug('Cancelling GC task...')
-        self.gc_task.cancel()
+        try:
+            self.gc_task.cancel()
+        except AttributeError:
+            pass
         logging.debug('Kicking clients...')
         await asyncio.gather(*(client.disconnect('Server closed') for client in self.clients))
         logging.debug('Closing server...')
         self.async_server.close()
         logging.info('Server closed')
-        if self.singleplayer_pipe is not None:
-            logging.debug('Closing singleplayer pipe...')
-            self.singleplayer_pipe.close()
+        logging.debug('Closing singleplayer pipes...')
+        if self.singleplayer_pipe_in is not None:
+            self.singleplayer_pipe_in.close()
+        if self.singleplayer_pipe_out is not None:
+            self.singleplayer_pipe_out.close()
         logging.info('Saving world...')
         section_count = len(self.world.open_sections)
         start = time.perf_counter()

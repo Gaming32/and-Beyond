@@ -177,10 +177,10 @@ while globals.running:
                 if globals.game_connection is not None:
                     globals.game_connection.stop()
                     globals.game_connection = None
-                if globals.singleplayer_pipe is not None:
+                if globals.singleplayer_pipe_out is not None:
                     globals.connecting_status = 'Stopping singleplayer server'
                     globals.close_singleplayer_server(False)
-                    globals.singleplayer_pipe = None
+                    globals.singleplayer_pipe_out = None
                 disconnect_reason = event.reason
 
         if globals.mixer.music_channel is not None and not globals.mixer.music_channel.get_busy():
@@ -196,7 +196,15 @@ while globals.running:
             y = screen.get_height() // 2 - text_render.get_height() // 2
             area = text_render.get_rect().move(x, y)
             screen.blit(text_render, area)
-            if globals.game_status == GameStatus.STOPPING:
+            if globals.game_status == GameStatus.CONNECTING:
+                if globals.singleplayer_pipe_in is not None and globals.connecting_status.lower() == 'starting singleplayer server':
+                    try:
+                        port = int.from_bytes(globals.singleplayer_pipe_in.read(2), 'little', signed=False)
+                    except OSError:
+                        pass
+                    else:
+                        TitleScreen.load_multiplayer('localhost', port)
+            elif globals.game_status == GameStatus.STOPPING:
                 if globals.singleplayer_popen is not None:
                     if (returncode := globals.singleplayer_popen.poll()) is not None:
                         if returncode:

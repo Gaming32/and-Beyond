@@ -5,7 +5,7 @@ import subprocess
 import sys
 from typing import TYPE_CHECKING, BinaryIO, Optional, TypedDict
 
-from and_beyond.pipe_commands import PipeCommands
+from and_beyond.pipe_commands import PipeCommandsToServer
 from pygame import Vector2
 
 if TYPE_CHECKING:
@@ -64,14 +64,17 @@ class ConfigManager:
 
 
 def close_singleplayer_server(wait: bool = True):
-    global singleplayer_pipe, singleplayer_popen
+    global singleplayer_pipe_out, singleplayer_pipe_in, singleplayer_popen
     logging.debug('Checking if singleplayer server needs shutdown...')
-    if singleplayer_pipe is not None:
+    if singleplayer_pipe_out is not None:
         logging.info('Shutting down singleplayer server...')
-        singleplayer_pipe.write(PipeCommands.SHUTDOWN.to_bytes(2, 'little'))
-        singleplayer_pipe.flush()
-        singleplayer_pipe.close()
-        singleplayer_pipe = None
+        singleplayer_pipe_out.write(PipeCommandsToServer.SHUTDOWN.to_bytes(2, 'little'))
+        singleplayer_pipe_out.flush()
+        singleplayer_pipe_out.close()
+        singleplayer_pipe_out = None
+    if singleplayer_pipe_in is not None:
+        singleplayer_pipe_in.close()
+        singleplayer_pipe_in = None
     if wait and singleplayer_popen is not None:
         logging.info('Waiting for singleplayer server to stop...')
         if returncode := singleplayer_popen.wait():
@@ -102,9 +105,11 @@ events: list['Event']
 game_status: GameStatus
 game_connection: Optional['ServerConnection'] = None
 singleplayer_popen: Optional[subprocess.Popen] = None
-singleplayer_pipe: Optional[BinaryIO] = None
+singleplayer_pipe_in: Optional[BinaryIO] = None
+singleplayer_pipe_out: Optional[BinaryIO] = None
 if sys.platform == 'win32':
-    singleplayer_pipe_ih: int
+    singleplayer_pipe_in_ih: int
+    singleplayer_pipe_out_ih: int
 connecting_status: str = ''
 
 paused: bool = False

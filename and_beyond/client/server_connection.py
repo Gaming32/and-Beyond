@@ -44,36 +44,36 @@ class ServerConnection:
         self.disconnect_reason = None
         self._should_post_event = True
 
-    def start(self, server: str) -> None:
+    def start(self, server: str, port: int = PORT) -> None:
         logging.debug('Starting connection thread...')
-        self.thread = threading.Thread(name='ConnectionThread', target=self.start_thread, args=(server,))
+        self.thread = threading.Thread(name='ConnectionThread', target=self.start_thread, args=(server, port))
         self.thread.start()
 
     def stop(self) -> None:
         self.running = False
         self._should_post_event = False
 
-    def start_thread(self, server: str) -> None:
+    def start_thread(self, server: str, port: int = PORT) -> None:
         self.running = True
         self.aio_loop = asyncio.new_event_loop()
         try:
-            self.aio_loop.run_until_complete(self.main(server))
+            self.aio_loop.run_until_complete(self.main(server, port))
         finally:
             self.aio_loop.run_until_complete(self.shutdown())
 
-    async def main(self, server: str) -> None:
-        logging.info('Connecting to server %s...', server)
-        globals.connecting_status = 'Connecting to server' + (f' {server}' if server != 'localhost' else '')
+    async def main(self, server: str, port: int = PORT) -> None:
+        logging.info('Connecting to server %s:%i...', server, port)
+        globals.connecting_status = (
+            'Connecting to server'
+            + (f' {server}' + (f':{port}' if port != PORT else '') if server != 'localhost' else '')
+        )
         while True:
             try:
-                self.reader, self.writer = await asyncio.open_connection(server, PORT)
-            except OSError as e: # Singleplayer mode
-                if globals.singleplayer_popen is not None:
-                    await asyncio.sleep(0)
-                else:
-                    self.disconnect_reason = f'Failed to connect:\n{e}'
-                    logging.info('Failed to connect to server %s', server, exc_info=True)
-                    return
+                self.reader, self.writer = await asyncio.open_connection(server, port)
+            except OSError as e:
+                self.disconnect_reason = f'Failed to connect:\n{e}'
+                logging.error('Failed to connect to server %s', server, exc_info=True)
+                return
             else:
                 break
         logging.debug('Authenticating with server...')
@@ -83,6 +83,7 @@ class ServerConnection:
         logging.info('Connected to server')
         globals.connecting_status = 'Connected'
         globals.game_status = GameStatus.IN_GAME
+        # TODO: Move pygame calls to main thread
         globals.mixer.stop_all_music()
         globals.mixer.play_song()
         globals.local_world.load()

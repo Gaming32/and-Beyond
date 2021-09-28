@@ -1,5 +1,6 @@
 import logging
 import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -7,7 +8,6 @@ from pathlib import Path
 from and_beyond.client import globals
 from and_beyond.client.globals import GameStatus
 from and_beyond.client.ui import Ui, UiButton, UiLabel
-from and_beyond.client.ui.title_screen import TitleScreen
 from and_beyond.utils import DEBUG
 
 if sys.platform == 'win32':
@@ -52,23 +52,35 @@ class WorldScreen(Ui):
         globals.game_status = GameStatus.CONNECTING
         logging.info('Starting singleplayer server')
         globals.connecting_status = 'Starting singleplayer server'
-        (r, w) = os.pipe()
+        (ro, wo) = os.pipe()
+        (ri, wi) = os.pipe()
         # Thanks to
         # https://www.digitalenginesoftware.com/blog/archives/47-Passing-pipes-to-subprocesses-in-Python-in-Windows.html
         # for teaching how to work with subprocess pipes on Windows :)
         if sys.platform == 'win32':
             curproc = _winapi.GetCurrentProcess()
-            rh = msvcrt.get_osfhandle(r)
-            rih = _winapi.DuplicateHandle(curproc, rh, curproc, 0, True, _winapi.DUPLICATE_SAME_ACCESS)
-            pipe = rih
-            globals.singleplayer_pipe_ih = rih
-            os.close(r)
+            roh = msvcrt.get_osfhandle(ro)
+            wih = msvcrt.get_osfhandle(wi)
+            roih = _winapi.DuplicateHandle(curproc, roh, curproc, 0, True, _winapi.DUPLICATE_SAME_ACCESS)
+            wiih = _winapi.DuplicateHandle(curproc, wih, curproc, 0, True, _winapi.DUPLICATE_SAME_ACCESS)
+            pipe_out = roih
+            pipe_in = wiih
+            globals.singleplayer_pipe_out_ih = roih
+            globals.singleplayer_pipe_in_ih = wiih
+            os.close(ro)
+            os.close(wi)
+            rih = msvcrt.get_osfhandle(ri)
+            _winapi.SetNamedPipeHandleState(rih, 1, None, None)
         else:
-            os.set_inheritable(r, True)
-            pipe = r
-        globals.singleplayer_pipe = os.fdopen(w, 'wb')
-        server_args = [sys.executable, '-m', 'and_beyond.server', '--singleplayer', str(pipe), '--world', name]
+            os.set_inheritable(ro, True)
+            os.set_inheritable(wi, True)
+            os.set_blocking(ri, False)
+            pipe_out = ro
+            pipe_in = wi
+        globals.singleplayer_pipe_out = os.fdopen(wo, 'wb')
+        globals.singleplayer_pipe_in = os.fdopen(ri, 'rb')
+        server_args = [sys.executable, '-m', 'and_beyond.server', '--singleplayer', str(pipe_out), str(pipe_in), '--world', name]
         if DEBUG:
             server_args.append('--debug')
+        logging.debug('Starting singleplayer server with args: %s', shlex.join(server_args))
         globals.singleplayer_popen = subprocess.Popen(server_args, close_fds=False)
-        TitleScreen.load_multiplayer('localhost')

@@ -7,7 +7,7 @@ from and_beyond.client import globals
 from and_beyond.client.consts import SERVER_DISCONNECT_EVENT
 from and_beyond.client.ui import Ui, UiButton, UiLabel
 from and_beyond.client.ui.options_menu import OptionsMenu
-from and_beyond.pipe_commands import PipeCommands
+from and_beyond.pipe_commands import PipeCommandsToServer
 from pygame import *
 from pygame.locals import *
 
@@ -34,17 +34,17 @@ class PauseMenu(Ui):
         return super().draw_and_call(surf)
 
     def pause_game(self) -> None:
-        if globals.singleplayer_pipe is not None:
+        if globals.singleplayer_pipe_out is not None:
             logging.debug('Sending pause command...')
-            globals.singleplayer_pipe.write(PipeCommands.PAUSE.to_bytes(2, 'little'))
-            globals.singleplayer_pipe.flush()
+            globals.singleplayer_pipe_out.write(PipeCommandsToServer.PAUSE.to_bytes(2, 'little'))
+            globals.singleplayer_pipe_out.flush()
         globals.paused = True
 
     def continue_game(self) -> None:
-        if globals.singleplayer_pipe is not None:
+        if globals.singleplayer_pipe_out is not None:
             logging.debug('Sending unpause command...')
-            globals.singleplayer_pipe.write(PipeCommands.UNPAUSE.to_bytes(2, 'little'))
-            globals.singleplayer_pipe.flush()
+            globals.singleplayer_pipe_out.write(PipeCommandsToServer.UNPAUSE.to_bytes(2, 'little'))
+            globals.singleplayer_pipe_out.flush()
         globals.paused = False
 
     def show_options(self) -> None:
