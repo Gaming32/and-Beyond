@@ -12,11 +12,12 @@ import janus
 import pygame
 import pygame.event
 from and_beyond.client import globals
+from and_beyond.client.chat import ClientChatMessage
 from and_beyond.client.consts import SERVER_DISCONNECT_EVENT
 from and_beyond.client.globals import GameStatus
 from and_beyond.client.world import ClientChunk
 from and_beyond.common import PORT
-from and_beyond.packet import (AuthenticatePacket, ChunkPacket,
+from and_beyond.packet import (AuthenticatePacket, ChatPacket, ChunkPacket,
                                ChunkUpdatePacket, DisconnectPacket, Packet,
                                PingPacket, PlayerPositionPacket,
                                UnloadChunkPacket, read_packet, write_packet)
@@ -130,6 +131,9 @@ class ServerConnection:
                 self.running = False
             elif isinstance(packet, PingPacket):
                 time_since_ping = 0
+            elif isinstance(packet, ChatPacket):
+                logging.info('CHAT: %s', packet.message)
+                globals.chat_client.add_message(ClientChatMessage(packet.message, packet.time))
 
     async def send_outgoing_packets(self) -> None:
         self.outgoing_queue = janus.Queue()

@@ -23,6 +23,7 @@ class PacketType(enum.IntEnum):
     # PLAYER_INFO = 6 # Reserved for future use
     PLAYER_POS = 7
     ADD_VELOCITY = 8
+    CHAT = 9
 
 
 class Packet(abc.ABC):
@@ -72,7 +73,7 @@ async def _read_double(reader: StreamReader) -> float:
 
 
 async def _read_string(reader: StreamReader) -> str:
-    return (await reader.readexactly(await _read_ushort(reader))).decode('utf-8')
+    return (await reader.readexactly(await _read_varint(reader))).decode('utf-8')
 
 
 async def _read_uuid(reader: StreamReader) -> uuid.UUID:
@@ -99,7 +100,7 @@ def _write_double(value: float, writer: StreamWriter) -> None:
 
 def _write_string(value: str, writer: StreamWriter) -> None:
     enc = value.encode('utf-8')
-    _write_ushort(len(enc), writer)
+    _write_varint(len(enc), writer)
     writer.write(enc)
 
 
@@ -255,6 +256,24 @@ class AddVelocityPacket(Packet):
         _write_double(self.y, writer)
 
 
+class ChatPacket(Packet):
+    type = PacketType.CHAT
+    message: str
+    time: float
+
+    def __init__(self, message: str = '', time: float = 0) -> None:
+        self.message = message
+        self.time = time
+
+    async def read(self, reader: StreamReader) -> None:
+        self.message = await _read_string(reader)
+        self.time = await _read_double(reader)
+
+    def write(self, writer: StreamWriter) -> None:
+        _write_string(self.message, writer)
+        _write_double(self.time, writer)
+
+
 PACKET_CLASSES: list[type[Packet]] = [
     AuthenticatePacket,
     DisconnectPacket,
@@ -265,4 +284,5 @@ PACKET_CLASSES: list[type[Packet]] = [
     PlayerPositionPacket,
     PlayerPositionPacket,
     AddVelocityPacket,
+    ChatPacket,
 ]

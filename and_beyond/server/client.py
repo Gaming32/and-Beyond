@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Optional
 
 from and_beyond.common import MOVE_SPEED_CAP_SQ, VIEW_DISTANCE_BOX
 from and_beyond.packet import (AddVelocityPacket, AuthenticatePacket,
-                               ChunkPacket, ChunkUpdatePacket,
+                               ChatPacket, ChunkPacket, ChunkUpdatePacket,
                                DisconnectPacket, Packet, PingPacket,
                                PlayerPositionPacket, UnloadChunkPacket,
                                read_packet, write_packet)
@@ -187,6 +187,13 @@ class Client:
                     else:
                         self.player.physics.x_velocity = new_x
                         self.player.physics.y_velocity = new_y
+                elif isinstance(packet, ChatPacket):
+                    packet.message = f'<{self.player}> {packet.message}'
+                    logging.info('CHAT: %s', packet.message)
+                    await asyncio.gather(*(
+                        write_packet(packet, client.writer)
+                        for client in self.server.clients
+                    ))
                 else:
                     logging.warn('Client %s sent illegal packet: %s', self, packet.type.name)
                     await self.disconnect(f'Packet type not legal for C->S: {packet.type.name}')

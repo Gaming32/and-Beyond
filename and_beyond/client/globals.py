@@ -9,6 +9,7 @@ from and_beyond.pipe_commands import PipeCommandsToServer
 from pygame import Vector2
 
 if TYPE_CHECKING:
+    from and_beyond.client.chat import ChatClient
     from and_beyond.client.mixer import Mixer
     from and_beyond.client.player import ClientPlayer
     from and_beyond.client.server_connection import ServerConnection
@@ -92,7 +93,6 @@ class GameStatus(enum.IntEnum):
 config: ConfigManager
 running: bool
 display_info: '_VidInfo'
-frame: int
 mixer: 'Mixer'
 
 fullscreen: bool
@@ -101,6 +101,8 @@ w_height: int
 delta: float
 released_mouse_buttons: list[bool]
 events: list['Event']
+frame_time: float
+frame: int
 
 game_status: GameStatus
 game_connection: Optional['ServerConnection'] = None
@@ -120,3 +122,4 @@ player: 'ClientPlayer'
 camera: Vector2 = Vector2()
 mouse_screen: Vector2 = Vector2()
 mouse_world: tuple[float, float] = (0, 0)
+chat_client: 'ChatClient'

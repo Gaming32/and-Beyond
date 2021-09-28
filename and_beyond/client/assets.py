@@ -11,6 +11,7 @@ from pygame.locals import *
 pygame.font.init()
 GAME_FONT = pygame.font.SysFont('Calibri', 30)
 DEBUG_FONT = pygame.font.SysFont('Courier', 20, bold=True)
+CHAT_FONT = pygame.font.SysFont('Courier', 20)
 
 PERSON_SPRITES = [
     pygame.image.load('assets/sprites/person1.png'),
@@ -49,4 +50,4 @@ def transform_assets() -> int:
     count += 1
     return count
 
-ASSET_COUNT = 3
+ASSET_COUNT = 12

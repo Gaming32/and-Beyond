@@ -12,6 +12,7 @@ import pygame.draw
 import pygame.event
 import pygame.mouse
 import pygame.time
+from and_beyond.packet import ChatPacket
 from and_beyond.utils import DEBUG, init_logger
 
 init_logger('client.log')
@@ -20,14 +21,16 @@ pygame.init()
 logging.info('Pygame loaded')
 logging.info('Loading assets...')
 start = pytime.perf_counter()
-from and_beyond.client.assets import (ASSET_COUNT, DEBUG_FONT, GAME_FONT,
-                                      transform_assets)
+from and_beyond.client.assets import (ASSET_COUNT, CHAT_FONT, DEBUG_FONT,
+                                      GAME_FONT, transform_assets)
 
 end = pytime.perf_counter()
 logging.info('Loaded %i assets in %f seconds', ASSET_COUNT, end - start)
 
 from and_beyond.client import globals
-from and_beyond.client.consts import SERVER_DISCONNECT_EVENT, UI_FG
+from and_beyond.client.chat import ChatClient, ClientChatMessage
+from and_beyond.client.consts import (CHAT_DISPLAY_TIME, PERIODIC_TICK_EVENT,
+                                      SERVER_DISCONNECT_EVENT, UI_FG)
 from and_beyond.client.globals import ConfigManager, GameStatus
 from and_beyond.client.mixer import Mixer
 from and_beyond.client.player import ClientPlayer
@@ -103,6 +106,8 @@ should_show_debug = DEBUG
 globals.events = []
 globals.local_world = ClientWorld()
 globals.player = ClientPlayer()
+globals.chat_client = ChatClient()
+chat_open = False
 
 globals.game_status = GameStatus.MAIN_MENU
 globals.mixer = Mixer()
@@ -116,15 +121,19 @@ move_up = False
 globals.running = True
 globals.frame = 0
 clock = pygame.time.Clock()
+pygame.time.set_timer(PERIODIC_TICK_EVENT, 250)
 while globals.running:
     try:
         globals.delta = clock.tick(globals.config.config['max_framerate']) / 1000
+        globals.frame_time = pytime.time()
         globals.released_mouse_buttons = [False] * 7
         if globals.fullscreen != old_fullscreen:
             logging.debug('Switching fullscreen mode...')
             pygame.display.quit()
             screen = reset_window()
         old_fullscreen = globals.fullscreen
+        should_chat_open = False
+        periodic = False
 
         globals.events.clear()
         for event in pygame.event.get():
@@ -136,17 +145,15 @@ while globals.running:
                 if not globals.fullscreen:
                     globals.w_width = event.w
                     globals.w_height = event.h
+            elif event.type == PERIODIC_TICK_EVENT:
+                periodic = True
             elif event.type == KEYDOWN:
                 if event.key == K_F11:
                     globals.fullscreen = not globals.fullscreen
                 elif event.key == K_F3:
                     should_show_debug = not should_show_debug
-                elif event.key == K_d:
-                    move_right = True
-                elif event.key == K_a:
-                    move_left = True
-                elif event.key == K_SPACE:
-                    move_up = True
+                if event.key == K_t:
+                    should_chat_open = True
                 elif event.key == K_ESCAPE:
                     if globals.ui_override is not None:
                         globals.ui_override.close()
@@ -154,23 +161,56 @@ while globals.running:
                         pause_menu.continue_game()
                     else:
                         pause_menu.pause_game()
-                elif event.key == K_1:
-                    globals.player.change_selected_block(BlockTypes.STONE)
-                elif event.key == K_2:
-                    globals.player.change_selected_block(BlockTypes.DIRT)
-                elif event.key == K_3:
-                    globals.player.change_selected_block(BlockTypes.GRASS)
+                if not chat_open:
+                    if event.key == K_d:
+                        move_right = True
+                    elif event.key == K_a:
+                        move_left = True
+                    elif event.key == K_SPACE:
+                        move_up = True
+                    elif event.key == K_1:
+                        globals.player.change_selected_block(BlockTypes.STONE)
+                    elif event.key == K_2:
+                        globals.player.change_selected_block(BlockTypes.DIRT)
+                    elif event.key == K_3:
+                        globals.player.change_selected_block(BlockTypes.GRASS)
+                else:
+                    if event.key == pygame.K_BACKSPACE:
+                        text = globals.chat_client.current_chat
+                        if text:
+                            if event.mod & pygame.KMOD_CTRL:
+                                pos = text.rfind(' ')
+                                if pos == -1:
+                                    pos = 1
+                                globals.chat_client.current_chat = text[:pos - 1]
+                            else:
+                                globals.chat_client.current_chat = text[:-1]
+                            globals.chat_client.dirty = True
+                    elif event.key == K_RETURN:
+                        message = globals.chat_client.current_chat.strip()
+                        if message:
+                            packet = ChatPacket(message, pytime.time())
+                            if globals.game_connection is not None:
+                                globals.game_connection.write_packet_sync(packet)
+                        globals.chat_client.current_chat = ''
+                        globals.chat_client.dirty = True
+                        chat_open = False
             elif event.type == KEYUP:
-                if event.key == K_d:
-                    move_right = False
-                elif event.key == K_a:
-                    move_left = False
+                if not chat_open:
+                    if event.key == K_d:
+                        move_right = False
+                    elif event.key == K_a:
+                        move_left = False
             elif event.type == MOUSEBUTTONUP:
                 if event.button == 6 and globals.ui_override is not None:
                     globals.ui_override.close()
                 globals.released_mouse_buttons[event.button - 1] = True
+            elif chat_open and event.type == pygame.TEXTINPUT:
+                globals.chat_client.current_chat += event.text
+                globals.chat_client.dirty = True
             elif event.type == SERVER_DISCONNECT_EVENT:
                 globals.game_status = globals.GameStatus.STOPPING
+                globals.chat_client.clear()
                 globals.mixer.stop_all_music()
                 globals.mixer.play_song()
                 globals.connecting_status = 'Disconnecting'
@@ -182,6 +222,9 @@ while globals.running:
                     globals.close_singleplayer_server(False)
                     globals.singleplayer_pipe_out = None
                 disconnect_reason = event.reason
+
+        if should_chat_open:
+            chat_open = True
 
         if globals.mixer.music_channel is not None and not globals.mixer.music_channel.get_busy():
             globals.mixer.play_song()
@@ -230,6 +273,9 @@ while globals.running:
                     move_up = False
             globals.local_world.tick(screen)
             globals.player.render(screen)
+            if periodic:
+                globals.chat_client.dirty = True
+            globals.chat_client.render(screen, chat_open)
             if should_show_debug:
                 render_debug()
             elif globals.config.config['always_show_fps']:
