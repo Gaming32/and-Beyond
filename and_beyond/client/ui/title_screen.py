@@ -53,12 +53,14 @@ class TitleScreen(Ui):
             else:
                 host = ip
                 port = PORT
+            globals.config.config['last_server'] = ip
             globals.game_status = GameStatus.CONNECTING
             TitleScreen.load_multiplayer(host, port)
         screen = globals.ui_override = QuestionScreen(
             'Enter Server Address/IP:',
             'Connect',
             ok_callback=connect_clicked,
+            default_text=globals.config.config['last_server']
         )
         globals.ui_override.text_input.selected = True
 

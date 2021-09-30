@@ -26,6 +26,7 @@ class _Config(TypedDict):
     max_framerate: int
     always_show_fps: bool
     volume: float
+    last_server: str
 
 
 class ConfigManager:
@@ -49,6 +50,7 @@ class ConfigManager:
             'max_framerate': 75,
             'always_show_fps': False,
             'volume': 1.0,
+            'last_server': '',
         }
 
     def save(self, reassign: bool = True) -> None:
