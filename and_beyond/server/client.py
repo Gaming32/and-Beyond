@@ -13,6 +13,7 @@ from and_beyond.packet import (AddVelocityPacket, AuthenticatePacket,
                                DisconnectPacket, Packet, PingPacket,
                                PlayerPositionPacket, UnloadChunkPacket,
                                read_packet, write_packet)
+from and_beyond.server.commands import COMMANDS
 from and_beyond.server.player import Player
 from and_beyond.utils import spiral_loop_async, spiral_loop_gen
 from and_beyond.world import BlockTypes, WorldChunk
@@ -188,12 +189,21 @@ class Client:
                         self.player.physics.x_velocity = new_x
                         self.player.physics.y_velocity = new_y
                 elif isinstance(packet, ChatPacket):
-                    packet.message = f'<{self.player}> {packet.message}'
-                    logging.info('CHAT: %s', packet.message)
-                    await asyncio.gather(*(
-                        write_packet(packet, client.writer)
-                        for client in self.server.clients
-                    ))
+                    if packet.message[0] == '/':
+                        name, *rest = packet.message[1:].split(' ', 1)
+                        if name in COMMANDS:
+                            command = COMMANDS[name]
+                            await command(self, rest[0] if rest else '')
+                        else:
+                            logging.info('<%s> No command named "%s"', self.player, name)
+                            await self.send_chat(f'No command named "{name}"')
+                    else:
+                        packet.message = f'<{self.player}> {packet.message}'
+                        logging.info('CHAT: %s', packet.message)
+                        await asyncio.gather(*(
+                            write_packet(packet, client.writer)
+                            for client in self.server.clients
+                        ))
                 else:
                     logging.warn('Client %s sent illegal packet: %s', self, packet.type.name)
                     await self.disconnect(f'Packet type not legal for C->S: {packet.type.name}')
@@ -245,3 +255,9 @@ class Client:
     def __repr__(self) -> str:
         peername = self.writer.get_extra_info('peername')
         return f'<Client host={peername[0]}:{peername[1]} player={self.player!r} server={self.server!r}>'
+
+    async def send_chat(self, message: str, at: float = None) -> None:
+        if at is None:
+            at = time.time()
+        packet = ChatPacket(message, at)
+        await write_packet(packet, self.writer)

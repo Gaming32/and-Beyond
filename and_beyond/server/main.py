@@ -1,4 +1,5 @@
 import asyncio
+import itertools
 import logging
 import os
 import random
@@ -8,21 +9,21 @@ import time
 from asyncio.base_events import Server
 from asyncio.events import AbstractEventLoop
 from asyncio.streams import StreamReader, StreamWriter
+from collections import deque
 from typing import BinaryIO, Optional
 
+import colorama
 from and_beyond.common import PORT
 from and_beyond.packet import ChunkUpdatePacket, write_packet
-from and_beyond.pipe_commands import PipeCommandsToClient, PipeCommandsToServer
+from and_beyond.pipe_commands import PipeCommandsToServer
 from and_beyond.server.client import Client
 from and_beyond.server.consts import GC_TIME_SECONDS
 from and_beyond.server.world_gen.core import WorldGenerator
+from and_beyond.utils import autoslots, init_logger, mean
 from and_beyond.world import BlockTypes, World, WorldChunk
 
 if sys.platform == 'win32':
     import msvcrt
-
-import colorama
-from and_beyond.utils import autoslots, init_logger
 
 
 def get_opt(opt: str, offset: int = 1) -> str:
@@ -45,6 +46,9 @@ class AsyncServer:
     async_server: Server
     clients: list[Client]
 
+    last_tps_values: deque[float]
+    last_mspt_values: deque[float]
+
     last_spt: float
     world: World
     world_generator: WorldGenerator
@@ -62,6 +66,8 @@ class AsyncServer:
         self.world = None # type: ignore
         self.clients = []
         self.last_spt = 0
+        self.last_tps_values = deque(maxlen=600)
+        self.last_mspt_values = deque(maxlen=600)
 
     def start(self) -> None:
         if sys.platform == 'win32':
@@ -183,6 +189,7 @@ class AsyncServer:
         self.running = True
         logging.debug('Setting up section GC')
         self.gc_task = self.loop.create_task(self.section_gc())
+        time_since_last_second = 0
         while self.running:
             if not self.multiplayer:
                 while self.paused and self.running:
@@ -192,8 +199,13 @@ class AsyncServer:
             end = time.perf_counter()
             self.last_spt = end - start
             await asyncio.sleep(0.05 - self.last_spt)
+            time_since_last_second += max(self.last_spt, 0.05)
             if self.last_spt > 1:
                 logging.warn('Is the server overloaded? Running %f seconds behind (%i ticks)', self.last_spt, self.last_spt // 0.05)
+            if time_since_last_second > 1:
+                time_since_last_second -= 1
+                self.last_tps_values.append(1 / self.last_spt)
+                self.last_mspt_values.append(self.last_spt * 1000)
 
     async def listen(self, host: str, port: Optional[int] = None) -> None:
         logging.debug('Trying to listen on %s:%s', host, port)
@@ -275,15 +287,42 @@ class AsyncServer:
                 tasks.append(self.loop.create_task(write_packet(packet, player.writer)))
         await asyncio.gather(*tasks)
 
-    def get_tps(self) -> int:
-        return int(1 / self.last_spt)
+    def get_tps(self, time: int = 60):
+        return mean(itertools.islice(self.last_tps_values, max(len(self.last_tps_values) - time, 0), None))
 
-    def get_tps_str(self) -> str:
-        tps = self.get_tps()
+    def get_tps_str(self, time: int = 60) -> str:
+        tps = self.get_tps(time)
         return f'>20.0' if tps > 20.0 else f'{tps:.1f}'
+
+    def get_multi_tps_str(self) -> str:
+        results = []
+        for time in (60, 300, 600):
+            results.append(self.get_tps_str(time))
+        return f'TPS from last 1m, 5m, 10m: ' + ', '.join(results)
+
+    def get_mspt(self, time: int = 60):
+        return mean(itertools.islice(self.last_mspt_values, max(len(self.last_mspt_values) - time, 0), None))
+
+    def get_mspt_str(self, time: int = 60) -> str:
+        mspt = self.get_tps(time)
+        return f'{mspt:.2f}'
+
+    def get_multi_mspt_str(self) -> str:
+        results = []
+        for time in (60, 300, 600):
+            results.append(self.get_mspt_str(time))
+        return f'MSPT from last 1m, 5m, 10m: ' + ', '.join(results)
 
     def __repr__(self) -> str:
         return f'<AsyncServer{" SINGLEPLAYER" * (not self.multiplayer)} bind={self.host}:{self.port} world={str(self.world)!r} tps={self.get_tps_str()}>'
+
+    async def send_chat(self, message: str, at: float = None) -> None:
+        if at is None:
+            at = time.time()
+        await asyncio.gather(*(
+            self.loop.create_task(client.send_chat(message, at))
+            for client in self.clients
+        ))
 
 
 def main():

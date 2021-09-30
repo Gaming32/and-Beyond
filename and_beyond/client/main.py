@@ -154,6 +154,9 @@ while globals.running:
                     should_show_debug = not should_show_debug
                 if event.key == K_t:
                     should_chat_open = True
+                if event.key == K_SLASH:
+                    should_chat_open = True
+                    globals.chat_client.current_chat = '/'
                 elif event.key == K_ESCAPE:
                     if globals.ui_override is not None:
                         globals.ui_override.close()

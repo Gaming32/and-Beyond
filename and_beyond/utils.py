@@ -1,7 +1,9 @@
+import itertools
 import logging
 import sys
-from typing import (Any, Awaitable, Callable, Generator, Generic,
-                    MutableSequence, Optional, Sequence, TypeVar, Union)
+from typing import (Any, Awaitable, Callable, Generator, Generic, Iterable,
+                    MutableSequence, Optional, Sequence, TypeVar, Union,
+                    overload)
 
 T = TypeVar('T', bound=type)
 E = TypeVar('E')
@@ -20,6 +22,16 @@ FORMAT = '[%(asctime)s] [%(threadName)s/%(levelname)s] [%(filename)s:%(lineno)i]
 DATA_FORMAT = '%H:%M:%S'
 
 DEBUG = '--debug' in sys.argv
+
+
+def mean(values: Iterable[float]) -> float:
+    if hasattr(values, '__len__'):
+        return sum(values) / len(values) # type: ignore
+    i = 0
+    s = 0.0
+    for (i, v) in enumerate(values):
+        s += v
+    return s / (i + 1)
 
 
 def no_op(return_val: E) -> Callable[..., E]:

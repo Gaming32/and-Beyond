@@ -55,19 +55,12 @@ class ChatClient:
         if self.dirty or self.last_size != surf.get_size() or self.last_render_full != full:
             render = Surface(surf.get_size()).convert_alpha()
             render.fill((0, 0, 0, 0))
-            text_renders = []
-            max_width = 0
             if full:
                 messages = self.messages + [ClientChatMessage(self.current_chat, time.time())]
             else:
                 messages = self.messages[-(surf.get_height() - 100) // 40:]
-            self.should_show = bool(messages)
-            if not self.should_show:
-                self.screen_render = render
-                self.last_size = surf.get_size()
-                self.last_render_full = full
-                self.dirty = False
-                return
+            text_renders: list[Surface] = []
+            max_width = 0
             for message in reversed(messages):
                 if globals.frame_time - message.time > CHAT_DISPLAY_TIME and not full:
                     continue
@@ -75,6 +68,13 @@ class ChatClient:
                 if text_render.get_width() > max_width:
                     max_width = text_render.get_width()
                 text_renders.append(text_render)
+            self.should_show = bool(text_renders)
+            if not self.should_show:
+                self.screen_render = render
+                self.last_size = surf.get_size()
+                self.last_render_full = full
+                self.dirty = False
+                return
             chat_y = 5
             render.fill((0, 0, 0, 192))
             for text_render in reversed(text_renders):
