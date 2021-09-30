@@ -63,6 +63,7 @@ class ChatClient:
                 messages = self.messages[-(surf.get_height() - 100) // 40:]
             self.should_show = bool(messages)
             if not self.should_show:
+                self.screen_render = render
                 self.last_size = surf.get_size()
                 self.last_render_full = full
                 self.dirty = False

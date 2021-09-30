@@ -157,6 +157,9 @@ while globals.running:
                 elif event.key == K_ESCAPE:
                     if globals.ui_override is not None:
                         globals.ui_override.close()
+                    elif chat_open:
+                        chat_open = False
+                        globals.chat_client.dirty = True
                     elif globals.paused:
                         pause_menu.continue_game()
                     else:
