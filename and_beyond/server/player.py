@@ -1,4 +1,5 @@
 import json
+import logging
 from asyncio.events import AbstractEventLoop
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
 class Player(AbstractPlayer):
     data_path: Path
     client: 'Client'
+    name: str
     physics: PlayerPhysics
 
     aloop: AbstractEventLoop
@@ -24,7 +26,13 @@ class Player(AbstractPlayer):
     def __init__(self, client: 'Client') -> None:
         world = client.server.world
         self.data_path = world.players_path / f'{client.auth_uuid}.json'
+        if client.auth_uuid is not None and client.auth_uuid.int == 0:
+            old_path = world.players_path / '00000000-0000-0000-0000-000000005db0.json'
+            if old_path.exists():
+                logging.info('Player used old save file name, renaming...')
+                old_path.rename(self.data_path) # Rename singleplayer saves
         self.client = client
+        self.name = str(self.client.auth_uuid)
         self.physics = PlayerPhysics(self)
         self.loaded_chunks = client.loaded_chunks # Reference to fulfill AbstractPlayer
 

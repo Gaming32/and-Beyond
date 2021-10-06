@@ -16,7 +16,7 @@ from and_beyond.client.chat import ClientChatMessage
 from and_beyond.client.consts import SERVER_DISCONNECT_EVENT
 from and_beyond.client.globals import GameStatus
 from and_beyond.client.world import ClientChunk
-from and_beyond.common import PORT
+from and_beyond.common import PORT, PROTOCOL_VERSION
 from and_beyond.packet import (AuthenticatePacket, ChatPacket, ChunkPacket,
                                ChunkUpdatePacket, DisconnectPacket, Packet,
                                PingPacket, PlayerPositionPacket,
@@ -79,7 +79,7 @@ class ServerConnection:
                 break
         logging.debug('Authenticating with server...')
         globals.connecting_status = 'Authenticating'
-        auth = AuthenticatePacket(uuid.UUID(int=23984)) # Why not? This will be more rigorous in the future
+        auth = AuthenticatePacket(uuid.UUID(int=0), PROTOCOL_VERSION) # Explicit > implicit
         await write_packet(auth, self.writer)
         logging.info('Connected to server')
         globals.connecting_status = 'Connected'

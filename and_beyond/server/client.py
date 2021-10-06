@@ -7,7 +7,7 @@ from asyncio.events import AbstractEventLoop
 from asyncio.tasks import shield
 from typing import TYPE_CHECKING, Optional
 
-from and_beyond.common import MOVE_SPEED_CAP_SQ, VIEW_DISTANCE_BOX
+from and_beyond.common import MOVE_SPEED_CAP_SQ, PROTOCOL_VERSION, VIEW_DISTANCE_BOX, get_version_name
 from and_beyond.packet import (AddVelocityPacket, AuthenticatePacket,
                                ChatPacket, ChunkPacket, ChunkUpdatePacket,
                                DisconnectPacket, Packet, PingPacket,
@@ -32,8 +32,8 @@ class Client:
     disconnecting: bool
 
     auth_uuid: Optional[uuid.UUID]
-    ping_task: asyncio.Task
-    packet_task: asyncio.Task
+    ping_task: Optional[asyncio.Task]
+    packet_task: Optional[asyncio.Task]
     loaded_chunks: dict[tuple[int, int], WorldChunk]
 
     player: Player
@@ -44,19 +44,25 @@ class Client:
         self.writer = writer
         self.aloop = server.loop
         self.auth_uuid = None
+        self.ping_task = None
+        self.packet_task = None
         self.loaded_chunks = {}
+        self.player = None # type: ignore (A single ignore is easier than convincing the type checker that this is almost never null)
 
     async def start(self) -> None:
         self.ready = False
+        self.disconnecting = False
         try:
             auth_packet = await asyncio.wait_for(read_packet(self.reader), 3)
         except asyncio.TimeoutError:
             return await self.disconnect('Authentication timeout')
         if not isinstance(auth_packet, AuthenticatePacket):
             return await self.disconnect(f'Packet type not AUTHENTICATE type: {auth_packet.type.name}')
+        if auth_packet.protocol_version != PROTOCOL_VERSION:
+            return await self.disconnect(f'This server is on version {get_version_name(PROTOCOL_VERSION)}, '
+                                         f'but you connected with {get_version_name(auth_packet.protocol_version)}')
         self.auth_uuid = auth_packet.auth_id
         logging.info('Player logged in with UUID %s', self.auth_uuid)
-        self.disconnecting = False
         self.packet_queue = asyncio.Queue()
         self.ping_task = self.aloop.create_task(self.periodic_ping())
         self.packet_task = self.aloop.create_task(self.packet_tick())
@@ -235,8 +241,10 @@ class Client:
             self.server.clients.remove(self)
         except ValueError:
             pass
-        self.packet_task.cancel()
-        self.ping_task.cancel()
+        if self.packet_task is not None:
+            self.packet_task.cancel()
+        if self.ping_task is not None:
+            self.ping_task.cancel()
         if kick:
             packet = DisconnectPacket(reason)
             try:
@@ -244,10 +252,11 @@ class Client:
             except ConnectionError:
                 logging.debug('Player was already disconnected')
         self.writer.close()
-        start = time.perf_counter()
-        await self.player.save()
-        end = time.perf_counter()
-        logging.debug('Player %s data saved in %f seconds', self, end - start)
+        if self.player is not None:
+            start = time.perf_counter()
+            await self.player.save()
+            end = time.perf_counter()
+            logging.debug('Player %s data saved in %f seconds', self, end - start)
         await self.writer.wait_closed()
         logging.info('Player %s disconnected for reason: %s', self, reason)
         logging.info('%s left the game', self.player)

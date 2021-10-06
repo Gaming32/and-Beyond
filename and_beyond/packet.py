@@ -6,6 +6,7 @@ from asyncio import StreamReader
 from asyncio.streams import StreamWriter
 from typing import Optional, TypeVar
 
+from and_beyond.common import PROTOCOL_VERSION
 from and_beyond.utils import autoslots
 from and_beyond.world import BlockTypes, WorldChunk
 
@@ -117,15 +118,19 @@ class PingPacket(Packet):
 class AuthenticatePacket(Packet):
     type = PacketType.AUTHENTICATE
     auth_id: uuid.UUID
+    protocol_version: int
 
-    def __init__(self, auth_id: uuid.UUID = uuid.UUID(int=0)) -> None:
+    def __init__(self, auth_id: uuid.UUID = uuid.UUID(int=0), protocol_version: int = PROTOCOL_VERSION) -> None:
         self.auth_id = auth_id
+        self.protocol_version = protocol_version
 
     async def read(self, reader: StreamReader) -> None:
         self.auth_id = await _read_uuid(reader)
+        self.protocol_version = await _read_varint(reader)
 
     def write(self, writer: StreamWriter) -> None:
         _write_uuid(self.auth_id, writer)
+        _write_varint(self.protocol_version, writer)
 
 
 class DisconnectPacket(Packet):
