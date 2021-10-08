@@ -90,4 +90,4 @@ class Player(AbstractPlayer):
         return self.name
 
     def __repr__(self) -> str:
-        return f'<Player uuid={self.client.auth_uuid!r} x={self.x} y={self.y}>'
+        return f'<Player uuid={self.client.auth_uuid!r} name={self.name!r} x={self.x} y={self.y}>'

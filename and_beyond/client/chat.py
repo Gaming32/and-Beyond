@@ -56,7 +56,7 @@ class ChatClient:
             render = Surface(surf.get_size()).convert_alpha()
             render.fill((0, 0, 0, 0))
             if full:
-                messages = self.messages + [ClientChatMessage(self.current_chat, time.time())]
+                messages = self.messages + [ClientChatMessage('> ' + self.current_chat, time.time())]
             else:
                 messages = self.messages[-(surf.get_height() - 100) // 40:]
             text_renders: list[Surface] = []

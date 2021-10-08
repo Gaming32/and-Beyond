@@ -40,6 +40,7 @@ class AsyncServer:
     paused: bool
     has_been_shutdown: bool
     gc_task: asyncio.Task
+    skip_gc: bool
 
     host: str
     port: int
@@ -62,6 +63,7 @@ class AsyncServer:
         self.paused = False
         self.has_been_shutdown = False
         self.gc_task = None # type: ignore
+        self.skip_gc = True
         self.async_server = None # type: ignore
         self.world = None # type: ignore
         self.clients = []
@@ -219,6 +221,7 @@ class AsyncServer:
             logging.info('Listening on %s:%i', self.host, self.port)
 
     async def client_connected(self, reader: StreamReader, writer: StreamWriter) -> None:
+        self.skip_gc = False
         client = Client(self, reader, writer)
         if self.clients:
             self.clients.insert(random.randrange(len(self.clients)), client)
@@ -236,6 +239,9 @@ class AsyncServer:
     async def section_gc(self):
         while self.running:
             await asyncio.sleep(GC_TIME_SECONDS)
+            if self.skip_gc:
+                logging.debug('Skipping section GC, as nobody is online')
+                continue
             logging.debug('Starting section GC')
             start = time.perf_counter()
             chunks: set[tuple[int, int]] = set()
@@ -249,6 +255,7 @@ class AsyncServer:
                 self.world.get_section(sx, sy).close()
             end = time.perf_counter()
             logging.debug('Successfully closed %i section(s) in %f seconds', len(to_close), end - start)
+            self.skip_gc = len(self.clients) == 0
 
     async def shutdown(self) -> None:
         logging.info('Shutting down...')

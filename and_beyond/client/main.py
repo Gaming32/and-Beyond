@@ -152,11 +152,6 @@ while globals.running:
                     globals.fullscreen = not globals.fullscreen
                 elif event.key == K_F3:
                     should_show_debug = not should_show_debug
-                if event.key == K_t:
-                    should_chat_open = True
-                if event.key == K_SLASH:
-                    should_chat_open = True
-                    globals.chat_client.current_chat = '/'
                 elif event.key == K_ESCAPE:
                     if globals.ui_override is not None:
                         globals.ui_override.close()
@@ -180,6 +175,11 @@ while globals.running:
                         globals.player.change_selected_block(BlockTypes.DIRT)
                     elif event.key == K_3:
                         globals.player.change_selected_block(BlockTypes.GRASS)
+                    if event.key == K_t:
+                        should_chat_open = True
+                    elif event.key == K_SLASH:
+                        should_chat_open = True
+                        globals.chat_client.current_chat = '/'
                 else:
                     if event.key == pygame.K_BACKSPACE:
                         text = globals.chat_client.current_chat
