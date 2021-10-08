@@ -3,6 +3,6 @@ __pycache__
 config.json
 worlds
 test.py
-and-Beyond-*.pyz
+pyz
 # Noise tests
 test*.png

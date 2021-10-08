@@ -1,9 +1,12 @@
 # The launching script needs to be Python 2.X compatible so that it can tell people to upgrade ;)
 from __future__ import print_function
 
+import os
 import shlex
 import subprocess
 import sys
+import time
+from pathlib import Path
 
 if sys.version_info[0] > 2:
     from typing import List
@@ -80,5 +83,17 @@ if missing_deps:
     else:
         print('Installation cancelled.')
         sys.exit(0)
+
+GAME_DIR = Path(__file__).parent
+if GAME_DIR.is_file() and os.path.splitext(GAME_DIR)[1].lower() == '.pyz':
+    # Extract assets from PYZ
+    import zipfile
+    with zipfile.ZipFile(GAME_DIR, 'r') as zfp:
+        print('Extracting assets from PYZ')
+        start = time.perf_counter()
+        files_list = [f for f in zfp.namelist() if f.startswith('assets/')]
+        zfp.extractall(members=files_list)
+        end = time.perf_counter()
+        print('Extracted', len(files_list), 'assets from PYZ in', end - start, 'seconds')
 
 import and_beyond.client.main
