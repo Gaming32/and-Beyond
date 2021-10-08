@@ -40,7 +40,7 @@ from and_beyond.client.ui.pause_menu import PauseMenu
 from and_beyond.client.ui.title_screen import TitleScreen
 from and_beyond.client.utils import screen_to_world
 from and_beyond.client.world import ClientWorld
-from and_beyond.common import JUMP_SPEED, MOVE_SPEED
+from and_beyond.common import JUMP_SPEED, MOVE_SPEED, VERSION_DISPLAY_NAME
 from and_beyond.world import BlockTypes
 from pygame import *
 from pygame.locals import *
@@ -239,6 +239,14 @@ while globals.running:
 
         if globals.game_status == GameStatus.MAIN_MENU:
             title.draw_and_call(screen)
+            text_render = CHAT_FONT.render(VERSION_DISPLAY_NAME, True, (255, 255, 255))
+            screen.blit(
+                text_render,
+                text_render.get_rect().move(
+                    15,
+                    screen.get_height() - 15 - text_render.get_height()
+                )
+            )
         elif globals.game_status in (GameStatus.CONNECTING, GameStatus.STOPPING):
             screen.fill((0, 0, 0))
             text_render = GAME_FONT.render(globals.connecting_status, True, UI_FG)
