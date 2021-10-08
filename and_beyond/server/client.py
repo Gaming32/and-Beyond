@@ -7,7 +7,7 @@ from asyncio.events import AbstractEventLoop
 from asyncio.tasks import shield
 from typing import TYPE_CHECKING, Optional
 
-from and_beyond.common import MOVE_SPEED_CAP_SQ, PROTOCOL_VERSION, VIEW_DISTANCE_BOX, get_version_name
+from and_beyond.common import MOVE_SPEED_CAP_SQ, PROTOCOL_VERSION, VERSION_DISPLAY_NAME, VIEW_DISTANCE_BOX, get_version_name
 from and_beyond.packet import (AddVelocityPacket, OfflineAuthenticatePacket,
                                ChatPacket, ChunkPacket, ChunkUpdatePacket,
                                DisconnectPacket, Packet, PingPacket,
@@ -61,7 +61,8 @@ class Client:
         if not isinstance(auth_packet, OfflineAuthenticatePacket):
             return await self.disconnect(f'Packet type not AUTHENTICATE type: {auth_packet.type.name}')
         if auth_packet.protocol_version != PROTOCOL_VERSION:
-            return await self.disconnect(f'This server is on version {get_version_name(PROTOCOL_VERSION)}, '
+            return await self.disconnect(f'This server is on version {VERSION_DISPLAY_NAME} '
+                                         f'(requires minimum {get_version_name(PROTOCOL_VERSION)} to join), '
                                          f'but you connected with {get_version_name(auth_packet.protocol_version)}')
         self.auth_uuid = auth_packet.user_id
         logging.info('Player logged in with UUID %s', self.auth_uuid)

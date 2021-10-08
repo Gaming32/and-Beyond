@@ -3,11 +3,11 @@ import time
 import zipfile
 from pathlib import Path
 
-from and_beyond.common import VERSION_NAME
+from and_beyond.common import VERSION_DISPLAY_NAME
 
 PYZ_DIR = Path('pyz')
 PYZ_DIR.mkdir(exist_ok=True)
-DEST_FILE = PYZ_DIR / f'and-Beyond-{VERSION_NAME}.pyz'
+DEST_FILE = PYZ_DIR / f'and-Beyond-{VERSION_DISPLAY_NAME}.pyz'
 
 AND_BEYOND_DIR = Path('and_beyond')
 ASSETS_DIR = Path('assets')

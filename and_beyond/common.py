@@ -5,6 +5,7 @@ PROTOCOL_VERSION_MAP = [
     'a1.2.3', # 1
     'a1.2.4', # 2
 ]
+VERSION_DISPLAY_NAME = 'a1.2.5'
 
 VIEW_DISTANCE = 8
 VIEW_DISTANCE_BOX = 2 * VIEW_DISTANCE + 1
@@ -22,6 +23,3 @@ def get_version_name(protocol_version: int) -> str:
     if 0 <= protocol_version < len(PROTOCOL_VERSION_MAP):
         return PROTOCOL_VERSION_MAP[protocol_version]
     return 'UNKNOWN'
-
-
-VERSION_NAME = get_version_name(PROTOCOL_VERSION)
