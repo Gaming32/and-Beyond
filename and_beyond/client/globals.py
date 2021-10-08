@@ -52,7 +52,7 @@ class ConfigManager:
             'always_show_fps': False,
             'volume': 1.0,
             'nickname': 'nickname',
-            'last_server': '',
+            'last_server': 'mc.jemnetworks.com',
         }
 
     def save(self, reassign: bool = True) -> None:
