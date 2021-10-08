@@ -238,7 +238,7 @@ class Client:
             logging.debug('Already disconnecting %s', self)
             return
         self.disconnecting = True
-        logging.debug('Disconnecting player %s for reason "%s"', self, reason)
+        logging.debug('Disconnecting Client %s for reason "%s"', self, reason)
         try:
             self.server.clients.remove(self)
         except ValueError:
@@ -252,7 +252,7 @@ class Client:
             try:
                 await write_packet(packet, self.writer)
             except ConnectionError:
-                logging.debug('Player was already disconnected')
+                logging.debug('Client was already disconnected')
         self.writer.close()
         if self.player is not None:
             start = time.perf_counter()
@@ -260,9 +260,10 @@ class Client:
             end = time.perf_counter()
             logging.debug('Player %s data saved in %f seconds', self, end - start)
         await self.writer.wait_closed()
-        logging.info('Player %s disconnected for reason: %s', self, reason)
-        logging.info('%s left the game', self.player)
-        await self.server.send_chat(f'{self.player} left the game')
+        logging.info('Client %s disconnected for reason: %s', self, reason)
+        if self.player is not None:
+            logging.info('%s left the game', self.player)
+            await self.server.send_chat(f'{self.player} left the game')
 
     def __repr__(self) -> str:
         peername = self.writer.get_extra_info('peername')
