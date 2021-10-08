@@ -34,6 +34,7 @@ class Client:
     auth_uuid: Optional[uuid.UUID]
     ping_task: Optional[asyncio.Task]
     packet_task: Optional[asyncio.Task]
+    load_chunks_task: Optional[asyncio.Task]
     loaded_chunks: dict[tuple[int, int], WorldChunk]
 
     player: Player
@@ -46,6 +47,7 @@ class Client:
         self.auth_uuid = None
         self.ping_task = None
         self.packet_task = None
+        self.load_chunks_task = None
         self.loaded_chunks = {}
         self.player = None # type: ignore (A single ignore is easier than convincing the type checker that this is almost never null)
 
@@ -68,7 +70,8 @@ class Client:
         self.packet_task = self.aloop.create_task(self.packet_tick())
         self.player = Player(self, auth_packet.nickname)
         await self.player.ainit()
-        await self.load_chunks_around_player()
+        await self.load_chunks_around_player(9)
+        self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
         self.ready = True
         self.server.skip_gc = False
         logging.info('%s joined the game', self.player)
@@ -86,7 +89,7 @@ class Client:
         packet = UnloadChunkPacket(x, y)
         await write_packet(packet, self.writer)
 
-    async def load_chunks_around_player(self) -> None:
+    async def load_chunks_around_player(self, diameter: int = VIEW_DISTANCE_BOX) -> None:
         async def load_chunk_rel(x, y):
             await asyncio.sleep(0) # Why do I have to do this? I *do* have to for some reason
             x += cx
@@ -99,14 +102,14 @@ class Client:
         cx = int(self.player.x) >> 4
         cy = int(self.player.y) >> 4
         await spiral_loop_async(
-            VIEW_DISTANCE_BOX,
-            VIEW_DISTANCE_BOX,
+            diameter,
+            diameter,
             load_chunk_rel
         ) # bpo-29930
         # await asyncio.gather(*
         #     spiral_loop_gen(
-        #         VIEW_DISTANCE_BOX,
-        #         VIEW_DISTANCE_BOX,
+        #         diameter,
+        #         diameter,
         #         (
         #             lambda x, y:
         #                 self.aloop.create_task(load_chunk_rel(x, y))
@@ -248,6 +251,8 @@ class Client:
             self.packet_task.cancel()
         if self.ping_task is not None:
             self.ping_task.cancel()
+        if self.load_chunks_task is not None:
+            self.load_chunks_task.cancel()
         if kick:
             packet = DisconnectPacket(reason)
             try:

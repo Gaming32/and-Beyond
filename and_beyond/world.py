@@ -2,6 +2,7 @@ import asyncio
 import enum
 import json
 import logging
+import random
 import time
 from functools import partial
 from json.decoder import JSONDecodeError
@@ -107,10 +108,12 @@ class World:
                 return self.meta['spawn_x'], self.meta['spawn_y']
             else:
                 logging.warn('Invalid world spawn location (is partially null). Regenerating.')
-        x = 0
+        rand = random.Random(gen.seed)
+        x = rand.randint(-128, 128)
         y = 0
         cmp = self._compare_valid_spawn(x, y, gen)
-        if cmp != 0: # If it == 0, we've already found it
+        dir = 1
+        if cmp != 0: # If cmp == 0, we've already found the spawn
             y += -cmp * 16
             last_cmp = cmp
             while True:
