@@ -82,5 +82,13 @@ class WorldScreen(Ui):
         server_args = [sys.executable, '-m', 'and_beyond.server', '--singleplayer', str(pipe_out), str(pipe_in), '--world', name]
         if DEBUG:
             server_args.append('--debug')
+        env = os.environ.copy()
+        import __main__
+        if hasattr(__main__, 'GAME_DIR'):
+            GAME_DIR = str(__main__.GAME_DIR.absolute())
+            if 'PYTHONPATH' in env:
+                env['PYTHONPATH'] = str(GAME_DIR) + os.pathsep + env['PYTHONPATH']
+            else:
+                env['PYTHONPATH'] = str(GAME_DIR)
         logging.debug('Starting singleplayer server with args: %s', shlex.join(server_args))
-        globals.singleplayer_popen = subprocess.Popen(server_args, close_fds=False)
+        globals.singleplayer_popen = subprocess.Popen(server_args, close_fds=False, env=env)
