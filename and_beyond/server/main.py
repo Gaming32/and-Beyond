@@ -237,11 +237,16 @@ class AsyncServer:
             await asyncio.sleep(0)
 
     async def section_gc(self):
+        gc_time = GC_TIME_SECONDS
         while self.running:
-            await asyncio.sleep(GC_TIME_SECONDS)
+            await asyncio.sleep(gc_time)
             if self.skip_gc:
-                logging.debug('Skipping section GC, as nobody is online')
+                gc_time += 60
+                if gc_time > 300:
+                    gc_time = 300
+                logging.debug('Skipping section GC, as nobody is online (delay increased to %f minutes)', gc_time / 60)
                 continue
+            gc_time = GC_TIME_SECONDS
             logging.debug('Starting section GC')
             start = time.perf_counter()
             chunks: set[tuple[int, int]] = set()
