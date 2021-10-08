@@ -13,6 +13,7 @@ import pygame.event
 import pygame.mouse
 import pygame.time
 from and_beyond.packet import ChatPacket
+from and_beyond.pipe_commands import read_pipe
 from and_beyond.utils import DEBUG, init_logger
 
 init_logger('client.log')
@@ -248,7 +249,7 @@ while globals.running:
             if globals.game_status == GameStatus.CONNECTING:
                 if globals.singleplayer_pipe_in is not None and globals.connecting_status.lower() == 'starting singleplayer server':
                     try:
-                        port = int.from_bytes(globals.singleplayer_pipe_in.read(2), 'little', signed=False)
+                        port = read_pipe(globals.singleplayer_pipe_in)
                     except OSError:
                         pass
                     else:

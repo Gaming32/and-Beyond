@@ -5,7 +5,7 @@ import subprocess
 import sys
 from typing import TYPE_CHECKING, BinaryIO, Optional, TypedDict
 
-from and_beyond.pipe_commands import PipeCommandsToServer
+from and_beyond.pipe_commands import PipeCommandsToServer, write_pipe
 from pygame import Vector2
 
 if TYPE_CHECKING:
@@ -73,7 +73,7 @@ def close_singleplayer_server(wait: bool = True):
     logging.debug('Checking if singleplayer server needs shutdown...')
     if singleplayer_pipe_out is not None:
         logging.info('Shutting down singleplayer server...')
-        singleplayer_pipe_out.write(PipeCommandsToServer.SHUTDOWN.to_bytes(2, 'little'))
+        write_pipe(singleplayer_pipe_out, PipeCommandsToServer.SHUTDOWN)
         singleplayer_pipe_out.flush()
         singleplayer_pipe_out.close()
         singleplayer_pipe_out = None

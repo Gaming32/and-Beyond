@@ -24,6 +24,8 @@ TextInputCallback = Callable[[str], Any]
 
 
 class UiElement(abc.ABC):
+    hidden: bool = False
+
     def __init__(self) -> None:
         pass
 
@@ -240,6 +242,10 @@ class Ui:
         self.parent = None
         self.elements = elements
 
+    def show(self, parent: Optional['Ui'] = None) -> None:
+        self.parent = globals.ui_override if parent is None else parent
+        globals.ui_override = self
+
     def close(self) -> None:
         if globals.ui_override is self:
             globals.ui_override = self.parent
@@ -248,10 +254,12 @@ class Ui:
         pressed = list(pygame.mouse.get_pressed(5))
         released = globals.released_mouse_buttons
 
-        total_height = sum(e.get_height() + ELEMENT_Y_PADDING for e in self.elements)
+        total_height = sum(e.get_height() + ELEMENT_Y_PADDING for e in self.elements if not e.hidden)
         x = surf.get_width() // 2 - DEFAULT_ELEMENT_WIDTH // 2
         y = surf.get_height() // 2 - total_height // 2
 
         for element in self.elements:
+            if element.hidden:
+                continue
             element.draw_and_call(surf, Vector2(x, y), pressed, released)
             y += element.get_height() + ELEMENT_Y_PADDING

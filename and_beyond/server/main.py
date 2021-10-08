@@ -15,7 +15,7 @@ from typing import BinaryIO, Optional
 import colorama
 from and_beyond.common import PORT
 from and_beyond.packet import ChunkUpdatePacket, write_packet
-from and_beyond.pipe_commands import PipeCommandsToServer
+from and_beyond.pipe_commands import PipeCommandsToServer, read_pipe
 from and_beyond.server.client import Client
 from and_beyond.server.consts import GC_TIME_SECONDS
 from and_beyond.server.world_gen.core import WorldGenerator
@@ -93,11 +93,11 @@ class AsyncServer:
     def quit(self) -> None:
         self.running = False
 
-    async def receive_singleplayer_commands(self, singleplayer_pipe: BinaryIO):
+    async def receive_singleplayer_commands(self, pipe: BinaryIO):
         while not self.running:
             await asyncio.sleep(0)
         while self.running:
-            command = await self.loop.run_in_executor(None, singleplayer_pipe.read, 2)
+            command = await self.loop.run_in_executor(None, pipe.read, 2)
             command = PipeCommandsToServer.from_bytes(command, 'little')
             if command == PipeCommandsToServer.SHUTDOWN:
                 self.running = False
@@ -107,6 +107,13 @@ class AsyncServer:
             elif command == PipeCommandsToServer.UNPAUSE:
                 if not self.multiplayer:
                     self.paused = False
+            elif command == PipeCommandsToServer.OPEN_TO_LAN:
+                self.async_server.close()
+                port = read_pipe(pipe)
+                await self.async_server.wait_closed()
+                await self.listen('0.0.0.0', port)
+                self.multiplayer = True
+                await self.send_chat(f'Opened to LAN on port {self.port}')
 
     async def set_block(self, cx: int, cy: int, bx: int, by: int, block: BlockTypes) -> None:
         tasks: list[asyncio.Task] = []
