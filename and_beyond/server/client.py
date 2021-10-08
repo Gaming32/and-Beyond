@@ -70,6 +70,7 @@ class Client:
         await self.player.ainit()
         await self.load_chunks_around_player()
         self.ready = True
+        self.server.skip_gc = False
         logging.info('%s joined the game', self.player)
         if self.auth_uuid.int != 0 or self.server.multiplayer: # Don't show in singleplayer
             await self.server.send_chat(f'{self.player} joined the game')

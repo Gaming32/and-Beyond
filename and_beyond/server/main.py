@@ -228,7 +228,6 @@ class AsyncServer:
             logging.info('Listening on %s:%i', self.host, self.port)
 
     async def client_connected(self, reader: StreamReader, writer: StreamWriter) -> None:
-        self.skip_gc = False
         client = Client(self, reader, writer)
         if self.clients:
             self.clients.insert(random.randrange(len(self.clients)), client)
