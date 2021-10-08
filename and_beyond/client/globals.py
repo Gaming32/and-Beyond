@@ -26,6 +26,7 @@ class _Config(TypedDict):
     max_framerate: int
     always_show_fps: bool
     volume: float
+    nickname: str # Will be removed when a proper account system is added
     last_server: str
 
 
@@ -50,6 +51,7 @@ class ConfigManager:
             'max_framerate': 75,
             'always_show_fps': False,
             'volume': 1.0,
+            'nickname': 'nickname',
             'last_server': '',
         }
 

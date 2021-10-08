@@ -15,16 +15,17 @@ _D = struct.Struct('<d')
 
 
 class PacketType(enum.IntEnum):
-    AUTHENTICATE = 0
-    DISCONNECT = 1
-    PING = 2
-    CHUNK = 3
-    CHUNK_UNLOAD = 4
-    CHUNK_UPDATE = 5
-    # PLAYER_INFO = 6 # Reserved for future use
-    PLAYER_POS = 7
-    ADD_VELOCITY = 8
-    CHAT = 9
+    ONLINE_AUTHENTICATE = 0
+    OFFLINE_AUTHENTICATE = 1
+    DISCONNECT = 2
+    PING = 3
+    CHUNK = 4
+    CHUNK_UNLOAD = 5
+    CHUNK_UPDATE = 6
+    # PLAYER_INFO = 7 # Reserved for future use
+    PLAYER_POS = 8
+    ADD_VELOCITY = 9
+    CHAT = 10
 
 
 class Packet(abc.ABC):
@@ -115,21 +116,29 @@ class PingPacket(Packet):
     type = PacketType.PING
 
 
-class AuthenticatePacket(Packet):
-    type = PacketType.AUTHENTICATE
-    auth_id: uuid.UUID
+class OfflineAuthenticatePacket(Packet):
+    type = PacketType.OFFLINE_AUTHENTICATE
+    user_id: uuid.UUID
+    nickname: str
     protocol_version: int
 
-    def __init__(self, auth_id: uuid.UUID = uuid.UUID(int=0), protocol_version: int = PROTOCOL_VERSION) -> None:
-        self.auth_id = auth_id
+    def __init__(self,
+            user_id: uuid.UUID = uuid.UUID(int=0),
+            nickname: str = None,
+            protocol_version: int = PROTOCOL_VERSION,
+        ) -> None:
+        self.user_id = user_id
+        self.nickname = str(user_id) if nickname is None else nickname
         self.protocol_version = protocol_version
 
     async def read(self, reader: StreamReader) -> None:
-        self.auth_id = await _read_uuid(reader)
+        self.user_id = await _read_uuid(reader)
+        self.nickname = await _read_string(reader)
         self.protocol_version = await _read_varint(reader)
 
     def write(self, writer: StreamWriter) -> None:
-        _write_uuid(self.auth_id, writer)
+        _write_uuid(self.user_id, writer)
+        _write_string(self.nickname, writer)
         _write_varint(self.protocol_version, writer)
 
 
@@ -280,7 +289,8 @@ class ChatPacket(Packet):
 
 
 PACKET_CLASSES: list[type[Packet]] = [
-    AuthenticatePacket,
+    OfflineAuthenticatePacket,
+    OfflineAuthenticatePacket,
     DisconnectPacket,
     PingPacket,
     ChunkPacket,

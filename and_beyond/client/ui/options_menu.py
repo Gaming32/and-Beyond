@@ -3,7 +3,7 @@ from typing import Any
 
 from and_beyond.client import globals
 from and_beyond.client.ui import (SliderCallback, Ui, UiButton, UiLabel,
-                                  UiSlider, UiToggleButton)
+                                  UiSlider, UiTextInput, UiToggleButton)
 from pygame import *
 from pygame.locals import *
 
@@ -22,18 +22,21 @@ class OptionsMenu(Ui):
     framerate_slider: UiSlider
     fps_toggle: UiToggleButton
     volume_slider: UiSlider
+    nickname_text_input: UiTextInput
 
     def __init__(self) -> None:
         self.fullscreen_toggle = UiToggleButton('Fullscreen', self.fullscreen_toggle_cb)
         self.framerate_slider = FramerateSlider(self.framerate_slider_cb)
         self.fps_toggle = UiToggleButton('Always Show FPS', self.fps_toggle_cb)
         self.volume_slider = UiSlider('Volume', self.volume_slider_cb, 0, 101)
+        self.nickname_text_input = UiTextInput(self.nickname_text_input_cb)
         super().__init__([
             UiLabel('Options'),
             self.fullscreen_toggle,
             self.framerate_slider,
             self.fps_toggle,
             self.volume_slider,
+            self.nickname_text_input,
             UiButton('Back', self.close_option_menu),
         ])
 
@@ -43,6 +46,7 @@ class OptionsMenu(Ui):
         self.framerate_slider.value = 121 if framerate == 0 else framerate
         self.fps_toggle.toggled = globals.config.config['always_show_fps']
         self.volume_slider.value = int(globals.config.config['volume'] * 100)
+        self.nickname_text_input.text = globals.config.config['nickname']
         return super().draw_and_call(surf)
 
     def close_option_menu(self) -> None:
@@ -61,3 +65,6 @@ class OptionsMenu(Ui):
         volume = value / 100
         globals.config.config['volume'] = volume
         globals.mixer.set_volume(volume)
+
+    def nickname_text_input_cb(self, new_nickname: str) -> None:
+        globals.config.config['nickname'] = new_nickname

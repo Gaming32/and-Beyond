@@ -8,7 +8,7 @@ from asyncio.tasks import shield
 from typing import TYPE_CHECKING, Optional
 
 from and_beyond.common import MOVE_SPEED_CAP_SQ, PROTOCOL_VERSION, VIEW_DISTANCE_BOX, get_version_name
-from and_beyond.packet import (AddVelocityPacket, AuthenticatePacket,
+from and_beyond.packet import (AddVelocityPacket, OfflineAuthenticatePacket,
                                ChatPacket, ChunkPacket, ChunkUpdatePacket,
                                DisconnectPacket, Packet, PingPacket,
                                PlayerPositionPacket, UnloadChunkPacket,
@@ -56,21 +56,23 @@ class Client:
             auth_packet = await asyncio.wait_for(read_packet(self.reader), 3)
         except asyncio.TimeoutError:
             return await self.disconnect('Authentication timeout')
-        if not isinstance(auth_packet, AuthenticatePacket):
+        if not isinstance(auth_packet, OfflineAuthenticatePacket):
             return await self.disconnect(f'Packet type not AUTHENTICATE type: {auth_packet.type.name}')
         if auth_packet.protocol_version != PROTOCOL_VERSION:
             return await self.disconnect(f'This server is on version {get_version_name(PROTOCOL_VERSION)}, '
                                          f'but you connected with {get_version_name(auth_packet.protocol_version)}')
-        self.auth_uuid = auth_packet.auth_id
+        self.auth_uuid = auth_packet.user_id
         logging.info('Player logged in with UUID %s', self.auth_uuid)
         self.packet_queue = asyncio.Queue()
         self.ping_task = self.aloop.create_task(self.periodic_ping())
         self.packet_task = self.aloop.create_task(self.packet_tick())
-        self.player = Player(self)
+        self.player = Player(self, auth_packet.nickname)
         await self.player.ainit()
         await self.load_chunks_around_player()
         self.ready = True
         logging.info('%s joined the game', self.player)
+        if self.auth_uuid.int != 0 or self.server.multiplayer: # Don't show in singleplayer
+            await self.server.send_chat(f'{self.player} joined the game')
 
     async def load_chunk(self, x: int, y: int) -> None:
         chunk = self.server.world.get_generated_chunk(x, y, self.server.world_generator)
@@ -260,6 +262,7 @@ class Client:
         await self.writer.wait_closed()
         logging.info('Player %s disconnected for reason: %s', self, reason)
         logging.info('%s left the game', self.player)
+        await self.server.send_chat(f'{self.player} left the game')
 
     def __repr__(self) -> str:
         peername = self.writer.get_extra_info('peername')

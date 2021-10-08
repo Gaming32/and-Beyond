@@ -1,9 +1,9 @@
 PORT = 7932
-PROTOCOL_VERSION = 1
-# SERVER_VERSION_STR = 'a1.2.3'
+PROTOCOL_VERSION = 2
 PROTOCOL_VERSION_MAP = [
     'a1.2.2', # 0
     'a1.2.3', # 1
+    'a1.2.4', # 2
 ]
 
 VIEW_DISTANCE = 8

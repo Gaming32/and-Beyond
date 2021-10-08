@@ -1,6 +1,6 @@
 # ...and BEYOND
 
-...and BEYOND is an open-world sandbox, similar to Minecraft. It is my PyWeek 32 (Neverending) submission.
+...and BEYOND is an open-world sandbox, similar to Minecraft. It is my PyWeek 32 (Neverending) submission. It also currently has a public multiplayer testing server at `mc.jemnetworks.com`.
 
 ## Running
 

@@ -23,16 +23,16 @@ class Player(AbstractPlayer):
 
     aloop: AbstractEventLoop
 
-    def __init__(self, client: 'Client') -> None:
+    def __init__(self, client: 'Client', name: str = None) -> None:
         world = client.server.world
         self.data_path = world.players_path / f'{client.auth_uuid}.json'
         if client.auth_uuid is not None and client.auth_uuid.int == 0:
             old_path = world.players_path / '00000000-0000-0000-0000-000000005db0.json'
             if old_path.exists():
-                logging.info('Player used old save file name, renaming...')
+                logging.info('Player used old save filename, renaming...')
                 old_path.rename(self.data_path) # Rename singleplayer saves
         self.client = client
-        self.name = str(self.client.auth_uuid)
+        self.name = name or str(self.client.auth_uuid)
         self.physics = PlayerPhysics(self)
         self.loaded_chunks = client.loaded_chunks # Reference to fulfill AbstractPlayer
 
@@ -87,7 +87,7 @@ class Player(AbstractPlayer):
         await write_packet(packet, self.client.writer)
 
     def __str__(self) -> str:
-        return str(self.client.auth_uuid) # TODO: Use player name
+        return self.name
 
     def __repr__(self) -> str:
         return f'<Player uuid={self.client.auth_uuid!r} x={self.x} y={self.y}>'
