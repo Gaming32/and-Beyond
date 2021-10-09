@@ -322,7 +322,7 @@ class AsyncServer:
         return mean(itertools.islice(self.last_mspt_values, max(len(self.last_mspt_values) - time, 0), None))
 
     def get_mspt_str(self, time: int = 60) -> str:
-        mspt = self.get_tps(time)
+        mspt = self.get_mspt(time)
         return f'{mspt:.2f}'
 
     def get_multi_mspt_str(self) -> str:

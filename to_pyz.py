@@ -27,7 +27,7 @@ counter = 0
 
 with open(DEST_FILE, 'wb') as fp:
     print('Writing shebang')
-    fp.write(b'#!/usr/bin/env python3.9\n')
+    fp.write(b'#!/usr/bin/env python3\n')
 
     with zipfile.ZipFile(fp, 'w', zipfile.ZIP_DEFLATED) as zfp:
         for child in AND_BEYOND_DIR.rglob('*'):
