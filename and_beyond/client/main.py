@@ -29,8 +29,9 @@ end = pytime.perf_counter()
 logging.info('Loaded %i assets in %f seconds', ASSET_COUNT, end - start)
 
 from and_beyond.client import globals
-from and_beyond.client.chat import ChatClient, ClientChatMessage
-from and_beyond.client.consts import (CHAT_DISPLAY_TIME, PERIODIC_TICK_EVENT,
+from and_beyond.client.chat import ChatClient
+from and_beyond.client.consts import (PERIODIC_TICK_EVENT,
+                                      SERVER_CONNECT_EVENT,
                                       SERVER_DISCONNECT_EVENT, UI_FG)
 from and_beyond.client.globals import ConfigManager, GameStatus
 from and_beyond.client.mixer import Mixer
@@ -215,6 +216,9 @@ while globals.running:
             elif chat_open and event.type == pygame.TEXTINPUT:
                 globals.chat_client.current_chat += event.text
                 globals.chat_client.dirty = True
+            elif event.type == SERVER_CONNECT_EVENT:
+                globals.mixer.stop_all_music()
+                globals.mixer.play_song()
             elif event.type == SERVER_DISCONNECT_EVENT:
                 globals.game_status = globals.GameStatus.STOPPING
                 globals.chat_client.clear()

@@ -13,7 +13,7 @@ import pygame
 import pygame.event
 from and_beyond.client import globals
 from and_beyond.client.chat import ClientChatMessage
-from and_beyond.client.consts import SERVER_DISCONNECT_EVENT
+from and_beyond.client.consts import SERVER_CONNECT_EVENT, SERVER_DISCONNECT_EVENT
 from and_beyond.client.globals import GameStatus
 from and_beyond.client.world import ClientChunk
 from and_beyond.common import PORT, PROTOCOL_VERSION
@@ -88,9 +88,7 @@ class ServerConnection:
         logging.info('Connected to server')
         globals.connecting_status = 'Connected'
         globals.game_status = GameStatus.IN_GAME
-        # TODO: Move pygame calls to main thread
-        globals.mixer.stop_all_music()
-        globals.mixer.play_song()
+        pygame.event.post(pygame.event.Event(SERVER_CONNECT_EVENT))
         globals.local_world.load()
         self.send_packets_task = self.aio_loop.create_task(self.send_outgoing_packets())
         time_since_ping = 0
