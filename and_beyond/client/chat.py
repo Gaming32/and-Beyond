@@ -75,14 +75,13 @@ class ChatClient:
                 self.last_render_full = full
                 self.dirty = False
                 return
+            render_height = text_renders[0].get_height()
+            show_renders = text_renders[-((render.get_height() - 35) // render_height):]
             chat_y = 5
             render.fill((0, 0, 0, 192))
-            for text_render in reversed(text_renders):
-                next_y = chat_y + text_render.get_height() + 10
-                if next_y > render.get_height():
-                    break
+            for text_render in reversed(show_renders):
                 render.blit(text_render, (10, chat_y))
-                chat_y = next_y
+                chat_y = chat_y + render_height + 10
             self.screen_render = render
             self.last_size = surf.get_size()
             self.last_render_full = full
