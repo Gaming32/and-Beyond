@@ -19,14 +19,13 @@ async def help_command(client: 'Client', args: str) -> None:
 
 
 async def list_command(client: 'Client', args: str) -> None:
-    clients = client.server.clients
     players = [
         c.player
         for c in client.server.clients
         if c.player is not None
     ]
     player_text = ', '.join(str(p) for p in players)
-    await client.send_chat(f'There are {len(players)} players online: {player_text}')
+    await client.send_chat(f'There are {len(players)} player(s) online: {player_text}')
 
 
 async def tps_command(client: 'Client', args: str) -> None:
