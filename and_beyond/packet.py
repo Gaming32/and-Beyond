@@ -4,13 +4,14 @@ import struct
 import uuid
 from asyncio import StreamReader
 from asyncio.streams import StreamWriter
+from io import BytesIO
 from typing import Optional, TypeVar
 
 from and_beyond.common import PROTOCOL_VERSION
-from and_beyond.utils import autoslots
+from and_beyond.utils import BufferedStreamWriter, autoslots, copy_obj_to_class
 from and_beyond.world import BlockTypes, WorldChunk
 
-T = TypeVar('T', bound=int)
+_T_int = TypeVar('_T_int', bound=int)
 _D = struct.Struct('<d')
 
 
@@ -46,12 +47,15 @@ async def read_packet(reader: StreamReader) -> Packet:
 
 
 async def write_packet(packet: Packet, writer: StreamWriter) -> None:
+    if not isinstance(writer, BufferedStreamWriter):
+        writer = copy_obj_to_class(writer, BufferedStreamWriter)
+        writer._buffer = BytesIO()
     _write_ushort(packet.type, writer)
     packet.write(writer)
     await writer.drain()
 
 
-async def _read_ushort(reader: StreamReader, factory: type[T] = int) -> T:
+async def _read_ushort(reader: StreamReader, factory: type[_T_int] = int) -> _T_int:
     # The typing is correct, but Pyright hates me
     return factory.from_bytes(await reader.readexactly(2), 'little', signed=False) # type: ignore
 

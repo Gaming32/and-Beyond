@@ -1,12 +1,14 @@
 import itertools
 import logging
 import sys
+from asyncio.streams import StreamWriter
+from io import BytesIO
 from typing import (Any, Awaitable, Callable, Generator, Generic, Iterable,
                     MutableSequence, Optional, Sequence, TypeVar, Union,
                     overload)
 
-T = TypeVar('T', bound=type)
-E = TypeVar('E')
+_T = TypeVar('_T')
+_T_type = TypeVar('_T_type', bound=type)
 
 RESET_SEQ = '\033[0m'
 COLOR_SEQ = '\033[%sm'
@@ -34,7 +36,12 @@ def mean(values: Iterable[float]) -> float:
     return s / (i + 1)
 
 
-def no_op(return_val: E) -> Callable[..., E]:
+class copy_signature(Generic[_T]):
+    def __init__(self, target: _T) -> None: ...
+    def __call__(self, wrapped: Callable[..., Any]) -> _T: ...
+
+
+def no_op(return_val: _T) -> Callable[..., _T]:
     return (lambda *args, **kwargs: return_val)
 
 NO_OP = no_op(None)
@@ -55,7 +62,7 @@ class ColoredFormatter(logging.Formatter):
         return message
 
 
-def autoslots(cls: T) -> T:
+def autoslots(cls: _T_type) -> _T_type:
     slots = set(cls.__slots__) if hasattr(cls, '__slots__') else set()
     slots.update(cls.__annotations__.keys())
     cls.__slots__ = slots
@@ -63,12 +70,12 @@ def autoslots(cls: T) -> T:
 
 
 @autoslots
-class View(Generic[E]):
-    c: Sequence[E]
+class View(Generic[_T]):
+    c: Sequence[_T]
     start: int
     end: Optional[int]
 
-    def __init__(self, c: Sequence[E], start: int, end: Optional[int] = None) -> None:
+    def __init__(self, c: Sequence[_T], start: int, end: Optional[int] = None) -> None:
         self.c = c
         self.start = start
         self.end = end
@@ -90,20 +97,20 @@ class View(Generic[E]):
             self._index_error(i)
         return index
 
-    def __getitem__(self, i: Union[int, slice]) -> Union[E, Sequence[E]]:
+    def __getitem__(self, i: Union[int, slice]) -> Union[_T, Sequence[_T]]:
         return self.c[self._get_index(i)]
 
 
 @autoslots
-class MutableView(View[E], Generic[E]):
-    c: MutableSequence[E]
+class MutableView(View[_T], Generic[_T]):
+    c: MutableSequence[_T]
 
-    def __init__(self, c: MutableSequence[E], start: int, end: Optional[int] = None) -> None:
+    def __init__(self, c: MutableSequence[_T], start: int, end: Optional[int] = None) -> None:
         self.c = c
         self.start = start
         self.end = end
 
-    def __setitem__(self, i: Union[int, slice], v: E) -> None:
+    def __setitem__(self, i: Union[int, slice], v: _T) -> None:
         # Why does Pyright hate me?
         self.c[self._get_index(i)] = v # type: ignore
 
@@ -122,6 +129,23 @@ class MaxSizedDict(dict):
             del self[next(iter(self))]
 
 
+class BufferedStreamWriter(StreamWriter):
+    _buffer: BytesIO
+
+    @copy_signature(StreamWriter.__init__)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._buffer = BytesIO()
+
+    def write(self, data: bytes) -> None:
+        self._buffer.write(data)
+
+    async def drain(self) -> None:
+        super().write(self._buffer.getvalue())
+        self._buffer.truncate(0)
+        await super().drain()
+
+
 def spiral_loop(w: int, h: int, cb: Callable[[int, int], Any]) -> None:
     x = y = 0
     dx = 0
@@ -134,7 +158,7 @@ def spiral_loop(w: int, h: int, cb: Callable[[int, int], Any]) -> None:
         x, y = x+dx, y+dy
 
 
-def spiral_loop_gen(w: int, h: int, cb: Callable[[int, int], E]) -> Generator[E, None, None]:
+def spiral_loop_gen(w: int, h: int, cb: Callable[[int, int], _T]) -> Generator[_T, None, None]:
     x = y = 0
     dx = 0
     dy = -1
@@ -156,6 +180,20 @@ async def spiral_loop_async(w: int, h: int, cb: Callable[[int, int], Awaitable[A
         if x == y or (x < 0 and x == -y) or (x > 0 and x == 1-y):
             dx, dy = -dy, dx
         x, y = x+dx, y+dy
+
+
+def copy_obj_to_class(obj: Any, to: Union[type[_T], _T]) -> _T:
+    if hasattr(obj, '__slots__'):
+        copy_attrs = set(obj.__slots__)
+    else:
+        copy_attrs = set(obj.__dict__)
+    if hasattr(to, '__slots__'):
+        copy_attrs.intersection_update(to.__slots__)
+    if isinstance(to, type):
+        to = to.__new__(to) # type: ignore
+    for attr in copy_attrs:
+        setattr(to, attr, getattr(obj, attr))
+    return to # type: ignore
 
 
 def init_logger(log_file: str) -> None:
