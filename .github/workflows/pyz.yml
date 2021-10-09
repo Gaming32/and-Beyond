@@ -1,0 +1,16 @@
+name: PYZ
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  build_pyz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+      - run: python to_pyz.py
+      - uses: actions/upload-artifact@v2
+        with:
+          name: pyz-executable
+          path: pyz/*.pyz
