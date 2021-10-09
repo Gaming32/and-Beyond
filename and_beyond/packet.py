@@ -7,26 +7,28 @@ from asyncio.streams import StreamWriter
 from io import BytesIO
 from typing import Optional, TypeVar
 
-from and_beyond.common import PROTOCOL_VERSION
+from and_beyond.common import KEY_LENGTH, PROTOCOL_VERSION
 from and_beyond.utils import BufferedStreamWriter, autoslots, copy_obj_to_class
 from and_beyond.world import BlockTypes, WorldChunk
 
 _T_int = TypeVar('_T_int', bound=int)
 _D = struct.Struct('<d')
+_uuid = uuid
 
 
 class PacketType(enum.IntEnum):
-    ONLINE_AUTHENTICATE = 0
-    OFFLINE_AUTHENTICATE = 1
-    DISCONNECT = 2
-    PING = 3
-    CHUNK = 4
-    CHUNK_UNLOAD = 5
-    CHUNK_UPDATE = 6
-    # PLAYER_INFO = 7 # Reserved for future use
-    PLAYER_POS = 8
-    ADD_VELOCITY = 9
-    CHAT = 10
+    CLIENT_REQUEST = 0
+    SERVER_INFO = 1
+    BASIC_AUTH = 2
+    PLAYER_INFO = 3
+    DISCONNECT = 4
+    PING = 5
+    CHUNK = 6
+    CHUNK_UNLOAD = 7
+    CHUNK_UPDATE = 8
+    PLAYER_POS = 9
+    ADD_VELOCITY = 10
+    CHAT = 11
 
 
 class Packet(abc.ABC):
@@ -78,12 +80,20 @@ async def _read_double(reader: StreamReader) -> float:
     return _D.unpack(await reader.readexactly(8))[0]
 
 
+async def _read_binary(reader: StreamReader) -> bytes:
+    return await reader.readexactly(await _read_varint(reader))
+
+
 async def _read_string(reader: StreamReader) -> str:
-    return (await reader.readexactly(await _read_varint(reader))).decode('utf-8')
+    return (await _read_binary(reader)).decode('utf-8')
 
 
 async def _read_uuid(reader: StreamReader) -> uuid.UUID:
     return uuid.UUID(bytes=await reader.readexactly(16))
+
+
+async def _read_bool(reader: StreamReader) -> bool:
+    return await reader.readexactly(1) != 0
 
 
 def _write_ushort(value: int, writer: StreamWriter) -> None:
@@ -104,46 +114,83 @@ def _write_double(value: float, writer: StreamWriter) -> None:
     writer.write(_D.pack(value))
 
 
+def _write_binary(value: bytes, writer: StreamWriter) -> None:
+    _write_varint(len(value), writer)
+    writer.write(value)
+
+
 def _write_string(value: str, writer: StreamWriter) -> None:
-    enc = value.encode('utf-8')
-    _write_varint(len(enc), writer)
-    writer.write(enc)
+    _write_binary(value.encode('utf-8'), writer)
 
 
 def _write_uuid(value: uuid.UUID, writer: StreamWriter) -> None:
     writer.write(value.bytes)
 
 
+def _write_bool(value: bool, writer: StreamWriter) -> None:
+    writer.write(bytes((value,)))
+
+
 # Packet classes
 
-class PingPacket(Packet):
-    type = PacketType.PING
-
-
-class OfflineAuthenticatePacket(Packet):
-    type = PacketType.OFFLINE_AUTHENTICATE
-    user_id: uuid.UUID
-    nickname: str
+class ClientRequestPacket(Packet):
+    type = PacketType.CLIENT_REQUEST
     protocol_version: int
 
-    def __init__(self,
-            user_id: uuid.UUID = uuid.UUID(int=0),
-            nickname: str = None,
-            protocol_version: int = PROTOCOL_VERSION,
-        ) -> None:
-        self.user_id = user_id
-        self.nickname = str(user_id) if nickname is None else nickname
+    def __init__(self, protocol_version: int = PROTOCOL_VERSION) -> None:
         self.protocol_version = protocol_version
 
     async def read(self, reader: StreamReader) -> None:
-        self.user_id = await _read_uuid(reader)
-        self.nickname = await _read_string(reader)
         self.protocol_version = await _read_varint(reader)
 
     def write(self, writer: StreamWriter) -> None:
-        _write_uuid(self.user_id, writer)
-        _write_string(self.nickname, writer)
         _write_varint(self.protocol_version, writer)
+
+
+class ServerInfoPacket(Packet):
+    type = PacketType.SERVER_INFO
+    offline: bool
+    public_key: bytes
+
+    def __init__(self, offline: bool = False, public_key: bytes = bytes(KEY_LENGTH)) -> None:
+        self.offline = offline
+        self.public_key = public_key
+
+    async def read(self, reader: StreamReader) -> None:
+        self.offline = await _read_bool(reader)
+        self.public_key = await reader.readexactly(KEY_LENGTH)
+
+
+class BasicAuthPacket(Packet):
+    type = PacketType.BASIC_AUTH
+    token: bytes
+
+    def __init__(self, token: bytes = b'') -> None:
+        self.token = token
+
+    async def read(self, reader: StreamReader) -> None:
+        self.token = await _read_binary(reader)
+
+    def write(self, writer: StreamWriter) -> None:
+        _write_binary(self.token, writer)
+
+
+class PlayerInfoPacket(Packet):
+    type = PacketType.PLAYER_INFO
+    uuid: _uuid.UUID
+    name: str
+
+    def __init__(self, uuid: _uuid.UUID = _uuid.UUID(int=0), name: str = '') -> None:
+        self.uuid = uuid
+        self.name = name
+
+    async def read(self, reader: StreamReader) -> None:
+        self.uuid = await _read_uuid(reader)
+        self.name = (await _read_binary(reader)).decode('ascii')
+
+    def write(self, writer: StreamWriter) -> None:
+        _write_uuid(self.uuid, writer)
+        _write_binary(self.name.encode('ascii'), writer)
 
 
 class DisconnectPacket(Packet):
@@ -158,6 +205,10 @@ class DisconnectPacket(Packet):
 
     def write(self, writer: StreamWriter) -> None:
         _write_string(self.reason, writer)
+
+
+class PingPacket(Packet):
+    type = PacketType.PING
 
 
 @autoslots
@@ -293,15 +344,16 @@ class ChatPacket(Packet):
 
 
 PACKET_CLASSES: list[type[Packet]] = [
-    OfflineAuthenticatePacket,
-    OfflineAuthenticatePacket,
-    DisconnectPacket,
-    PingPacket,
-    ChunkPacket,
-    UnloadChunkPacket,
-    ChunkUpdatePacket,
-    PlayerPositionPacket,
-    PlayerPositionPacket,
-    AddVelocityPacket,
-    ChatPacket,
+    ClientRequestPacket, # CLIENT_REQUEST
+    ServerInfoPacket, # SERVER_INFO
+    BasicAuthPacket, # BASIC_AUTH
+    PlayerInfoPacket, # PLAYER_INFO
+    DisconnectPacket, # DISCONNECT
+    PingPacket, # PING
+    ChunkPacket, # CHUNK
+    UnloadChunkPacket, # CHUNK_UNLOAD
+    ChunkUpdatePacket, # CHUNK_UPDATE
+    PlayerPositionPacket, # PLAYER_POS
+    AddVelocityPacket, # ADD_VELOCITY
+    ChatPacket, # CHAT
 ]
