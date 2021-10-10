@@ -7,10 +7,14 @@ from asyncio.events import AbstractEventLoop
 from asyncio.tasks import shield
 from typing import TYPE_CHECKING, Optional
 
-from and_beyond.common import MOVE_SPEED_CAP_SQ, PROTOCOL_VERSION, VERSION_DISPLAY_NAME, VIEW_DISTANCE_BOX, get_version_name
-from and_beyond.packet import (AddVelocityPacket, OfflineAuthenticatePacket,
-                               ChatPacket, ChunkPacket, ChunkUpdatePacket,
-                               DisconnectPacket, Packet, PingPacket,
+from and_beyond.common import (MOVE_SPEED_CAP_SQ, PROTOCOL_VERSION,
+                               VERSION_DISPLAY_NAME, VIEW_DISTANCE_BOX,
+                               get_version_name)
+from and_beyond.middleware import (BufferedWriterMiddleware, ReaderMiddleware,
+                                   WriterMiddleware)
+from and_beyond.packet import (AddVelocityPacket, ChatPacket, ChunkPacket,
+                               ChunkUpdatePacket, DisconnectPacket,
+                               OfflineAuthenticatePacket, Packet, PingPacket,
                                PlayerPositionPacket, UnloadChunkPacket,
                                read_packet, write_packet)
 from and_beyond.server.commands import COMMANDS
@@ -24,8 +28,10 @@ if TYPE_CHECKING:
 
 class Client:
     server: 'AsyncServer'
-    reader: StreamReader
-    writer: StreamWriter
+    _reader: StreamReader
+    _writer: StreamWriter
+    reader: ReaderMiddleware
+    writer: WriterMiddleware
     aloop: AbstractEventLoop
     packet_queue: asyncio.Queue[Packet]
     ready: bool
@@ -41,8 +47,10 @@ class Client:
 
     def __init__(self, server: 'AsyncServer', reader: StreamReader, writer: StreamWriter) -> None:
         self.server = server
+        self._reader = reader
+        self._writer = writer
         self.reader = reader
-        self.writer = writer
+        self.writer = BufferedWriterMiddleware(writer)
         self.aloop = server.loop
         self.auth_uuid = None
         self.ping_task = None

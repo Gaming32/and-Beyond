@@ -2,13 +2,11 @@ import abc
 import enum
 import struct
 import uuid
-from asyncio import StreamReader
-from asyncio.streams import StreamWriter
-from io import BytesIO
 from typing import Optional, TypeVar
 
 from and_beyond.common import KEY_LENGTH, PROTOCOL_VERSION
-from and_beyond.utils import BufferedStreamWriter, autoslots, copy_obj_to_class
+from and_beyond.middleware import ReaderMiddleware, WriterMiddleware
+from and_beyond.utils import autoslots
 from and_beyond.world import BlockTypes, WorldChunk
 
 _T_int = TypeVar('_T_int', bound=int)
@@ -34,35 +32,31 @@ class PacketType(enum.IntEnum):
 class Packet(abc.ABC):
     type: PacketType
 
-    async def read(self, reader: StreamReader) -> None:
+    async def read(self, reader: ReaderMiddleware) -> None:
         pass
 
-    def write(self, writer: StreamWriter) -> None:
+    def write(self, writer: WriterMiddleware) -> None:
         pass
 
 
-async def read_packet(reader: StreamReader) -> Packet:
+async def read_packet(reader: ReaderMiddleware) -> Packet:
     pack_type = await _read_ushort(reader, PacketType)
     packet = PACKET_CLASSES[pack_type]()
     await packet.read(reader)
     return packet
 
 
-async def write_packet(packet: Packet, writer: StreamWriter) -> None:
-    if not isinstance(writer, BufferedStreamWriter):
-        writer = copy_obj_to_class(writer, BufferedStreamWriter)
-        writer._buffer = BytesIO()
+async def write_packet(packet: Packet, writer: WriterMiddleware) -> None:
     _write_ushort(packet.type, writer)
     packet.write(writer)
     await writer.drain()
 
 
-async def _read_ushort(reader: StreamReader, factory: type[_T_int] = int) -> _T_int:
-    # The typing is correct, but Pyright hates me
+async def _read_ushort(reader: ReaderMiddleware, factory: type[_T_int] = int) -> _T_int:
     return factory.from_bytes(await reader.readexactly(2), 'little', signed=False) # type: ignore
 
 
-async def _read_varint(reader: StreamReader) -> int:
+async def _read_varint(reader: ReaderMiddleware) -> int:
     r = 0
     i = 0
     while True:
@@ -76,31 +70,31 @@ async def _read_varint(reader: StreamReader) -> int:
     return r
 
 
-async def _read_double(reader: StreamReader) -> float:
+async def _read_double(reader: ReaderMiddleware) -> float:
     return _D.unpack(await reader.readexactly(8))[0]
 
 
-async def _read_binary(reader: StreamReader) -> bytes:
+async def _read_binary(reader: ReaderMiddleware) -> bytes:
     return await reader.readexactly(await _read_varint(reader))
 
 
-async def _read_string(reader: StreamReader) -> str:
+async def _read_string(reader: ReaderMiddleware) -> str:
     return (await _read_binary(reader)).decode('utf-8')
 
 
-async def _read_uuid(reader: StreamReader) -> uuid.UUID:
+async def _read_uuid(reader: ReaderMiddleware) -> uuid.UUID:
     return uuid.UUID(bytes=await reader.readexactly(16))
 
 
-async def _read_bool(reader: StreamReader) -> bool:
+async def _read_bool(reader: ReaderMiddleware) -> bool:
     return await reader.readexactly(1) != 0
 
 
-def _write_ushort(value: int, writer: StreamWriter) -> None:
+def _write_ushort(value: int, writer: WriterMiddleware) -> None:
     writer.write(value.to_bytes(2, 'little', signed=False))
 
 
-def _write_varint(value: int, writer: StreamWriter) -> None:
+def _write_varint(value: int, writer: WriterMiddleware) -> None:
     while True:
         b = value & 0x7f
         value >>= 7
@@ -110,24 +104,24 @@ def _write_varint(value: int, writer: StreamWriter) -> None:
         writer.write(bytes((0x80 | b,)))
 
 
-def _write_double(value: float, writer: StreamWriter) -> None:
+def _write_double(value: float, writer: WriterMiddleware) -> None:
     writer.write(_D.pack(value))
 
 
-def _write_binary(value: bytes, writer: StreamWriter) -> None:
+def _write_binary(value: bytes, writer: WriterMiddleware) -> None:
     _write_varint(len(value), writer)
     writer.write(value)
 
 
-def _write_string(value: str, writer: StreamWriter) -> None:
+def _write_string(value: str, writer: WriterMiddleware) -> None:
     _write_binary(value.encode('utf-8'), writer)
 
 
-def _write_uuid(value: uuid.UUID, writer: StreamWriter) -> None:
+def _write_uuid(value: uuid.UUID, writer: WriterMiddleware) -> None:
     writer.write(value.bytes)
 
 
-def _write_bool(value: bool, writer: StreamWriter) -> None:
+def _write_bool(value: bool, writer: WriterMiddleware) -> None:
     writer.write(bytes((value,)))
 
 
@@ -140,10 +134,10 @@ class ClientRequestPacket(Packet):
     def __init__(self, protocol_version: int = PROTOCOL_VERSION) -> None:
         self.protocol_version = protocol_version
 
-    async def read(self, reader: StreamReader) -> None:
+    async def read(self, reader: ReaderMiddleware) -> None:
         self.protocol_version = await _read_varint(reader)
 
-    def write(self, writer: StreamWriter) -> None:
+    def write(self, writer: WriterMiddleware) -> None:
         _write_varint(self.protocol_version, writer)
 
 
@@ -156,7 +150,7 @@ class ServerInfoPacket(Packet):
         self.offline = offline
         self.public_key = public_key
 
-    async def read(self, reader: StreamReader) -> None:
+    async def read(self, reader: ReaderMiddleware) -> None:
         self.offline = await _read_bool(reader)
         self.public_key = await reader.readexactly(KEY_LENGTH)
 
@@ -168,10 +162,10 @@ class BasicAuthPacket(Packet):
     def __init__(self, token: bytes = b'') -> None:
         self.token = token
 
-    async def read(self, reader: StreamReader) -> None:
+    async def read(self, reader: ReaderMiddleware) -> None:
         self.token = await _read_binary(reader)
 
-    def write(self, writer: StreamWriter) -> None:
+    def write(self, writer: WriterMiddleware) -> None:
         _write_binary(self.token, writer)
 
 
@@ -184,11 +178,11 @@ class PlayerInfoPacket(Packet):
         self.uuid = uuid
         self.name = name
 
-    async def read(self, reader: StreamReader) -> None:
+    async def read(self, reader: ReaderMiddleware) -> None:
         self.uuid = await _read_uuid(reader)
         self.name = (await _read_binary(reader)).decode('ascii')
 
-    def write(self, writer: StreamWriter) -> None:
+    def write(self, writer: WriterMiddleware) -> None:
         _write_uuid(self.uuid, writer)
         _write_binary(self.name.encode('ascii'), writer)
 
@@ -200,10 +194,10 @@ class DisconnectPacket(Packet):
     def __init__(self, reason: str = '') -> None:
         self.reason = reason
 
-    async def read(self, reader: StreamReader) -> None:
+    async def read(self, reader: ReaderMiddleware) -> None:
         self.reason = await _read_string(reader)
 
-    def write(self, writer: StreamWriter) -> None:
+    def write(self, writer: WriterMiddleware) -> None:
         _write_string(self.reason, writer)
 
 
@@ -219,7 +213,7 @@ class ChunkPacket(Packet):
     def __init__(self, chunk: Optional[WorldChunk] = None) -> None:
         self.chunk = chunk # type: ignore
 
-    async def read(self, reader: StreamReader) -> None:
+    async def read(self, reader: ReaderMiddleware) -> None:
         abs_x = await _read_varint(reader)
         abs_y = await _read_varint(reader)
         x = await _read_varint(reader)
@@ -227,7 +221,7 @@ class ChunkPacket(Packet):
         data = await reader.readexactly(1024)
         self.chunk = WorldChunk.virtual_chunk(x, y, abs_x, abs_y, data)
 
-    def write(self, writer: StreamWriter) -> None:
+    def write(self, writer: WriterMiddleware) -> None:
         if self.chunk is None:
             writer.write(bytes(1028))
             return
@@ -248,11 +242,11 @@ class UnloadChunkPacket(Packet):
         self.x = x
         self.y = y
 
-    async def read(self, reader: StreamReader) -> None:
+    async def read(self, reader: ReaderMiddleware) -> None:
         self.x = await _read_varint(reader)
         self.y = await _read_varint(reader)
 
-    def write(self, writer: StreamWriter) -> None:
+    def write(self, writer: WriterMiddleware) -> None:
         _write_varint(self.x, writer)
         _write_varint(self.y, writer)
 
@@ -273,7 +267,7 @@ class ChunkUpdatePacket(Packet):
         self.by = by
         self.block = block
 
-    async def read(self, reader: StreamReader) -> None:
+    async def read(self, reader: ReaderMiddleware) -> None:
         self.cx = await _read_varint(reader)
         self.cy = await _read_varint(reader)
         block_info = await reader.readexactly(3)
@@ -281,7 +275,7 @@ class ChunkUpdatePacket(Packet):
         self.by = block_info[1]
         self.block = BlockTypes(block_info[2])
 
-    def write(self, writer: StreamWriter) -> None:
+    def write(self, writer: WriterMiddleware) -> None:
         _write_varint(self.cx, writer)
         _write_varint(self.cy, writer)
         writer.write(bytes((self.bx, self.by, self.block)))
@@ -297,11 +291,11 @@ class PlayerPositionPacket(Packet):
         self.x = x
         self.y = y
 
-    async def read(self, reader: StreamReader) -> None:
+    async def read(self, reader: ReaderMiddleware) -> None:
         self.x = await _read_double(reader)
         self.y = await _read_double(reader)
 
-    def write(self, writer: StreamWriter) -> None:
+    def write(self, writer: WriterMiddleware) -> None:
         _write_double(self.x, writer)
         _write_double(self.y, writer)
 
@@ -316,11 +310,11 @@ class AddVelocityPacket(Packet):
         self.x = x
         self.y = y
 
-    async def read(self, reader: StreamReader) -> None:
+    async def read(self, reader: ReaderMiddleware) -> None:
         self.x = await _read_double(reader)
         self.y = await _read_double(reader)
 
-    def write(self, writer: StreamWriter) -> None:
+    def write(self, writer: WriterMiddleware) -> None:
         _write_double(self.x, writer)
         _write_double(self.y, writer)
 
@@ -334,11 +328,11 @@ class ChatPacket(Packet):
         self.message = message
         self.time = time
 
-    async def read(self, reader: StreamReader) -> None:
+    async def read(self, reader: ReaderMiddleware) -> None:
         self.message = await _read_string(reader)
         self.time = await _read_double(reader)
 
-    def write(self, writer: StreamWriter) -> None:
+    def write(self, writer: WriterMiddleware) -> None:
         _write_string(self.message, writer)
         _write_double(self.time, writer)
 

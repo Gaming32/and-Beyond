@@ -13,19 +13,24 @@ import pygame
 import pygame.event
 from and_beyond.client import globals
 from and_beyond.client.chat import ClientChatMessage
-from and_beyond.client.consts import SERVER_CONNECT_EVENT, SERVER_DISCONNECT_EVENT
+from and_beyond.client.consts import (SERVER_CONNECT_EVENT,
+                                      SERVER_DISCONNECT_EVENT)
 from and_beyond.client.globals import GameStatus
 from and_beyond.client.world import ClientChunk
 from and_beyond.common import PORT, PROTOCOL_VERSION
-from and_beyond.packet import (OfflineAuthenticatePacket, ChatPacket, ChunkPacket,
-                               ChunkUpdatePacket, DisconnectPacket, Packet,
-                               PingPacket, PlayerPositionPacket,
+from and_beyond.middleware import (BufferedWriterMiddleware, ReaderMiddleware,
+                                   WriterMiddleware)
+from and_beyond.packet import (ChatPacket, ChunkPacket, ChunkUpdatePacket,
+                               DisconnectPacket, OfflineAuthenticatePacket,
+                               Packet, PingPacket, PlayerPositionPacket,
                                UnloadChunkPacket, read_packet, write_packet)
 
 
 class ServerConnection:
-    reader: Optional[StreamReader]
-    writer: Optional[StreamWriter]
+    _reader: StreamReader
+    _writer: StreamWriter
+    reader: Optional[ReaderMiddleware]
+    writer: Optional[WriterMiddleware]
     thread: threading.Thread
     aio_loop: asyncio.AbstractEventLoop
 
@@ -68,15 +73,14 @@ class ServerConnection:
             'Connecting to server'
             + (f' {server}' + (f':{port}' if port != PORT else '') if server != 'localhost' else '')
         )
-        while True:
-            try:
-                self.reader, self.writer = await asyncio.open_connection(server, port)
-            except OSError as e:
-                self.disconnect_reason = f'Failed to connect:\n{e}'
-                logging.error('Failed to connect to server %s', server, exc_info=True)
-                return
-            else:
-                break
+        try:
+            self._reader, self._writer = await asyncio.open_connection(server, port)
+        except OSError as e:
+            self.disconnect_reason = f'Failed to connect:\n{e}'
+            logging.error('Failed to connect to server %s', server, exc_info=True)
+            return
+        self.reader = self._reader
+        self.writer = BufferedWriterMiddleware(self._writer)
         logging.debug('Authenticating with server...')
         globals.connecting_status = 'Authenticating'
         auth = OfflineAuthenticatePacket(

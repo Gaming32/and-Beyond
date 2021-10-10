@@ -129,23 +129,6 @@ class MaxSizedDict(dict):
             del self[next(iter(self))]
 
 
-class BufferedStreamWriter(StreamWriter):
-    _buffer: BytesIO
-
-    @copy_signature(StreamWriter.__init__)
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self._buffer = BytesIO()
-
-    def write(self, data: bytes) -> None:
-        self._buffer.write(data)
-
-    async def drain(self) -> None:
-        super().write(self._buffer.getvalue())
-        self._buffer.truncate(0)
-        await super().drain()
-
-
 def spiral_loop(w: int, h: int, cb: Callable[[int, int], Any]) -> None:
     x = y = 0
     dx = 0
