@@ -162,7 +162,7 @@ class ServerConnection:
                 self.disconnect_reason = packet.reason
                 return None
             if not isinstance(packet, should_be):
-                self.disconnect_reason = f'Server packet of type {packet.type} should be of type {should_be.type}'
+                self.disconnect_reason = f'Server packet of type {packet.type!s} should be of type {should_be.type!s}'
                 return None
             return packet
         packet = ClientRequestPacket(PROTOCOL_VERSION) # Explicit > implicit

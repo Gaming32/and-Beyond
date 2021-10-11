@@ -11,7 +11,7 @@ class LabelScreen(Ui):
 
     def __init__(self, text: str, ok_text: str = 'Back', closed_callback: Optional[CloseCallback] = None) -> None:
         super().__init__([
-            UiLabel(textwrap.fill(text, width=90, replace_whitespace=False)),
+            UiLabel(textwrap.fill(text, width=75, replace_whitespace=False)),
             UiButton(ok_text, self.close),
         ])
         self.callback = closed_callback

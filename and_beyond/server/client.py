@@ -100,7 +100,7 @@ class Client:
                 await self.disconnect('Client handshake timeout')
                 return None
             if not isinstance(packet, should_be):
-                await self.disconnect(f'Client packet of type {packet.type} should be of type {should_be.type}')
+                await self.disconnect(f'Client packet of type {packet.type!s} should be of type {should_be.type!s}')
                 return None
             return packet
         if (packet := await read_and_verify(ClientRequestPacket)) is None:
