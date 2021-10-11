@@ -180,16 +180,20 @@ class ServerConnection:
                 PublicFormat.SubjectPublicKeyInfo,
             ))
             await write_packet(packet, self.writer)
-            shared_key = client_key.exchange(
-                ec.ECDH(),
-                server_public_key,
-            )
-            derived_key = HKDF(hashes.SHA256(), KEY_LENGTH, None, None).derive(shared_key)
-            self.writer = create_writer_middlewares(
-                [BufferedWriterMiddleware, EncryptedWriterMiddleware(derived_key)],
-                self._writer
-            )
-            self.reader = EncryptedReaderMiddleware(derived_key)(self._reader)
+            if self._writer.get_extra_info('peername')[0] not in ('localhost', '127.0.0.1', '::1'):
+                logging.debug('Encrypting connection...')
+                shared_key = client_key.exchange(
+                    ec.ECDH(),
+                    server_public_key,
+                )
+                derived_key = HKDF(hashes.SHA256(), KEY_LENGTH, None, None).derive(shared_key)
+                self.writer = create_writer_middlewares(
+                    [BufferedWriterMiddleware, EncryptedWriterMiddleware(derived_key)],
+                    self._writer
+                )
+                self.reader = EncryptedReaderMiddleware(derived_key)(self._reader)
+            else:
+                logging.debug('localhost connection not encrypted')
             packet = PlayerInfoPacket(
                 uuid.UUID(int=0),
                 globals.config.config['nickname'],

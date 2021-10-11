@@ -121,20 +121,24 @@ class Client:
             return False
         client_token = packet.token
         if offline:
-            client_public_key = load_der_public_key(client_token)
-            if not isinstance(client_public_key, ec.EllipticCurvePublicKey):
-                await self.disconnect('Client key not EllipticCurvePublicKey')
-                return False
-            shared_key = server_key.exchange(
-                ec.ECDH(),
-                client_public_key,
-            )
-            derived_key = HKDF(hashes.SHA256(), KEY_LENGTH, None, None).derive(shared_key)
-            self.writer = create_writer_middlewares(
-                [BufferedWriterMiddleware, EncryptedWriterMiddleware(derived_key)],
-                self._writer,
-            )
-            self.reader = EncryptedReaderMiddleware(derived_key)(self._reader)
+            if self._writer.get_extra_info('peername')[0] not in ('localhost', '127.0.0.1', '::1'):
+                logging.debug('Encrypting connection...')
+                client_public_key = load_der_public_key(client_token)
+                if not isinstance(client_public_key, ec.EllipticCurvePublicKey):
+                    await self.disconnect('Client key not EllipticCurvePublicKey')
+                    return False
+                shared_key = server_key.exchange(
+                    ec.ECDH(),
+                    client_public_key,
+                )
+                derived_key = HKDF(hashes.SHA256(), KEY_LENGTH, None, None).derive(shared_key)
+                self.writer = create_writer_middlewares(
+                    [BufferedWriterMiddleware, EncryptedWriterMiddleware(derived_key)],
+                    self._writer,
+                )
+                self.reader = EncryptedReaderMiddleware(derived_key)(self._reader)
+            else:
+                logging.debug('localhost connection not encrypted')
             if (packet := await read_and_verify(PlayerInfoPacket)) is None:
                 return False
             self.auth_uuid = packet.uuid
