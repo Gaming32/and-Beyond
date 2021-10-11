@@ -1,5 +1,7 @@
 import abc
+import asyncio
 import enum
+import logging
 import struct
 import uuid
 from typing import Optional, TypeVar
@@ -44,6 +46,10 @@ async def read_packet(reader: ReaderMiddleware) -> Packet:
     packet = PACKET_CLASSES[pack_type]()
     await packet.read(reader)
     return packet
+
+
+async def read_packet_timeout(reader: ReaderMiddleware, timeout: float = 3) -> Packet:
+    return await asyncio.wait_for(read_packet(reader), timeout)
 
 
 async def write_packet(packet: Packet, writer: WriterMiddleware) -> None:
@@ -152,7 +158,11 @@ class ServerInfoPacket(Packet):
 
     async def read(self, reader: ReaderMiddleware) -> None:
         self.offline = await _read_bool(reader)
-        self.public_key = await reader.readexactly(KEY_LENGTH)
+        self.public_key = await _read_binary(reader)
+
+    def write(self, writer: WriterMiddleware) -> None:
+        _write_bool(self.offline, writer)
+        _write_binary(self.public_key, writer)
 
 
 class BasicAuthPacket(Packet):

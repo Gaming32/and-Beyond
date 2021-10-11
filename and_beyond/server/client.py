@@ -5,25 +5,37 @@ import uuid
 from asyncio import StreamReader, StreamWriter
 from asyncio.events import AbstractEventLoop
 from asyncio.tasks import shield
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, TypeVar
 
-from and_beyond.common import (MOVE_SPEED_CAP_SQ, PROTOCOL_VERSION,
+from and_beyond.common import (KEY_LENGTH, MOVE_SPEED_CAP_SQ, PROTOCOL_VERSION,
                                VERSION_DISPLAY_NAME, VIEW_DISTANCE_BOX,
                                get_version_name)
-from and_beyond.middleware import (BufferedWriterMiddleware, ReaderMiddleware,
-                                   WriterMiddleware)
-from and_beyond.packet import (AddVelocityPacket, ChatPacket, ChunkPacket,
-                               ChunkUpdatePacket, DisconnectPacket,
-                               OfflineAuthenticatePacket, Packet, PingPacket,
-                               PlayerPositionPacket, UnloadChunkPacket,
-                               read_packet, write_packet)
+from and_beyond.middleware import (BufferedWriterMiddleware,
+                                   EncryptedReaderMiddleware,
+                                   EncryptedWriterMiddleware, ReaderMiddleware,
+                                   WriterMiddleware, create_writer_middlewares)
+from and_beyond.packet import (AddVelocityPacket, BasicAuthPacket, ChatPacket,
+                               ChunkPacket, ChunkUpdatePacket,
+                               ClientRequestPacket, DisconnectPacket, Packet,
+                               PingPacket, PlayerInfoPacket,
+                               PlayerPositionPacket, ServerInfoPacket,
+                               UnloadChunkPacket, read_packet,
+                               read_packet_timeout, write_packet)
 from and_beyond.server.commands import COMMANDS
 from and_beyond.server.player import Player
 from and_beyond.utils import spiral_loop_async, spiral_loop_gen
 from and_beyond.world import BlockTypes, WorldChunk
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+from cryptography.hazmat.primitives.serialization.base import \
+    load_der_public_key
 
 if TYPE_CHECKING:
     from and_beyond.server.main import AsyncServer
+
+_T_Packet = TypeVar('_T_Packet', bound=Packet)
 
 
 class Client:
@@ -44,6 +56,7 @@ class Client:
     loaded_chunks: dict[tuple[int, int], WorldChunk]
 
     player: Player
+    nickname: str
 
     def __init__(self, server: 'AsyncServer', reader: StreamReader, writer: StreamWriter) -> None:
         self.server = server
@@ -62,22 +75,14 @@ class Client:
     async def start(self) -> None:
         self.ready = False
         self.disconnecting = False
-        try:
-            auth_packet = await asyncio.wait_for(read_packet(self.reader), 3)
-        except asyncio.TimeoutError:
-            return await self.disconnect('Authentication timeout')
-        if not isinstance(auth_packet, OfflineAuthenticatePacket):
-            return await self.disconnect(f'Packet type not AUTHENTICATE type: {auth_packet.type.name}')
-        if auth_packet.protocol_version != PROTOCOL_VERSION:
-            return await self.disconnect(f'This server is on version {VERSION_DISPLAY_NAME} '
-                                         f'(requires minimum {get_version_name(PROTOCOL_VERSION)} to join), '
-                                         f'but you connected with {get_version_name(auth_packet.protocol_version)}')
-        self.auth_uuid = auth_packet.user_id
+        if not await self.handshake():
+            return
+        assert self.auth_uuid is not None
         logging.info('Player logged in with UUID %s', self.auth_uuid)
         self.packet_queue = asyncio.Queue()
         self.ping_task = self.aloop.create_task(self.periodic_ping())
         self.packet_task = self.aloop.create_task(self.packet_tick())
-        self.player = Player(self, auth_packet.nickname)
+        self.player = Player(self, self.nickname)
         await self.player.ainit()
         await self.load_chunks_around_player(9)
         self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
@@ -86,6 +91,57 @@ class Client:
         logging.info('%s joined the game', self.player)
         if self.auth_uuid.int != 0 or self.server.multiplayer: # Don't show in singleplayer
             await self.server.send_chat(f'{self.player} joined the game')
+
+    async def handshake(self) -> bool:
+        async def read_and_verify(should_be: type[_T_Packet]) -> Optional[_T_Packet]:
+            try:
+                packet = await read_packet_timeout(self.reader)
+            except TimeoutError:
+                await self.disconnect('Client handshake timeout')
+                return None
+            if not isinstance(packet, should_be):
+                await self.disconnect(f'Client packet of type {packet.type} should be of type {should_be.type}')
+                return None
+            return packet
+        if (packet := await read_and_verify(ClientRequestPacket)) is None:
+            return False
+        if packet.protocol_version != PROTOCOL_VERSION:
+            await self.disconnect(f'This server is on version {VERSION_DISPLAY_NAME} '
+                                  f'(requires minimum {get_version_name(PROTOCOL_VERSION)} to join), '
+                                  f'but you connected with {get_version_name(packet.protocol_version)}')
+            return False
+        offline = True
+        server_key = ec.generate_private_key(ec.SECP384R1())
+        packet = ServerInfoPacket(offline, server_key.public_key().public_bytes(
+            Encoding.DER,
+            PublicFormat.SubjectPublicKeyInfo,
+        ))
+        await write_packet(packet, self.writer)
+        if (packet := await read_and_verify(BasicAuthPacket)) is None:
+            return False
+        client_token = packet.token
+        if offline:
+            client_public_key = load_der_public_key(client_token)
+            if not isinstance(client_public_key, ec.EllipticCurvePublicKey):
+                await self.disconnect('Client key not EllipticCurvePublicKey')
+                return False
+            shared_key = server_key.exchange(
+                ec.ECDH(),
+                client_public_key,
+            )
+            derived_key = HKDF(hashes.SHA256(), KEY_LENGTH, None, None).derive(shared_key)
+            self.writer = create_writer_middlewares(
+                [BufferedWriterMiddleware, EncryptedWriterMiddleware(derived_key)],
+                self._writer,
+            )
+            self.reader = EncryptedReaderMiddleware(derived_key)(self._reader)
+            if (packet := await read_and_verify(PlayerInfoPacket)) is None:
+                return False
+            self.auth_uuid = packet.uuid
+            self.nickname = packet.name
+        else:
+            pass # TODO: Online auth
+        return True
 
     async def load_chunk(self, x: int, y: int) -> None:
         chunk = self.server.world.get_generated_chunk(x, y, self.server.world_generator)
@@ -268,20 +324,20 @@ class Client:
                 await write_packet(packet, self.writer)
             except ConnectionError:
                 logging.debug('Client was already disconnected')
-        self.writer.close()
+        self._writer.close()
         if self.player is not None:
             start = time.perf_counter()
             await self.player.save()
             end = time.perf_counter()
             logging.debug('Player %s data saved in %f seconds', self, end - start)
-        await self.writer.wait_closed()
+        await self._writer.wait_closed()
         logging.info('Client %s disconnected for reason: %s', self, reason)
         if self.player is not None:
             logging.info('%s left the game', self.player)
             await self.server.send_chat(f'{self.player} left the game')
 
     def __repr__(self) -> str:
-        peername = self.writer.get_extra_info('peername')
+        peername = self._writer.get_extra_info('peername')
         return f'<Client host={peername[0]}:{peername[1]} player={self.player!r} server={self.server!r}>'
 
     async def send_chat(self, message: str, at: float = None) -> None:

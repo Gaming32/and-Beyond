@@ -1,3 +1,4 @@
 colorama
 aiofiles
 opensimplex # World generation
+cryptography # Encryption

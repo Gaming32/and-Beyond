@@ -3,6 +3,7 @@ import itertools
 import logging
 import os
 import random
+import secrets
 import sys
 import threading
 import time
@@ -10,10 +11,10 @@ from asyncio.base_events import Server
 from asyncio.events import AbstractEventLoop
 from asyncio.streams import StreamReader, StreamWriter
 from collections import deque
-from typing import BinaryIO, Optional
+from typing import Any, BinaryIO, Optional
 
 import colorama
-from and_beyond.common import PORT
+from and_beyond.common import KEY_LENGTH, PORT
 from and_beyond.packet import ChunkUpdatePacket, write_packet
 from and_beyond.pipe_commands import PipeCommandsToServer, read_pipe
 from and_beyond.server.client import Client
@@ -21,6 +22,7 @@ from and_beyond.server.consts import GC_TIME_SECONDS
 from and_beyond.server.world_gen.core import WorldGenerator
 from and_beyond.utils import autoslots, init_logger, mean
 from and_beyond.world import BlockTypes, World, WorldChunk
+from cryptography.hazmat.primitives.asymmetric import ec
 
 if sys.platform == 'win32':
     import msvcrt

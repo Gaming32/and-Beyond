@@ -55,6 +55,7 @@ class BufferedWriterMiddleware(WriterMiddlewareABC):
 
     async def drain(self) -> None:
         self.next.write(self._buffer.getvalue())
+        self._buffer.seek(0)
         self._buffer.truncate(0)
         return await self.next.drain()
 
@@ -73,7 +74,7 @@ class _EncryptedWriterMiddleware(WriterMiddlewareABC):
     def write(self, data: bytes) -> None:
         i = self._i
         self.next.write(bytes(
-            ((b + self.key[i + j]) & 255)
+            ((b + self.key[(i + j) & self._mod]) & 255)
             for (j, b) in enumerate(data)
         ))
         self._i = (i + len(data)) & self._mod
@@ -99,7 +100,7 @@ class _EncryptedReaderMiddleware(ReaderMiddlewareABC):
     def _decrypt(self, data: bytes) -> bytes:
         i = self._i
         result = bytes(
-            ((b - self.key[i + j]) & 255)
+            ((b - self.key[(i + j) & self._mod]) & 255)
             for (j, b) in enumerate(data)
         )
         self._i = (i + len(data)) & self._mod
@@ -125,12 +126,12 @@ def EncryptedReaderMiddleware(key: bytes) -> ReaderMiddlewareFactory:
 
 
 def create_writer_middlewares(middlewares: Sequence[WriterMiddlewareFactory], writer: WriterMiddleware) -> WriterMiddleware:
-    for middleware in middlewares:
+    for middleware in reversed(middlewares):
         writer = middleware(writer)
     return writer
 
 
 def create_reader_middlewares(middlewares: Sequence[ReaderMiddlewareFactory], reader: ReaderMiddleware) -> ReaderMiddleware:
-    for middleware in middlewares:
+    for middleware in reversed(middlewares):
         reader = middleware(reader)
     return reader

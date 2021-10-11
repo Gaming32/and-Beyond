@@ -1,12 +1,13 @@
 import asyncio
 import logging
 import math
+import secrets
 import threading
 import time
 import uuid
-from asyncio.exceptions import CancelledError
+from asyncio.exceptions import CancelledError, TimeoutError
 from asyncio.streams import StreamReader, StreamWriter
-from typing import Optional
+from typing import Optional, TypeVar
 
 import janus
 import pygame
@@ -17,20 +18,32 @@ from and_beyond.client.consts import (SERVER_CONNECT_EVENT,
                                       SERVER_DISCONNECT_EVENT)
 from and_beyond.client.globals import GameStatus
 from and_beyond.client.world import ClientChunk
-from and_beyond.common import PORT, PROTOCOL_VERSION
-from and_beyond.middleware import (BufferedWriterMiddleware, ReaderMiddleware,
-                                   WriterMiddleware)
-from and_beyond.packet import (ChatPacket, ChunkPacket, ChunkUpdatePacket,
-                               DisconnectPacket, OfflineAuthenticatePacket,
-                               Packet, PingPacket, PlayerPositionPacket,
-                               UnloadChunkPacket, read_packet, write_packet)
+from and_beyond.common import KEY_LENGTH, PORT, PROTOCOL_VERSION
+from and_beyond.middleware import (BufferedWriterMiddleware,
+                                   EncryptedReaderMiddleware,
+                                   EncryptedWriterMiddleware, ReaderMiddleware,
+                                   WriterMiddleware, create_writer_middlewares)
+from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket,
+                               ChunkUpdatePacket, ClientRequestPacket,
+                               DisconnectPacket, Packet, PingPacket,
+                               PlayerInfoPacket, PlayerPositionPacket,
+                               ServerInfoPacket, UnloadChunkPacket,
+                               read_packet, read_packet_timeout, write_packet)
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+from cryptography.hazmat.primitives.serialization.base import \
+    load_der_public_key
+
+_T_Packet = TypeVar('_T_Packet', bound=Packet)
 
 
 class ServerConnection:
-    _reader: StreamReader
-    _writer: StreamWriter
-    reader: Optional[ReaderMiddleware]
-    writer: Optional[WriterMiddleware]
+    _reader: Optional[StreamReader]
+    _writer: Optional[StreamWriter]
+    reader: ReaderMiddleware
+    writer: WriterMiddleware
     thread: threading.Thread
     aio_loop: asyncio.AbstractEventLoop
 
@@ -42,8 +55,8 @@ class ServerConnection:
     _should_post_event: bool
 
     def __init__(self) -> None:
-        self.reader = None
-        self.writer = None
+        self._reader = None
+        self._writer = None
         self.running = False
         self.outgoing_queue = None
         self.send_packets_task = None
@@ -81,14 +94,9 @@ class ServerConnection:
             return
         self.reader = self._reader
         self.writer = BufferedWriterMiddleware(self._writer)
-        logging.debug('Authenticating with server...')
-        globals.connecting_status = 'Authenticating'
-        auth = OfflineAuthenticatePacket(
-            uuid.UUID(int=0),
-            globals.config.config['nickname'],
-            PROTOCOL_VERSION # Explicit > implicit
-        )
-        await write_packet(auth, self.writer)
+        globals.connecting_status = 'Handshaking'
+        if not await self.handshake():
+            return
         logging.info('Connected to server')
         globals.connecting_status = 'Connected'
         globals.game_status = GameStatus.IN_GAME
@@ -141,6 +149,56 @@ class ServerConnection:
                 logging.info('CHAT: %s', packet.message)
                 globals.chat_client.add_message(ClientChatMessage(packet.message, packet.time))
 
+    async def handshake(self) -> bool:
+        assert self._reader is not None
+        assert self._writer is not None
+        async def read_and_verify(should_be: type[_T_Packet]) -> Optional[_T_Packet]:
+            try:
+                packet = await read_packet_timeout(self.reader)
+            except TimeoutError:
+                self.disconnect_reason = 'Server handshake timeout'
+                return None
+            if isinstance(packet, DisconnectPacket):
+                self.disconnect_reason = packet.reason
+                return None
+            if not isinstance(packet, should_be):
+                self.disconnect_reason = f'Server packet of type {packet.type} should be of type {should_be.type}'
+                return None
+            return packet
+        packet = ClientRequestPacket(PROTOCOL_VERSION) # Explicit > implicit
+        await write_packet(packet, self.writer)
+        client_key = ec.generate_private_key(ec.SECP384R1())
+        if (packet := await read_and_verify(ServerInfoPacket)) is None:
+            return False
+        if packet.offline:
+            server_public_key = load_der_public_key(packet.public_key)
+            if not isinstance(server_public_key, ec.EllipticCurvePublicKey):
+                self.disconnect_reason = 'Server key not EllipticCurvePublicKey'
+                return False
+            packet = BasicAuthPacket(client_key.public_key().public_bytes(
+                Encoding.DER,
+                PublicFormat.SubjectPublicKeyInfo,
+            ))
+            await write_packet(packet, self.writer)
+            shared_key = client_key.exchange(
+                ec.ECDH(),
+                server_public_key,
+            )
+            derived_key = HKDF(hashes.SHA256(), KEY_LENGTH, None, None).derive(shared_key)
+            self.writer = create_writer_middlewares(
+                [BufferedWriterMiddleware, EncryptedWriterMiddleware(derived_key)],
+                self._writer
+            )
+            self.reader = EncryptedReaderMiddleware(derived_key)(self._reader)
+            packet = PlayerInfoPacket(
+                uuid.UUID(int=0),
+                globals.config.config['nickname'],
+            )
+            await write_packet(packet, self.writer)
+        else:
+            pass # TODO: Online auth
+        return True
+
     async def send_outgoing_packets(self) -> None:
         self.outgoing_queue = janus.Queue()
         try:
@@ -169,19 +227,19 @@ class ServerConnection:
             logging.info('Disconnected from server: %s', self.disconnect_reason)
         if self.send_packets_task is not None:
             self.send_packets_task.cancel()
-        if self.writer is not None:
-            self.writer.close()
+        if self._writer is not None:
+            self._writer.close()
         if self.outgoing_queue is not None:
             self.outgoing_queue.close()
         globals.local_world.unload()
         globals.player.x = globals.player.render_x = math.inf
         globals.player.y = globals.player.render_y = math.inf
-        if self.writer is not None:
+        if self._writer is not None:
             try:
-                await self.writer.wait_closed()
+                await self._writer.wait_closed()
             except ConnectionError:
                 pass
-        self.writer = None
+        self._writer = None
         if self._should_post_event:
             try:
                 pygame.event.post(pygame.event.Event(SERVER_DISCONNECT_EVENT, reason=self.disconnect_reason))
