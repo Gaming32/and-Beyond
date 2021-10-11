@@ -69,6 +69,15 @@ if not has_opensimplex:
     missing_deps_text += ' - OpenSimplex Noise (opensimplex)\n'
     missing_deps.append('opensimplex')
 
+has_cryptography = True
+try:
+    import cryptography
+except ModuleNotFoundError:
+    has_cryptography = False
+if not has_cryptography:
+    missing_deps_text += ' - Cryptography (cryptography)\n'
+    missing_deps.append('cryptography')
+
 if missing_deps:
     print('You appear to be missing the following requirements for this game to run:')
     print(missing_deps_text, end='')
