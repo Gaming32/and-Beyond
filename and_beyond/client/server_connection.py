@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import math
-import secrets
 import threading
 import time
 import uuid
@@ -171,6 +170,13 @@ class ServerConnection:
         if (packet := await read_and_verify(ServerInfoPacket)) is None:
             return False
         if packet.offline:
+            if globals.singleplayer_pipe_out is None:
+                use_uuid = globals.config.uuid
+                if use_uuid is None:
+                    self.disconnect_reason = 'You must log in to play multiplayer'
+                    return False
+            else:
+                use_uuid = uuid.UUID(int=0)
             server_public_key = load_der_public_key(packet.public_key)
             if not isinstance(server_public_key, ec.EllipticCurvePublicKey):
                 self.disconnect_reason = 'Server key not EllipticCurvePublicKey'
@@ -195,8 +201,8 @@ class ServerConnection:
             else:
                 logging.debug('localhost connection not encrypted')
             packet = PlayerInfoPacket(
-                uuid.UUID(int=0),
-                globals.config.config['nickname'],
+                use_uuid,
+                globals.config.config['username'],
             )
             await write_packet(packet, self.writer)
         else:

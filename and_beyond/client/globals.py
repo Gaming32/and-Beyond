@@ -3,6 +3,7 @@ import json
 import logging
 import subprocess
 import sys
+import uuid as _uuid
 from typing import TYPE_CHECKING, BinaryIO, Optional, TypedDict
 
 from and_beyond.pipe_commands import PipeCommandsToServer, write_pipe
@@ -26,12 +27,15 @@ class _Config(TypedDict):
     max_framerate: int
     always_show_fps: bool
     volume: float
-    nickname: str # Will be removed when a proper account system is added
     last_server: str
+    auth_token: Optional[str]
+    uuid: Optional[str]
+    username: str
 
 
 class ConfigManager:
     config: _Config
+    _uuid_cache: Optional[_uuid.UUID]
 
     def __init__(self, winfo: '_VidInfo') -> None:
         logging.info('Loading config...')
@@ -42,6 +46,7 @@ class ConfigManager:
         except (OSError, json.JSONDecodeError):
             logging.warn('Unable to load config. Loading default config...', exc_info=True)
         logging.info('Loaded config')
+        self._uuid_cache = None
 
     def load_default_config(self, winfo: '_VidInfo') -> None:
         self.config = {
@@ -51,8 +56,10 @@ class ConfigManager:
             'max_framerate': 75,
             'always_show_fps': False,
             'volume': 1.0,
-            'nickname': 'nickname',
             'last_server': 'mc.jemnetworks.com',
+            'auth_token': None,
+            'uuid': None,
+            'username': 'Player',
         }
 
     def save(self, reassign: bool = True) -> None:
@@ -66,6 +73,22 @@ class ConfigManager:
             logging.warn('Unable to save config', exc_info=True)
         else:
             logging.info('Saved config')
+
+    @property
+    def uuid(self) -> Optional[_uuid.UUID]:
+        if self._uuid_cache is None:
+            if self.config['uuid'] is None:
+                return None
+            self._uuid_cache = _uuid.UUID(self.config['uuid'])
+        return self._uuid_cache
+
+    @uuid.setter
+    def uuid(self, new: Optional[_uuid.UUID]) -> None:
+        self._uuid_cache = new
+        if new is None:
+            self.config['uuid'] = None
+        else:
+            self.config['uuid'] = str(new)
 
 
 def close_singleplayer_server(wait: bool = True):
