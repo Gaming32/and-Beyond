@@ -27,7 +27,7 @@ async def _check_error(resp: ClientResponse) -> None:
         return
     try:
         json: dict[str, Any] = await resp.json()
-    except ValueError:
+    except Exception:
         raise_for_status_none()
     if 'type' not in json:
         raise_for_status_none()
