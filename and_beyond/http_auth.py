@@ -1,4 +1,5 @@
 import binascii
+import logging
 from datetime import datetime
 from typing import Any, Optional, Union
 from uuid import UUID
@@ -99,6 +100,7 @@ class _AuthClient:
         return self.client.server / 'auth'
 
     async def _login(self, route: str, username: str, password: str) -> AuthenticatedUser:
+        logging.debug('auth.%s(%r, **)', route.replace('-', '_'), username)
         async with self.sess.post(self.root / route, json={
             'username': username,
             'password': password,
@@ -110,6 +112,7 @@ class _AuthClient:
         return await self._login('login', username, password)
 
     async def logout(self, token: str) -> None:
+        logging.debug('auth.logout(**)')
         async with self.sess.get(self.root / 'logout' / token) as resp:
             await _check_error(resp)
 
@@ -117,6 +120,7 @@ class _AuthClient:
         return await self._login('create-user', username, password)
 
     async def get_profile(self, token: str) -> AuthenticatedUser:
+        logging.debug('auth.get_profile(**)')
         async with self.sess.get(self.root / 'profile' / token) as resp:
             await _check_error(resp)
             json = await resp.json()
@@ -133,11 +137,13 @@ class _AuthClient:
             payload['username'] = username
         if password is not None:
             payload['password'] = password
+        logging.debug('auth.update(**, %r, **)', username)
         async with self.sess.post(self.root / 'profile' / token, json=payload) as resp:
             await _check_error(resp)
             return (await resp.json())['changes']
 
     async def _simple_json_user(self, url: URL) -> User:
+        logging.debug('auth.%s(**)', url.parent.name)
         async with self.sess.delete(url) as resp:
             await _check_error(resp)
             return User.from_json(await resp.json())
@@ -188,6 +194,7 @@ class _SessionClient:
     async def create(self, user_token: Union[AuthenticatedUser, str], public_key: bytes) -> tuple[str, Session]:
         if isinstance(user_token, AuthenticatedUser):
             user_token = user_token.token
+        logging.debug('sessions.create(**, **)')
         async with self.sess.post(self.root / 'new', json={
             'user_token': user_token,
             'public_key': binascii.b2a_base64(public_key).decode('ascii'),
@@ -197,6 +204,7 @@ class _SessionClient:
             return (json['session_token'], Session.from_json(json))
 
     async def retrieve(self, token: str) -> Session:
+        logging.debug('sessions.retrieve(**)')
         async with self.sess.get(self.root / 'retrieve' / token) as resp:
             await _check_error(resp)
             return Session.from_json(await resp.json())
@@ -210,6 +218,7 @@ class AuthClient:
     allow_insecure: bool
 
     def __init__(self, server_address: StrOrURL = AUTH_SERVER, allow_insecure: bool = False) -> None:
+        logging.info('Initializing auth client')
         self.sess = ClientSession()
         self.server = URL(server_address)
         self.auth = _AuthClient(self)
@@ -223,9 +232,11 @@ class AuthClient:
         return await self.close()
 
     async def close(self) -> None:
+        logging.info('Closing auth client')
         return await self.sess.close()
 
     async def ping(self) -> None:
+        logging.debug('ping()')
         async with self.sess.get(self.server / 'ping', allow_redirects=True) as resp:
             await _check_error(resp)
             if not self.allow_insecure and resp.url.scheme != 'https':
@@ -233,5 +244,17 @@ class AuthClient:
             self.server = resp.url.parent
 
     async def teapot(self) -> None:
+        logging.debug('teapot()')
         async with self.sess.get(self.server / 'teapot') as resp:
             await _check_error(resp)
+
+    async def verify_connection(self) -> Optional[str]:
+        try:
+            await self.ping()
+        except InsecureAuth:
+            return 'Your connection to the authentication server is not ' \
+                   'secure. You can bypass this message by using the ' \
+                   '--insecure-auth command-line switch.'
+        except Exception as e:
+            logging.warning('Unable to ping auth server', exc_info=True)
+            return f'Authentication server inaccessible: {e}'

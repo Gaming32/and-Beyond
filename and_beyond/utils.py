@@ -69,6 +69,10 @@ def autoslots(cls: _T_type) -> _T_type:
     return cls
 
 
+def get_opt(opt: str, offset: int = 1) -> str:
+    return sys.argv[sys.argv.index(opt) + offset]
+
+
 @autoslots
 class View(Generic[_T]):
     c: Sequence[_T]

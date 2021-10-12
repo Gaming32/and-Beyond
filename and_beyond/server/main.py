@@ -20,16 +20,12 @@ from and_beyond.pipe_commands import PipeCommandsToServer, read_pipe
 from and_beyond.server.client import Client
 from and_beyond.server.consts import GC_TIME_SECONDS
 from and_beyond.server.world_gen.core import WorldGenerator
-from and_beyond.utils import autoslots, init_logger, mean
+from and_beyond.utils import autoslots, get_opt, init_logger, mean
 from and_beyond.world import BlockTypes, World, WorldChunk
 from cryptography.hazmat.primitives.asymmetric import ec
 
 if sys.platform == 'win32':
     import msvcrt
-
-
-def get_opt(opt: str, offset: int = 1) -> str:
-    return sys.argv[sys.argv.index(opt) + offset]
 
 
 @autoslots
@@ -156,7 +152,7 @@ class AsyncServer:
 
         try:
             listen_addr = get_opt('--listen')
-        except ValueError:
+        except (ValueError, IndexError):
             pass
         else:
             try:

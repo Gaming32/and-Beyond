@@ -6,7 +6,10 @@ import sys
 import uuid as _uuid
 from typing import TYPE_CHECKING, BinaryIO, Optional, TypedDict
 
+from and_beyond.common import AUTH_SERVER
+from and_beyond.http_auth import AuthClient
 from and_beyond.pipe_commands import PipeCommandsToServer, write_pipe
+from and_beyond.utils import get_opt
 from pygame import Vector2
 
 if TYPE_CHECKING:
@@ -110,6 +113,13 @@ def close_singleplayer_server(wait: bool = True):
         singleplayer_popen = None
 
 
+async def get_auth_client() -> AuthClient:
+    global auth_client
+    if auth_client is None:
+        auth_client = AuthClient(auth_server, allow_insecure_auth)
+    return auth_client
+
+
 class GameStatus(enum.IntEnum):
     MAIN_MENU = 0
     CONNECTING = 1
@@ -150,3 +160,12 @@ camera: Vector2 = Vector2()
 mouse_screen: Vector2 = Vector2()
 mouse_world: tuple[float, float] = (0, 0)
 chat_client: 'ChatClient'
+
+try:
+    auth_server = get_opt('--auth-server')
+except (ValueError, IndexError):
+    auth_server = AUTH_SERVER
+if '://' not in auth_server:
+    auth_server = 'http://' + auth_server
+allow_insecure_auth = '--insecure-auth' in sys.argv
+auth_client: Optional[AuthClient] = None

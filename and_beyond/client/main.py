@@ -12,8 +12,6 @@ import pygame.draw
 import pygame.event
 import pygame.mouse
 import pygame.time
-from and_beyond.packet import ChatPacket
-from and_beyond.pipe_commands import read_pipe
 from and_beyond.utils import DEBUG, init_logger
 
 init_logger('client.log')
@@ -36,12 +34,15 @@ from and_beyond.client.consts import (PERIODIC_TICK_EVENT,
 from and_beyond.client.globals import ConfigManager, GameStatus
 from and_beyond.client.mixer import Mixer
 from and_beyond.client.player import ClientPlayer
+from and_beyond.client.ui.accounts import AccountsMenu
 from and_beyond.client.ui.label_screen import LabelScreen
 from and_beyond.client.ui.pause_menu import PauseMenu
 from and_beyond.client.ui.title_screen import TitleScreen
 from and_beyond.client.utils import screen_to_world
 from and_beyond.client.world import ClientWorld
 from and_beyond.common import JUMP_SPEED, MOVE_SPEED, VERSION_DISPLAY_NAME
+from and_beyond.packet import ChatPacket
+from and_beyond.pipe_commands import read_pipe
 from and_beyond.world import BlockTypes
 from pygame import *
 from pygame.locals import *
@@ -322,4 +323,6 @@ pygame.display.quit()
 if globals.game_connection is not None:
     globals.game_connection.stop()
 globals.close_singleplayer_server()
+if globals.auth_client is not None:
+    asyncio.get_event_loop().run_until_complete(globals.auth_client.close())
 config.save()

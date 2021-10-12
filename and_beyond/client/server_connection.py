@@ -18,6 +18,8 @@ from and_beyond.client.consts import (SERVER_CONNECT_EVENT,
 from and_beyond.client.globals import GameStatus
 from and_beyond.client.world import ClientChunk
 from and_beyond.common import KEY_LENGTH, PORT, PROTOCOL_VERSION
+from and_beyond.http_auth import AuthClient
+from and_beyond.http_errors import InsecureAuth
 from and_beyond.middleware import (BufferedWriterMiddleware,
                                    EncryptedReaderMiddleware,
                                    EncryptedWriterMiddleware, ReaderMiddleware,
@@ -206,7 +208,10 @@ class ServerConnection:
             )
             await write_packet(packet, self.writer)
         else:
-            pass # TODO: Online auth
+            async with AuthClient(globals.auth_server, globals.allow_insecure_auth) as auth:
+                if (error := await auth.verify_connection()) is not None:
+                    self.disconnect_reason = error
+                    return False
         return True
 
     async def send_outgoing_packets(self) -> None:

@@ -77,17 +77,20 @@ class UiTextInput(UiElement):
     selected: bool
     width: int
     show_time: float
+    mask: Optional[str]
 
-    def __init__(self, update_cb: TextInputCallback, default_text: str = '') -> None:
+    def __init__(self, update_cb: TextInputCallback, default_text: str = '', mask: Optional[str] = None) -> None:
         self.text = default_text
         self.callback = update_cb
         self.selected = False
         self.width = DEFAULT_ELEMENT_WIDTH
         self.show_time = 0
+        self.mask = mask
 
     def draw_and_call(self, surf: Surface, at: Vector2, pressed: list[bool], released: list[bool]) -> Any:
         self.show_time += globals.delta
-        text_render = GAME_FONT.render(self.text, True, UI_FG)
+        text = self.text if self.mask is None else (self.mask * len(self.text))
+        text_render = GAME_FONT.render(text, True, UI_FG)
         if text_render.get_width() > self.width - 20 or (text_render.get_width() < self.width - 20 and self.width > DEFAULT_ELEMENT_WIDTH):
             self.width = max(text_render.get_width() + 20, DEFAULT_ELEMENT_WIDTH)
         area = Rect(at + Vector2(DEFAULT_ELEMENT_WIDTH // 2 - self.width // 2, 0), (self.width, DEFAULT_ELEMENT_HEIGHT))
