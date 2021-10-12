@@ -56,6 +56,11 @@ class TitleScreen(Ui):
             globals.config.config['last_server'] = ip
             globals.game_status = GameStatus.CONNECTING
             TitleScreen.load_multiplayer(host, port)
+        if globals.config.uuid is None:
+            globals.ui_override = LabelScreen(
+                'You must have logged in to play multiplayer'
+            )
+            return
         screen = globals.ui_override = QuestionScreen(
             'Enter Server Address/IP:',
             'Connect',

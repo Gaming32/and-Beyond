@@ -173,7 +173,7 @@ class ServerConnection:
             if globals.singleplayer_pipe_out is None:
                 use_uuid = globals.config.uuid
                 if use_uuid is None:
-                    self.disconnect_reason = 'You must log in to play multiplayer'
+                    self.disconnect_reason = 'You must have logged in to play multiplayer'
                     return False
             else:
                 use_uuid = uuid.UUID(int=0)

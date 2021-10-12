@@ -2,5 +2,5 @@ pygame>=2.0
 janus # Thread-safe async queues
 colorama
 cryptography # Key exchange
-requests # Authentication
+aiohttp # Authentication
 -r "requirements-server.txt"
