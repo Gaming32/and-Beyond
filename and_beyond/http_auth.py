@@ -4,13 +4,37 @@ from typing import Any, Optional, Union
 from uuid import UUID
 
 from aiohttp.client import ClientSession
+from aiohttp.client_exceptions import ClientResponseError
+from aiohttp.client_reqrep import ClientResponse
 from aiohttp.typedefs import StrOrURL
 from yarl import URL
 
 from and_beyond.common import AUTH_SERVER
+from and_beyond.http_errors import SERVER_ERRORS, InsecureAuth
 
 
-class InsecureAuth(Exception): pass
+async def _check_error(resp: ClientResponse) -> None:
+    def raise_for_status_none():
+        '"from None" version of raise_for_status'
+        raise ClientResponseError(
+            resp.request_info,
+            resp.history,
+            status=resp.status,
+            message=resp.reason,
+            headers=resp.headers,
+        ) from None
+    if resp.status < 400:
+        return
+    try:
+        json: dict[str, Any] = await resp.json()
+    except ValueError:
+        raise_for_status_none()
+    if 'type' not in json:
+        raise_for_status_none()
+    exc_type = SERVER_ERRORS.get(json['type'])
+    if exc_type is None:
+        raise_for_status_none()
+    raise exc_type(json.get('human', None), json.get('args', None), resp.status)
 
 
 class User:
@@ -79,7 +103,7 @@ class _AuthClient:
             'username': username,
             'password': password,
         }) as resp:
-            resp.raise_for_status()
+            await _check_error(resp)
             return AuthenticatedUser.from_json(self, await resp.json())
 
     async def login(self, username: str, password: str) -> AuthenticatedUser:
@@ -87,14 +111,14 @@ class _AuthClient:
 
     async def logout(self, token: str) -> None:
         async with self.sess.get(self.root / 'logout' / token) as resp:
-            resp.raise_for_status()
+            await _check_error(resp)
 
     async def create_user(self, username: str, password: str) -> AuthenticatedUser:
         return await self._login('create-user', username, password)
 
     async def get_profile(self, token: str) -> AuthenticatedUser:
         async with self.sess.get(self.root / 'profile' / token) as resp:
-            resp.raise_for_status()
+            await _check_error(resp)
             json = await resp.json()
             json['token'] = token
             return AuthenticatedUser.from_json(self, json)
@@ -110,12 +134,12 @@ class _AuthClient:
         if password is not None:
             payload['password'] = password
         async with self.sess.post(self.root / 'profile' / token, json=payload) as resp:
-            resp.raise_for_status()
+            await _check_error(resp)
             return (await resp.json())['changes']
 
     async def _simple_json_user(self, url: URL) -> User:
         async with self.sess.delete(url) as resp:
-            resp.raise_for_status()
+            await _check_error(resp)
             return User.from_json(await resp.json())
 
     async def delete_user(self, token: str) -> User:
@@ -168,13 +192,13 @@ class _SessionClient:
             'user_token': user_token,
             'public_key': binascii.b2a_base64(public_key).decode('ascii'),
         }) as resp:
-            resp.raise_for_status()
+            await _check_error(resp)
             json = await resp.json()
             return (json['session_token'], Session.from_json(json))
 
     async def retrieve(self, token: str) -> Session:
         async with self.sess.get(self.root / 'retrieve' / token) as resp:
-            resp.raise_for_status()
+            await _check_error(resp)
             return Session.from_json(await resp.json())
 
 
@@ -203,11 +227,11 @@ class AuthClient:
 
     async def ping(self) -> None:
         async with self.sess.get(self.server / 'ping', allow_redirects=True) as resp:
-            resp.raise_for_status()
+            await _check_error(resp)
             if not self.allow_insecure and resp.url.scheme != 'https':
                 raise InsecureAuth(f'Scheme was {resp.url.scheme}, not https')
             self.server = resp.url.parent
 
     async def teapot(self) -> None:
         async with self.sess.get(self.server / 'teapot') as resp:
-            resp.raise_for_status()
+            await _check_error(resp)
