@@ -41,25 +41,31 @@ async def _check_error(resp: ClientResponse) -> None:
 class User:
     uuid: UUID
     username: str
+    join_date: datetime
 
-    def __init__(self, uuid: UUID, username: str) -> None:
+    def __init__(self, uuid: UUID, username: str, join_date: datetime) -> None:
         self.uuid = uuid
         self.username = username
+        self.join_date = join_date
 
     @classmethod
     def from_json(cls, json: dict[str, Any]):
         return cls(
             UUID(json['uuid']),
             json['username'],
+            datetime.fromisoformat(json['join_date']),
         )
+
+    def __repr__(self) -> str:
+        return f'User(uuid={self.uuid!r}, username={self.username!r}, join_date={self.join_date!r}'
 
 
 class AuthenticatedUser(User):
     token: str
     client: '_AuthClient'
 
-    def __init__(self, client: '_AuthClient', token: str, uuid: UUID, username: str) -> None:
-        super().__init__(uuid, username)
+    def __init__(self, client: '_AuthClient', token: str, uuid: UUID, username: str, join_date: datetime) -> None:
+        super().__init__(uuid, username, join_date)
         self.client = client
         self.token = token
 
@@ -70,6 +76,7 @@ class AuthenticatedUser(User):
             json['token'],
             UUID(json['uuid']),
             json['username'],
+            datetime.fromisoformat(json['join_date']),
         )
 
     async def logout(self) -> None:
@@ -175,6 +182,9 @@ class Session:
             datetime.fromisoformat(json['expiry']),
             User.from_json(json['user']),
         )
+
+    def __repr__(self) -> str:
+        return f'Session(public_key={self.public_key!r}, expiry={self.expiry!r}, user={self.user!r})'
 
 
 class _SessionClient:
