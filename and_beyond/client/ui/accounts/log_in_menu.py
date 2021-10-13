@@ -20,10 +20,10 @@ class LogInMenu(Ui):
     def __init__(self, accounts_menu: 'AccountsMenu') -> None:
         self.accounts_menu = accounts_menu
         self.aloop = accounts_menu.aloop
-        self.username_text_input = UiTextInput(NO_OP)
-        self.password_text_input = UiTextInput(NO_OP, mask='\u25cf')
+        self.username_text_input = UiTextInput(NO_OP, placeholder='Username')
+        self.password_text_input = UiTextInput(NO_OP, mask='\u25cf', placeholder='Password')
         super().__init__([
-            UiLabel('Username/Password'),
+            UiLabel('Log in'),
             self.username_text_input,
             self.password_text_input,
             UiButton('Log in', self.log_in_cb),
@@ -41,8 +41,7 @@ class LogInMenu(Ui):
             )
         except Exception as e:
             logging.warn('Login failed', exc_info=True)
-            self.close()
-            LabelScreen(f'Login failed: {e}').show(self.accounts_menu)
+            LabelScreen(f'Login failed: {e}').show(self)
             return
         globals.config.config['auth_token'] = user.token
         globals.config.uuid = user.uuid

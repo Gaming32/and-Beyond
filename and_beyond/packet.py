@@ -1,7 +1,6 @@
 import abc
 import asyncio
 import enum
-import logging
 import struct
 import uuid
 from typing import Optional, TypeVar

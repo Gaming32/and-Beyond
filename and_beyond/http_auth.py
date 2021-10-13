@@ -84,9 +84,10 @@ class AuthenticatedUser(User):
 
     async def update(self,
             username: Optional[str] = None,
-            password: Optional[str] = None
+            old_password: Optional[str] = None,
+            password: Optional[str] = None,
         ) -> int:
-        return await self.client.update_profile(self.token, username, password)
+        return await self.client.update_profile(self.token, username, old_password, password)
 
     async def delete_user(self):
         return await self.client.delete_user(self.token)
@@ -137,14 +138,18 @@ class _AuthClient:
     async def update_profile(self,
             token: str,
             username: Optional[str] = None,
-            password: Optional[str] = None
+            old_password: Optional[str] = None,
+            password: Optional[str] = None,
         ) -> int:
         payload = {}
         if username is not None:
             payload['username'] = username
         if password is not None:
+            if old_password is None:
+                raise TypeError('old_password cannot be None if password is specified')
             payload['password'] = password
-        logging.debug('auth.update(**, %r, **)', username)
+            payload['old_password'] = old_password
+        logging.debug('auth.update(**, %r, **, **)', username)
         async with self.sess.post(self.root / 'profile' / token, json=payload) as resp:
             await _check_error(resp)
             return (await resp.json())['changes']

@@ -3,4 +3,5 @@ janus # Thread-safe async queues
 colorama
 cryptography # Key exchange
 aiohttp # Authentication
+zxcvbn # Reduce auth server load by doing this client-side
 -r "requirements-server.txt"

@@ -1,5 +1,3 @@
 import re
 
 GC_TIME_SECONDS = 60
-_USERNAME_REGEX = '[_a-zA-Z][_a-zA-Z0-9]{0,15}'
-USERNAME_REGEX = re.compile(_USERNAME_REGEX)
