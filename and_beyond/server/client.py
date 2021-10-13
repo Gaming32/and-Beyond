@@ -1,4 +1,5 @@
 import asyncio
+import binascii
 import logging
 import time
 import uuid
@@ -110,8 +111,17 @@ class Client:
                                   f'(requires minimum {get_version_name(PROTOCOL_VERSION)} to join), '
                                   f'but you connected with {get_version_name(packet.protocol_version)}')
             return False
-        offline = True
+        auth_client = self.server.auth_client
+        offline = auth_client is None
+        if not offline:
+            assert auth_client is not None
+            try:
+                await auth_client.ping()
+            except Exception:
+                logging.warn('Failed to ping the auth server, will use offline mode for this connection.', exc_info=True)
+                offline = True
         server_key = ec.generate_private_key(ec.SECP384R1())
+        is_localhost = self._writer.get_extra_info('peername')[0] in ('localhost', '127.0.0.1', '::1')
         packet = ServerInfoPacket(offline, server_key.public_key().public_bytes(
             Encoding.DER,
             PublicFormat.SubjectPublicKeyInfo,
@@ -121,30 +131,56 @@ class Client:
             return False
         client_token = packet.token
         if offline:
-            if self._writer.get_extra_info('peername')[0] not in ('localhost', '127.0.0.1', '::1'):
-                logging.debug('Encrypting connection...')
-                client_public_key = load_der_public_key(client_token)
-                if not isinstance(client_public_key, ec.EllipticCurvePublicKey):
-                    await self.disconnect('Client key not EllipticCurvePublicKey')
-                    return False
-                shared_key = server_key.exchange(
-                    ec.ECDH(),
-                    client_public_key,
-                )
-                derived_key = HKDF(hashes.SHA256(), KEY_LENGTH, None, None).derive(shared_key)
-                self.writer = create_writer_middlewares(
-                    [BufferedWriterMiddleware, EncryptedWriterMiddleware(derived_key)],
-                    self._writer,
-                )
-                self.reader = EncryptedReaderMiddleware(derived_key)(self._reader)
-            else:
+            if is_localhost:
                 logging.debug('localhost connection not encrypted')
+            else:
+                if not await self.encrypt_connection(server_key, client_token):
+                    return False
             if (packet := await read_and_verify(PlayerInfoPacket)) is None:
                 return False
             self.auth_uuid = packet.uuid
             self.nickname = packet.name
         else:
-            pass # TODO: Online auth
+            assert auth_client is not None
+            client_token = binascii.b2a_hex(client_token).decode('ascii')
+            try:
+                session = await auth_client.sessions.retrieve(client_token)
+            except Exception as e:
+                logging.error('Failed to retrieve client session', exc_info=True)
+                await self.disconnect(f'Failed to retrieve client session: {e}')
+                return False
+            if is_localhost:
+                logging.debug('localhost connection not encrypted')
+            else:
+                if not await self.encrypt_connection(server_key, session.public_key):
+                    return False
+            self.auth_uuid = session.user.uuid
+            self.nickname = session.user.username
+            packet = PlayerInfoPacket(self.auth_uuid, self.nickname)
+            await write_packet(packet, self.writer)
+        return True
+
+    async def encrypt_connection(self,
+            server_key: ec.EllipticCurvePrivateKey,
+            key_bytes: bytes,
+        ) -> bool:
+        assert self._reader is not None
+        assert self._writer is not None
+        logging.debug('Encrypting connection...')
+        client_public_key = load_der_public_key(key_bytes)
+        if not isinstance(client_public_key, ec.EllipticCurvePublicKey):
+            await self.disconnect('Client key not EllipticCurvePublicKey')
+            return False
+        shared_key = server_key.exchange(
+            ec.ECDH(),
+            client_public_key,
+        )
+        derived_key = HKDF(hashes.SHA256(), KEY_LENGTH, None, None).derive(shared_key)
+        self.writer = create_writer_middlewares(
+            [BufferedWriterMiddleware, EncryptedWriterMiddleware(derived_key)],
+            self._writer
+        )
+        self.reader = EncryptedReaderMiddleware(derived_key)(self._reader)
         return True
 
     async def load_chunk(self, x: int, y: int) -> None:

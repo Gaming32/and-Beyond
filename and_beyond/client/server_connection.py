@@ -1,4 +1,5 @@
 import asyncio
+import binascii
 import logging
 import math
 import threading
@@ -19,7 +20,7 @@ from and_beyond.client.globals import GameStatus
 from and_beyond.client.world import ClientChunk
 from and_beyond.common import KEY_LENGTH, PORT, PROTOCOL_VERSION
 from and_beyond.http_auth import AuthClient
-from and_beyond.http_errors import InsecureAuth
+from and_beyond.http_errors import Unauthorized
 from and_beyond.middleware import (BufferedWriterMiddleware,
                                    EncryptedReaderMiddleware,
                                    EncryptedWriterMiddleware, ReaderMiddleware,
@@ -169,39 +170,31 @@ class ServerConnection:
         packet = ClientRequestPacket(PROTOCOL_VERSION) # Explicit > implicit
         await write_packet(packet, self.writer)
         client_key = ec.generate_private_key(ec.SECP384R1())
+        key_bytes = client_key.public_key().public_bytes(
+            Encoding.DER,
+            PublicFormat.SubjectPublicKeyInfo,
+        )
         if (packet := await read_and_verify(ServerInfoPacket)) is None:
+            return False
+        server_public_key = load_der_public_key(packet.public_key)
+        is_localhost = self._writer.get_extra_info('peername')[0] in ('localhost', '127.0.0.1', '::1')
+        if not isinstance(server_public_key, ec.EllipticCurvePublicKey):
+            self.disconnect_reason = 'Server key not EllipticCurvePublicKey'
             return False
         if packet.offline:
             if globals.singleplayer_pipe_out is None:
                 use_uuid = globals.config.uuid
                 if use_uuid is None:
-                    self.disconnect_reason = 'You must have logged in to play multiplayer'
+                    self.disconnect_reason = 'You must have logged in at some point to play multiplayer'
                     return False
             else:
-                use_uuid = uuid.UUID(int=0)
-            server_public_key = load_der_public_key(packet.public_key)
-            if not isinstance(server_public_key, ec.EllipticCurvePublicKey):
-                self.disconnect_reason = 'Server key not EllipticCurvePublicKey'
-                return False
-            packet = BasicAuthPacket(client_key.public_key().public_bytes(
-                Encoding.DER,
-                PublicFormat.SubjectPublicKeyInfo,
-            ))
+                use_uuid = uuid.UUID(int=0) # Singleplayer
+            packet = BasicAuthPacket(key_bytes)
             await write_packet(packet, self.writer)
-            if self._writer.get_extra_info('peername')[0] not in ('localhost', '127.0.0.1', '::1'):
-                logging.debug('Encrypting connection...')
-                shared_key = client_key.exchange(
-                    ec.ECDH(),
-                    server_public_key,
-                )
-                derived_key = HKDF(hashes.SHA256(), KEY_LENGTH, None, None).derive(shared_key)
-                self.writer = create_writer_middlewares(
-                    [BufferedWriterMiddleware, EncryptedWriterMiddleware(derived_key)],
-                    self._writer
-                )
-                self.reader = EncryptedReaderMiddleware(derived_key)(self._reader)
-            else:
+            if is_localhost:
                 logging.debug('localhost connection not encrypted')
+            else:
+                self.encrypt_connection(client_key, server_public_key)
             packet = PlayerInfoPacket(
                 use_uuid,
                 globals.config.config['username'],
@@ -212,7 +205,47 @@ class ServerConnection:
                 if (error := await auth.verify_connection()) is not None:
                     self.disconnect_reason = error
                     return False
+                token = globals.config.config['auth_token']
+                if token is None:
+                    self.disconnect_reason = 'You must be logged in to play multiplayer in online mode'
+                    return False
+                try:
+                    profile = await auth.auth.get_profile(token)
+                except Exception as e:
+                    logging.warn('Failed to fetch profile', exc_info=True)
+                    if isinstance(e, Unauthorized):
+                        self.disconnect_reason = 'You must be logged in to play multiplayer in online mode'
+                    else:
+                        self.disconnect_reason = f'Failed to fetch profile: {e}'
+                    return False
+                sess_token, session = await auth.sessions.create(profile, key_bytes)
+                packet = BasicAuthPacket(binascii.a2b_hex(sess_token))
+            await write_packet(packet, self.writer)
+            if is_localhost:
+                logging.debug('localhost connection not encrypted')
+            else:
+                self.encrypt_connection(client_key, server_public_key)
+            if (packet := await read_and_verify(PlayerInfoPacket)) is None:
+                return False
         return True
+
+    def encrypt_connection(self,
+            client_key: ec.EllipticCurvePrivateKey,
+            server_public_key: ec.EllipticCurvePublicKey
+        ) -> None:
+        assert self._reader is not None
+        assert self._writer is not None
+        logging.debug('Encrypting connection...')
+        shared_key = client_key.exchange(
+            ec.ECDH(),
+            server_public_key,
+        )
+        derived_key = HKDF(hashes.SHA256(), KEY_LENGTH, None, None).derive(shared_key)
+        self.writer = create_writer_middlewares(
+            [BufferedWriterMiddleware, EncryptedWriterMiddleware(derived_key)],
+            self._writer
+        )
+        self.reader = EncryptedReaderMiddleware(derived_key)(self._reader)
 
     async def send_outgoing_packets(self) -> None:
         self.outgoing_queue = janus.Queue()

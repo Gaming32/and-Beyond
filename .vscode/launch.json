@@ -38,7 +38,9 @@
             "module": "and_beyond.server",
             "args": [
                 "--debug",
-                "--world", "server_world"
+                "--world", "server_world",
+                "--auth-server", "http://localhost:8932",
+                "--insecure-auth"
             ]
         }
     ]

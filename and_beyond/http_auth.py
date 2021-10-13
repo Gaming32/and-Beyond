@@ -256,5 +256,5 @@ class AuthClient:
                    'secure. You can bypass this message by using the ' \
                    '--insecure-auth command-line switch.'
         except Exception as e:
-            logging.warning('Unable to ping auth server', exc_info=True)
+            logging.warn('Unable to ping auth server', exc_info=True)
             return f'Authentication server inaccessible: {e}'

@@ -14,7 +14,9 @@ from collections import deque
 from typing import Any, BinaryIO, Optional
 
 import colorama
-from and_beyond.common import KEY_LENGTH, PORT
+from and_beyond.common import AUTH_SERVER, KEY_LENGTH, PORT
+from and_beyond.http_auth import AuthClient
+from and_beyond.http_errors import InsecureAuth
 from and_beyond.packet import ChunkUpdatePacket, write_packet
 from and_beyond.pipe_commands import PipeCommandsToServer, read_pipe
 from and_beyond.server.client import Client
@@ -47,6 +49,7 @@ class AsyncServer:
 
     last_tps_values: deque[float]
     last_mspt_values: deque[float]
+    auth_client: Optional[AuthClient]
 
     last_spt: float
     world: World
@@ -171,6 +174,24 @@ class AsyncServer:
                         return
 
         try:
+            auth_server = get_opt('--auth-server')
+        except (ValueError, IndexError):
+            auth_server = AUTH_SERVER
+        if '://' not in auth_server:
+            auth_server = 'http://' + auth_server
+        allow_insecure_auth = '--insecure-auth' in sys.argv
+        self.auth_client = AuthClient(auth_server, allow_insecure_auth)
+        try:
+            await self.auth_client.ping()
+        except Exception as e:
+            if isinstance(e, InsecureAuth):
+                logging.critical('Requested auth server is insecure (uses HTTP '
+                                 'instead of HTTPS). You can bypass this with '
+                                 'the --insecure-auth command-line switch.')
+                return
+            logging.warn('Failed to ping the auth server', exc_info=True)
+
+        try:
             world_name = get_opt('--world')
         except (ValueError, IndexError):
             world_name = 'world'
@@ -276,6 +297,9 @@ class AsyncServer:
         if self.async_server is not None:
             logging.debug('Closing server...')
             self.async_server.close()
+        if self.auth_client is not None:
+            logging.debug('Closing auth client...')
+            await self.auth_client.close()
         logging.debug('Closing singleplayer pipes...')
         if self.singleplayer_pipe_in is not None:
             self.singleplayer_pipe_in.close()

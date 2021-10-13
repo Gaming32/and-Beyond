@@ -114,6 +114,7 @@ def close_singleplayer_server(wait: bool = True):
 
 
 async def get_auth_client() -> AuthClient:
+    "NOTE: Main thread *only*"
     global auth_client
     if auth_client is None:
         auth_client = AuthClient(auth_server, allow_insecure_auth)
@@ -168,4 +169,4 @@ except (ValueError, IndexError):
 if '://' not in auth_server:
     auth_server = 'http://' + auth_server
 allow_insecure_auth = '--insecure-auth' in sys.argv
-auth_client: Optional[AuthClient] = None
+auth_client: Optional[AuthClient] = None # NOTE: Main thread *only*

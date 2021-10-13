@@ -48,7 +48,7 @@ async def read_packet(reader: ReaderMiddleware) -> Packet:
     return packet
 
 
-async def read_packet_timeout(reader: ReaderMiddleware, timeout: float = 3) -> Packet:
+async def read_packet_timeout(reader: ReaderMiddleware, timeout: float = 5000) -> Packet:
     return await asyncio.wait_for(read_packet(reader), timeout)
 
 
@@ -93,7 +93,7 @@ async def _read_uuid(reader: ReaderMiddleware) -> uuid.UUID:
 
 
 async def _read_bool(reader: ReaderMiddleware) -> bool:
-    return await reader.readexactly(1) != 0
+    return (await reader.readexactly(1))[0] != 0
 
 
 def _write_ushort(value: int, writer: WriterMiddleware) -> None:
