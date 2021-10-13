@@ -106,14 +106,14 @@ class AsyncServer:
                 if not self.multiplayer:
                     self.paused = True
             elif command == PipeCommandsToServer.UNPAUSE:
-                if not self.multiplayer:
-                    self.paused = False
+                self.paused = False
             elif command == PipeCommandsToServer.OPEN_TO_LAN:
                 self.async_server.close()
                 port = read_pipe(pipe)
                 await self.async_server.wait_closed()
                 await self.listen('0.0.0.0', port)
                 self.multiplayer = True
+                self.paused = False
                 await self.send_chat(f'Opened to LAN on port {self.port}')
 
     async def set_block(self, cx: int, cy: int, bx: int, by: int, block: BlockTypes) -> None:

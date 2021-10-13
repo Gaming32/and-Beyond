@@ -79,9 +79,17 @@ class WorldScreen(Ui):
             pipe_in = wi
         globals.singleplayer_pipe_out = os.fdopen(wo, 'wb')
         globals.singleplayer_pipe_in = os.fdopen(ri, 'rb')
-        server_args = [sys.executable, '-m', 'and_beyond.server', '--singleplayer', str(pipe_out), str(pipe_in), '--world', name]
+        server_args = [
+            sys.executable,
+            '-m', 'and_beyond.server',
+            '--singleplayer', str(pipe_out), str(pipe_in),
+            '--world', name,
+            '--auth-server', globals.auth_server,
+        ]
         if DEBUG:
             server_args.append('--debug')
+        if globals.allow_insecure_auth:
+            server_args.append('--insecure-auth')
         env = os.environ.copy()
         import __main__
         if hasattr(__main__, 'GAME_DIR'):

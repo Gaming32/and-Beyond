@@ -156,7 +156,7 @@ class ServerConnection:
         assert self._writer is not None
         async def read_and_verify(should_be: type[_T_Packet]) -> Optional[_T_Packet]:
             try:
-                packet = await read_packet_timeout(self.reader)
+                packet = await read_packet_timeout(self.reader, 7)
             except TimeoutError:
                 self.disconnect_reason = 'Server handshake timeout'
                 return None

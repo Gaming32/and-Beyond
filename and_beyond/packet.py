@@ -48,7 +48,7 @@ async def read_packet(reader: ReaderMiddleware) -> Packet:
     return packet
 
 
-async def read_packet_timeout(reader: ReaderMiddleware, timeout: float = 5000) -> Packet:
+async def read_packet_timeout(reader: ReaderMiddleware, timeout: float = 3) -> Packet:
     return await asyncio.wait_for(read_packet(reader), timeout)
 
 

@@ -96,7 +96,7 @@ class Client:
     async def handshake(self) -> bool:
         async def read_and_verify(should_be: type[_T_Packet]) -> Optional[_T_Packet]:
             try:
-                packet = await read_packet_timeout(self.reader)
+                packet = await read_packet_timeout(self.reader, 7)
             except TimeoutError:
                 await self.disconnect('Client handshake timeout')
                 return None
@@ -111,17 +111,21 @@ class Client:
                                   f'(requires minimum {get_version_name(PROTOCOL_VERSION)} to join), '
                                   f'but you connected with {get_version_name(packet.protocol_version)}')
             return False
+        is_localhost = self._writer.get_extra_info('peername')[0] in ('localhost', '127.0.0.1', '::1')
         auth_client = self.server.auth_client
         offline = auth_client is None
         if not offline:
             assert auth_client is not None
-            try:
-                await auth_client.ping()
-            except Exception:
-                logging.warn('Failed to ping the auth server, will use offline mode for this connection.', exc_info=True)
+            if not self.server.multiplayer and is_localhost and len(self.server.clients) == 1:
+                logging.debug('Singleplayer server running in offline mode')
                 offline = True
+            else:
+                try:
+                    await auth_client.ping()
+                except Exception:
+                    logging.warn('Failed to ping the auth server, will use offline mode for this connection.', exc_info=True)
+                    offline = True
         server_key = ec.generate_private_key(ec.SECP384R1())
-        is_localhost = self._writer.get_extra_info('peername')[0] in ('localhost', '127.0.0.1', '::1')
         packet = ServerInfoPacket(offline, server_key.public_key().public_bytes(
             Encoding.DER,
             PublicFormat.SubjectPublicKeyInfo,
