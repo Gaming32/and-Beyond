@@ -95,6 +95,10 @@ def render_debug() -> None:
 globals.fullscreen = config.config['fullscreen']
 old_fullscreen = globals.fullscreen
 screen = reset_window()
+try:
+    pygame.scrap.init()
+except pygame.error:
+    pass
 
 logging.info('Performing asset transformations...')
 start = pytime.perf_counter()
@@ -204,6 +208,12 @@ while globals.running:
                         globals.chat_client.current_chat = ''
                         globals.chat_client.dirty = True
                         chat_open = False
+                    elif event.key == pygame.K_v and (event.mod & pygame.KMOD_CTRL):
+                        if pygame.scrap.get_init():
+                            clip = pygame.scrap.get(SCRAP_TEXT)
+                            if clip is not None:
+                                assert isinstance(clip, bytes)
+                                globals.chat_client.current_chat += clip.rstrip(b'\0').decode('utf-8')
             elif event.type == KEYUP:
                 if not chat_open:
                     if event.key == K_d:

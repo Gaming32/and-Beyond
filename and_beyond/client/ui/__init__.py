@@ -124,6 +124,12 @@ class UiTextInput(UiElement):
                             else:
                                 self.text = self.text[:-1]
                             changed = True
+                    elif event.key == pygame.K_v and (event.mod & pygame.KMOD_CTRL):
+                        if pygame.scrap.get_init():
+                            clip = pygame.scrap.get(SCRAP_TEXT)
+                            if clip is not None:
+                                assert isinstance(clip, bytes)
+                                self.text += clip.rstrip(b'\0').decode('utf-8')
         surf.blit(
             text_render,
             (
