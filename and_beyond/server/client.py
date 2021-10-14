@@ -95,7 +95,6 @@ class Client:
         packet = PlayerInfoPacket(self.uuid, self.nickname)
         await self.server.send_to_all(packet, exclude_player=self)
         await self.load_chunks_around_player(9)
-        # await self.send_player_positions()
         self.send_players_task = self.aloop.create_task(self.send_player_positions())
         self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
         self.ready = True
@@ -221,21 +220,16 @@ class Client:
         loaded: set[tuple[int, int]] = set()
         cx = int(self.player.x) >> 4
         cy = int(self.player.y) >> 4
-        await spiral_loop_async(
-            diameter,
-            diameter,
-            load_chunk_rel
-        ) # bpo-29930
-        # await asyncio.gather(*
-        #     spiral_loop_gen(
-        #         diameter,
-        #         diameter,
-        #         (
-        #             lambda x, y:
-        #                 self.aloop.create_task(load_chunk_rel(x, y))
-        #         )
-        #     )
-        # )
+        await asyncio.gather(*
+            spiral_loop_gen(
+                diameter,
+                diameter,
+                (
+                    lambda x, y:
+                        self.aloop.create_task(load_chunk_rel(x, y))
+                )
+            )
+        )
         to_unload = set(self.loaded_chunks).difference(loaded)
         tasks = []
         for (cx, cy) in to_unload:
