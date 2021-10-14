@@ -29,7 +29,7 @@ from and_beyond.middleware import (BufferedWriterMiddleware,
 from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket,
                                ChunkUpdatePacket, ClientRequestPacket,
                                DisconnectPacket, Packet, PingPacket,
-                               PlayerInfoPacket, PlayerPositionPacket,
+                               PlayerInfoPacket, PlayerPositionPacket, RemovePlayerPacket,
                                ServerInfoPacket, UnloadChunkPacket,
                                read_packet, read_packet_timeout, write_packet)
 from cryptography.hazmat.primitives import hashes
@@ -113,10 +113,10 @@ class ServerConnection:
         while self.running:
             it_end = time.perf_counter()
             time_since_ping += it_end - it_start
-            if time_since_ping > 10: # Server hasn't responded for 10 seconds, it's probably down
-                self.disconnect_reason = 'The server stopped responding'
-                self.running = False
-                break
+            # if time_since_ping > 10: # Server hasn't responded for 10 seconds, it's probably down
+            #     self.disconnect_reason = 'The server stopped responding'
+            #     self.running = False
+            #     break
             it_start = time.perf_counter()
             try:
                 packet = await read_packet(self.reader)
@@ -151,6 +151,8 @@ class ServerConnection:
             elif isinstance(packet, PlayerInfoPacket):
                 new_player = ClientPlayer(packet.name)
                 globals.all_players[packet.uuid] = new_player
+            elif isinstance(packet, RemovePlayerPacket):
+                globals.all_players.pop(packet.player, None)
             elif isinstance(packet, DisconnectPacket):
                 logging.info('Disconnected from server: %s', packet.reason)
                 self.disconnect_reason = packet.reason

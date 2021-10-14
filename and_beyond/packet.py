@@ -19,14 +19,15 @@ class PacketType(enum.IntEnum):
     SERVER_INFO = 1
     BASIC_AUTH = 2
     PLAYER_INFO = 3
-    DISCONNECT = 4
-    PING = 5
-    CHUNK = 6
-    CHUNK_UNLOAD = 7
-    CHUNK_UPDATE = 8
-    PLAYER_POS = 9
-    ADD_VELOCITY = 10
-    CHAT = 11
+    REMOVE_PLAYER = 4
+    DISCONNECT = 5
+    PING = 6
+    CHUNK = 7
+    CHUNK_UNLOAD = 8
+    CHUNK_UPDATE = 9
+    PLAYER_POS = 10
+    ADD_VELOCITY = 11
+    CHAT = 12
 
 
 class Packet(abc.ABC):
@@ -195,6 +196,20 @@ class PlayerInfoPacket(Packet):
         _write_binary(self.name.encode('ascii'), writer)
 
 
+class RemovePlayerPacket(Packet):
+    type = PacketType.REMOVE_PLAYER
+    player: UUID
+
+    def __init__(self, player: UUID = UUID(int=0)) -> None:
+        self.player = player
+
+    async def read(self, reader: ReaderMiddleware) -> None:
+        self.player = await _read_uuid(reader)
+
+    def write(self, writer: WriterMiddleware) -> None:
+        _write_uuid(self.player, writer)
+
+
 class DisconnectPacket(Packet):
     type = PacketType.DISCONNECT
     reason: str
@@ -354,6 +369,7 @@ PACKET_CLASSES: list[type[Packet]] = [
     ServerInfoPacket, # SERVER_INFO
     BasicAuthPacket, # BASIC_AUTH
     PlayerInfoPacket, # PLAYER_INFO
+    RemovePlayerPacket, # REMOVE_PLAYER
     DisconnectPacket, # DISCONNECT
     PingPacket, # PING
     ChunkPacket, # CHUNK

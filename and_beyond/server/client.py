@@ -4,7 +4,7 @@ import logging
 import time
 from asyncio import StreamReader, StreamWriter
 from asyncio.events import AbstractEventLoop
-from asyncio.tasks import shield
+from asyncio.tasks import create_task, shield
 from typing import TYPE_CHECKING, Optional, TypeVar
 from uuid import UUID
 
@@ -19,9 +19,9 @@ from and_beyond.packet import (AddVelocityPacket, BasicAuthPacket, ChatPacket,
                                ChunkPacket, ChunkUpdatePacket,
                                ClientRequestPacket, DisconnectPacket, Packet,
                                PingPacket, PlayerInfoPacket,
-                               PlayerPositionPacket, ServerInfoPacket,
-                               UnloadChunkPacket, read_packet,
-                               read_packet_timeout, write_packet)
+                               PlayerPositionPacket, RemovePlayerPacket,
+                               ServerInfoPacket, UnloadChunkPacket,
+                               read_packet, read_packet_timeout, write_packet)
 from and_beyond.server.commands import COMMANDS
 from and_beyond.server.player import Player
 from and_beyond.utils import spiral_loop_async, spiral_loop_gen
@@ -93,6 +93,8 @@ class Client:
         packet = PlayerInfoPacket(self.uuid, self.nickname)
         await self.server.send_to_all(packet, exclude_player=self)
         await self.load_chunks_around_player(9)
+        # await self.send_player_positions()
+        self.send_players_task = self.aloop.create_task(self.send_player_positions())
         self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
         self.ready = True
         self.server.skip_gc = False
@@ -239,6 +241,22 @@ class Client:
         if tasks:
             await asyncio.gather(*tasks)
 
+    async def send_player_positions(self):
+        assert self.uuid is not None
+        for client in self.server.clients:
+            if client is not self and client.ready:
+                assert client.uuid is not None
+                cx = int(client.player.x) >> 4
+                cy = int(client.player.y) >> 4
+                if (cx, cy) in self.loaded_chunks:
+                    packet = PlayerPositionPacket(client.uuid, client.player.x, client.player.y)
+                    await write_packet(packet, self.writer)
+                cx = int(self.player.x) >> 4
+                cy = int(self.player.y) >> 4
+                if (cx, cy) in client.loaded_chunks:
+                    packet = PlayerPositionPacket(self.uuid, self.player.x, self.player.y)
+                    await write_packet(packet, client.writer)
+
     async def periodic_ping(self) -> None:
         while self.server.running:
             await asyncio.sleep(1)
@@ -358,6 +376,7 @@ class Client:
         if self.disconnecting:
             logging.debug('Already disconnecting %s', self)
             return
+        self.ready = False
         self.disconnecting = True
         logging.debug('Disconnecting Client %s for reason "%s"', self, reason)
         try:
@@ -370,6 +389,8 @@ class Client:
             self.ping_task.cancel()
         if self.load_chunks_task is not None:
             self.load_chunks_task.cancel()
+        if self.send_players_task is not None:
+            self.send_players_task.cancel()
         if kick:
             packet = DisconnectPacket(reason)
             try:
@@ -383,6 +404,12 @@ class Client:
             end = time.perf_counter()
             logging.debug('Player %s data saved in %f seconds', self, end - start)
         await self._writer.wait_closed()
+        if self.uuid is not None:
+            logging.debug('Sending removal packets to remaining players')
+            packet = RemovePlayerPacket(self.uuid)
+            for client in self.server.clients:
+                if client.ready:
+                    await write_packet(packet, client.writer)
         logging.info('Client %s disconnected for reason: %s', self, reason)
         if self.player is not None:
             logging.info('%s left the game', self.player)
