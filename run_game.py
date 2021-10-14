@@ -69,6 +69,15 @@ if not has_aiohttp:
     missing_deps_text += ' - Asynchronous HTTP (aiohttp)\n'
     missing_deps.append('aiohttp')
 
+has_zxcvbn = True
+try:
+    import zxcvbn
+except ModuleNotFoundError:
+    has_zxcvbn = False
+if not has_zxcvbn:
+    missing_deps_text += ' - Password strength checker (zxcvbn)\n'
+    missing_deps.append('zxcvbn')
+
 has_aiofiles = True
 try:
     import aiofiles
