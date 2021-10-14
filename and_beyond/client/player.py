@@ -1,19 +1,18 @@
 # pyright: reportWildcardImportFromLibrary=false
-from typing import Optional
-from and_beyond.client.assets import PERSON_SPRITES
 import math as pymath
 from math import inf
+from typing import Optional
 
 import pygame
 import pygame.time
 import pygame.transform
 from and_beyond.abstract_player import AbstractPlayer
 from and_beyond.client import globals
+from and_beyond.client.assets import CHAT_FONT, PERSON_SPRITES
 from and_beyond.client.consts import BLOCK_RENDER_SIZE
 from and_beyond.client.utils import lerp, world_to_screen
 from and_beyond.client.world import get_block_texture
-from and_beyond.packet import (AddVelocityPacket, ChunkUpdatePacket,
-                               PlayerPositionPacket)
+from and_beyond.packet import AddVelocityPacket, ChunkUpdatePacket
 from and_beyond.utils import autoslots
 from and_beyond.world import BlockTypes
 from pygame import *
@@ -32,6 +31,8 @@ class ClientPlayer(AbstractPlayer):
     dir: bool
     frame: float
     display_name: Optional[str]
+    name_render: Optional[pygame.surface.Surface]
+    name_offset: Vector2
 
     def __init__(self, name: Optional[str] = None) -> None:
         self.x = inf
@@ -47,6 +48,7 @@ class ClientPlayer(AbstractPlayer):
         self.dir = True
         self.frame = 0
         self.display_name = name
+        self.name_render = None
 
     def render(self, surf: Surface) -> None:
         if self.x == inf or self.y == inf:
@@ -58,7 +60,20 @@ class ClientPlayer(AbstractPlayer):
         sprite = PERSON_SPRITES[int(self.frame) & 1]
         if not self.dir:
             sprite = pygame.transform.flip(sprite, True, False)
-        surf.blit(sprite, sprite.get_rect().move(draw_pos + Vector2(0, BLOCK_RENDER_SIZE / 2)))
+        surf.blit(sprite, draw_pos + Vector2(0, BLOCK_RENDER_SIZE / 2))
+        if self.display_name is not None:
+            if self.name_render is None:
+                base_name_render = CHAT_FONT.render(self.display_name, True, (255, 255, 255))
+                self.name_render = pygame.Surface(
+                    (base_name_render.get_width() + 10, base_name_render.get_height() + 10)
+                ).convert_alpha()
+                self.name_render.fill((0, 0, 0, 192))
+                self.name_render.blit(base_name_render, (5, 5))
+                self.name_offset = Vector2(
+                    BLOCK_RENDER_SIZE / 2 - self.name_render.get_width() / 2,
+                    -self.name_render.get_height() - 1
+                )
+            surf.blit(self.name_render, draw_pos + self.name_offset)
         # surf.fill(
         #     (128, 0, 128),
         #     (
