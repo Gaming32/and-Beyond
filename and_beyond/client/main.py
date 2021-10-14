@@ -63,11 +63,16 @@ def reset_window() -> Surface:
     else:
         globals.w_width = config.config['w_width']
         globals.w_height = config.config['w_height']
-    # type: ignore is needed to shut type checkers up about https://github.com/pygame/pygame/issues/839#issuecomment-812919220
-    return pygame.display.set_mode(
+    surf = pygame.display.set_mode(
         (globals.w_width, globals.w_height),
         (FULLSCREEN if globals.fullscreen else 0) | RESIZABLE
-    ) # type: ignore
+    )
+    try:
+        pygame.scrap.init()
+    except pygame.error:
+        logging.warn('pygame.scrap unavailable. Clipboard support is disabled.')
+    # type: ignore is needed to shut type checkers up about https://github.com/pygame/pygame/issues/839#issuecomment-812919220
+    return surf # type: ignore
 
 
 def render_debug() -> None:
@@ -95,10 +100,6 @@ def render_debug() -> None:
 globals.fullscreen = config.config['fullscreen']
 old_fullscreen = globals.fullscreen
 screen = reset_window()
-try:
-    pygame.scrap.init()
-except pygame.error:
-    pass
 
 logging.info('Performing asset transformations...')
 start = pytime.perf_counter()
