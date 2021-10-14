@@ -1,4 +1,5 @@
 # pyright: reportWildcardImportFromLibrary=false
+from typing import Optional
 from and_beyond.client.assets import PERSON_SPRITES
 import math as pymath
 from math import inf
@@ -30,29 +31,29 @@ class ClientPlayer(AbstractPlayer):
     selected_block_texture: Surface
     dir: bool
     frame: float
+    display_name: Optional[str]
 
-    def __init__(self) -> None:
+    def __init__(self, name: Optional[str] = None) -> None:
         self.x = inf
         self.y = inf
         self.last_x = inf
         self.last_y = inf
         self.render_x = inf
         self.render_y = inf
-        self.is_local = True
+        self.is_local = name is None
         # We know better than https://mypy.readthedocs.io/en/latest/generics.html#variance-of-generic-types here :)
         self.loaded_chunks = globals.local_world.loaded_chunks # type: ignore
         self.change_selected_block(BlockTypes.STONE)
         self.dir = True
         self.frame = 0
+        self.display_name = name
 
     def render(self, surf: Surface) -> None:
         if self.x == inf or self.y == inf:
             return
+        self._render_local()
         if self.is_local:
-            self._render_local()
-        else:
-            self._render_other()
-        globals.camera = Vector2(self.render_x, self.render_y + 3)
+            globals.camera.update(self.render_x, self.render_y + 3)
         draw_pos = world_to_screen(self.render_x, self.render_y + 1, surf)
         sprite = PERSON_SPRITES[int(self.frame) & 1]
         if not self.dir:
@@ -88,11 +89,6 @@ class ClientPlayer(AbstractPlayer):
     def change_selected_block(self, new: BlockTypes) -> None:
         self.selected_block = new
         self.selected_block_texture = pygame.transform.scale(get_block_texture(new), (50, 50)) # type: ignore
-
-    def send_position(self) -> None:
-        packet = PlayerPositionPacket(self.x, self.y)
-        assert globals.game_connection is not None
-        globals.game_connection.write_packet_sync(packet)
 
     def add_velocity(self, x: float = 0, y: float = 0) -> None:
         packet = AddVelocityPacket(x, y)

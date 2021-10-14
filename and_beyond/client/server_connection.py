@@ -4,10 +4,10 @@ import logging
 import math
 import threading
 import time
-import uuid
 from asyncio.exceptions import CancelledError, TimeoutError
 from asyncio.streams import StreamReader, StreamWriter
 from typing import Optional, TypeVar
+from uuid import UUID
 
 import janus
 import pygame
@@ -17,6 +17,7 @@ from and_beyond.client.chat import ClientChatMessage
 from and_beyond.client.consts import (SERVER_CONNECT_EVENT,
                                       SERVER_DISCONNECT_EVENT)
 from and_beyond.client.globals import GameStatus
+from and_beyond.client.player import ClientPlayer
 from and_beyond.client.world import ClientChunk
 from and_beyond.common import KEY_LENGTH, PORT, PROTOCOL_VERSION
 from and_beyond.http_auth import AuthClient
@@ -52,6 +53,7 @@ class ServerConnection:
     running: bool
     outgoing_queue: Optional[janus.Queue[Packet]]
     send_packets_task: Optional[asyncio.Task]
+    uuid: UUID
 
     disconnect_reason: Optional[str]
     _should_post_event: bool
@@ -103,6 +105,7 @@ class ServerConnection:
         globals.connecting_status = 'Connected'
         globals.game_status = GameStatus.IN_GAME
         pygame.event.post(pygame.event.Event(SERVER_CONNECT_EVENT))
+        globals.all_players[self.uuid] = globals.player
         globals.local_world.load()
         self.send_packets_task = self.aio_loop.create_task(self.send_outgoing_packets())
         time_since_ping = 0
@@ -139,8 +142,15 @@ class ServerConnection:
             elif isinstance(packet, PlayerPositionPacket):
                 # globals.player.last_x = globals.player.render_x = globals.player.x
                 # globals.player.last_y = globals.player.render_y = globals.player.y
-                globals.player.x = packet.x
-                globals.player.y = packet.y
+                # globals.player.x = packet.x
+                # globals.player.y = packet.y
+                player = globals.all_players.get(packet.player)
+                if player is not None:
+                    player.x = packet.x
+                    player.y = packet.y
+            elif isinstance(packet, PlayerInfoPacket):
+                new_player = ClientPlayer(packet.name)
+                globals.all_players[packet.uuid] = new_player
             elif isinstance(packet, DisconnectPacket):
                 logging.info('Disconnected from server: %s', packet.reason)
                 self.disconnect_reason = packet.reason
@@ -188,7 +198,7 @@ class ServerConnection:
                     self.disconnect_reason = 'You must have logged in at some point to play multiplayer'
                     return False
             else:
-                use_uuid = uuid.UUID(int=0) # Singleplayer
+                use_uuid = UUID(int=0) # Singleplayer
             packet = BasicAuthPacket(key_bytes)
             await write_packet(packet, self.writer)
             if is_localhost:
@@ -200,6 +210,7 @@ class ServerConnection:
                 globals.config.config['username'],
             )
             await write_packet(packet, self.writer)
+            self.uuid = use_uuid
         else:
             async with AuthClient(globals.auth_server, globals.allow_insecure_auth) as auth:
                 if (error := await auth.verify_connection()) is not None:
@@ -227,6 +238,7 @@ class ServerConnection:
                 self.encrypt_connection(client_key, server_public_key)
             if (packet := await read_and_verify(PlayerInfoPacket)) is None:
                 return False
+            self.uuid = packet.uuid
         return True
 
     def encrypt_connection(self,

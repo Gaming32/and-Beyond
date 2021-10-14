@@ -2,8 +2,8 @@ import abc
 import asyncio
 import enum
 import struct
-import uuid
 from typing import Optional, TypeVar
+from uuid import UUID
 
 from and_beyond.common import KEY_LENGTH, PROTOCOL_VERSION
 from and_beyond.middleware import ReaderMiddleware, WriterMiddleware
@@ -12,7 +12,6 @@ from and_beyond.world import BlockTypes, WorldChunk
 
 _T_int = TypeVar('_T_int', bound=int)
 _D = struct.Struct('<d')
-_uuid = uuid
 
 
 class PacketType(enum.IntEnum):
@@ -87,8 +86,8 @@ async def _read_string(reader: ReaderMiddleware) -> str:
     return (await _read_binary(reader)).decode('utf-8')
 
 
-async def _read_uuid(reader: ReaderMiddleware) -> uuid.UUID:
-    return uuid.UUID(bytes=await reader.readexactly(16))
+async def _read_uuid(reader: ReaderMiddleware) -> UUID:
+    return UUID(bytes=await reader.readexactly(16))
 
 
 async def _read_bool(reader: ReaderMiddleware) -> bool:
@@ -122,7 +121,7 @@ def _write_string(value: str, writer: WriterMiddleware) -> None:
     _write_binary(value.encode('utf-8'), writer)
 
 
-def _write_uuid(value: uuid.UUID, writer: WriterMiddleware) -> None:
+def _write_uuid(value: UUID, writer: WriterMiddleware) -> None:
     writer.write(value.bytes)
 
 
@@ -180,10 +179,10 @@ class BasicAuthPacket(Packet):
 
 class PlayerInfoPacket(Packet):
     type = PacketType.PLAYER_INFO
-    uuid: _uuid.UUID
+    uuid: UUID
     name: str
 
-    def __init__(self, uuid: _uuid.UUID = _uuid.UUID(int=0), name: str = '') -> None:
+    def __init__(self, uuid: UUID = UUID(int=0), name: str = '') -> None:
         self.uuid = uuid
         self.name = name
 
@@ -293,18 +292,22 @@ class ChunkUpdatePacket(Packet):
 @autoslots
 class PlayerPositionPacket(Packet):
     type = PacketType.PLAYER_POS
+    player: UUID
     x: float
     y: float
 
-    def __init__(self, x: float = 0, y: float = 0) -> None:
+    def __init__(self, player: UUID = UUID(int=0), x: float = 0, y: float = 0) -> None:
+        self.player = player
         self.x = x
         self.y = y
 
     async def read(self, reader: ReaderMiddleware) -> None:
+        self.player = await _read_uuid(reader)
         self.x = await _read_double(reader)
         self.y = await _read_double(reader)
 
     def write(self, writer: WriterMiddleware) -> None:
+        _write_uuid(self.player, writer)
         _write_double(self.x, writer)
         _write_double(self.y, writer)
 

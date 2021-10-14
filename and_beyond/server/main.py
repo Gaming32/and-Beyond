@@ -17,7 +17,7 @@ import colorama
 from and_beyond.common import AUTH_SERVER, KEY_LENGTH, PORT
 from and_beyond.http_auth import AuthClient
 from and_beyond.http_errors import InsecureAuth
-from and_beyond.packet import ChunkUpdatePacket, write_packet
+from and_beyond.packet import ChunkUpdatePacket, Packet, write_packet
 from and_beyond.pipe_commands import PipeCommandsToServer, read_pipe
 from and_beyond.server.client import Client
 from and_beyond.server.consts import GC_TIME_SECONDS
@@ -319,13 +319,16 @@ class AsyncServer:
         chunk.set_tile_type(x, y, type)
         cpos = (chunk.abs_x, chunk.abs_y)
         packet = ChunkUpdatePacket(chunk.abs_x, chunk.abs_y, x, y, type)
+        await self.send_to_all(packet, cpos, exclude_player)
+
+    async def send_to_all(self, packet: Packet, cpos_only: Optional[tuple[int, int]] = None, exclude_player: Client = None) -> tuple[None, ...]:
         tasks: list[asyncio.Task] = []
         for player in self.clients:
-            if player == exclude_player:
+            if player is exclude_player:
                 continue
-            if cpos in player.loaded_chunks:
+            if cpos_only is None or cpos_only in player.loaded_chunks:
                 tasks.append(self.loop.create_task(write_packet(packet, player.writer)))
-        await asyncio.gather(*tasks)
+        return await asyncio.gather(*tasks)
 
     def get_tps(self, time: int = 60):
         return mean(itertools.islice(self.last_tps_values, max(len(self.last_tps_values) - time, 0), None))

@@ -3,8 +3,8 @@ import json
 import logging
 import subprocess
 import sys
-import uuid as _uuid
 from typing import TYPE_CHECKING, BinaryIO, Optional, TypedDict
+from uuid import UUID
 
 from and_beyond.common import AUTH_SERVER
 from and_beyond.http_auth import AuthClient
@@ -38,7 +38,7 @@ class _Config(TypedDict):
 
 class ConfigManager:
     config: _Config
-    _uuid_cache: Optional[_uuid.UUID]
+    _uuid_cache: Optional[UUID]
 
     def __init__(self, winfo: '_VidInfo') -> None:
         logging.info('Loading config...')
@@ -78,15 +78,15 @@ class ConfigManager:
             logging.info('Saved config')
 
     @property
-    def uuid(self) -> Optional[_uuid.UUID]:
+    def uuid(self) -> Optional[UUID]:
         if self._uuid_cache is None:
             if self.config['uuid'] is None:
                 return None
-            self._uuid_cache = _uuid.UUID(self.config['uuid'])
+            self._uuid_cache = UUID(self.config['uuid'])
         return self._uuid_cache
 
     @uuid.setter
-    def uuid(self, new: Optional[_uuid.UUID]) -> None:
+    def uuid(self, new: Optional[UUID]) -> None:
         self._uuid_cache = new
         if new is None:
             self.config['uuid'] = None
@@ -157,6 +157,7 @@ ui_override: Optional['Ui'] = None
 
 local_world: 'ClientWorld'
 player: 'ClientPlayer'
+all_players: dict[UUID, 'ClientPlayer']
 camera: Vector2 = Vector2()
 mouse_screen: Vector2 = Vector2()
 mouse_world: tuple[float, float] = (0, 0)

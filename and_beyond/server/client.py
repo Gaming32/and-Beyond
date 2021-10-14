@@ -2,11 +2,11 @@ import asyncio
 import binascii
 import logging
 import time
-import uuid
 from asyncio import StreamReader, StreamWriter
 from asyncio.events import AbstractEventLoop
 from asyncio.tasks import shield
 from typing import TYPE_CHECKING, Optional, TypeVar
+from uuid import UUID
 
 from and_beyond.common import (KEY_LENGTH, MOVE_SPEED_CAP_SQ, PROTOCOL_VERSION,
                                VERSION_DISPLAY_NAME, VIEW_DISTANCE_BOX,
@@ -50,7 +50,7 @@ class Client:
     ready: bool
     disconnecting: bool
 
-    auth_uuid: Optional[uuid.UUID]
+    uuid: Optional[UUID]
     ping_task: Optional[asyncio.Task]
     packet_task: Optional[asyncio.Task]
     load_chunks_task: Optional[asyncio.Task]
@@ -66,7 +66,7 @@ class Client:
         self.reader = reader
         self.writer = BufferedWriterMiddleware(writer)
         self.aloop = server.loop
-        self.auth_uuid = None
+        self.uuid = None
         self.ping_task = None
         self.packet_task = None
         self.load_chunks_task = None
@@ -78,19 +78,26 @@ class Client:
         self.disconnecting = False
         if not await self.handshake():
             return
-        assert self.auth_uuid is not None
-        logging.info('Player logged in with UUID %s', self.auth_uuid)
+        assert self.uuid is not None
+        logging.info('Player logged in with UUID %s', self.uuid)
         self.packet_queue = asyncio.Queue()
         self.ping_task = self.aloop.create_task(self.periodic_ping())
         self.packet_task = self.aloop.create_task(self.packet_tick())
         self.player = Player(self, self.nickname)
         await self.player.ainit()
+        for client in self.server.clients:
+            if client is not self and client.ready:
+                assert client.uuid is not None
+                packet = PlayerInfoPacket(client.uuid, client.nickname)
+                await write_packet(packet, self.writer)
+        packet = PlayerInfoPacket(self.uuid, self.nickname)
+        await self.server.send_to_all(packet, exclude_player=self)
         await self.load_chunks_around_player(9)
         self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
         self.ready = True
         self.server.skip_gc = False
         logging.info('%s joined the game', self.player)
-        if self.auth_uuid.int != 0 or self.server.multiplayer: # Don't show in singleplayer
+        if self.uuid.int != 0 or self.server.multiplayer: # Don't show in singleplayer
             await self.server.send_chat(f'{self.player} joined the game')
 
     async def handshake(self) -> bool:
@@ -142,7 +149,7 @@ class Client:
                     return False
             if (packet := await read_and_verify(PlayerInfoPacket)) is None:
                 return False
-            self.auth_uuid = packet.uuid
+            self.uuid = packet.uuid
             self.nickname = packet.name
         else:
             assert auth_client is not None
@@ -158,9 +165,9 @@ class Client:
             else:
                 if not await self.encrypt_connection(server_key, session.public_key):
                     return False
-            self.auth_uuid = session.user.uuid
+            self.uuid = session.user.uuid
             self.nickname = session.user.username
-            packet = PlayerInfoPacket(self.auth_uuid, self.nickname)
+            packet = PlayerInfoPacket(self.uuid, self.nickname)
             await write_packet(packet, self.writer)
         return True
 
@@ -254,6 +261,7 @@ class Client:
     async def tick(self) -> None:
         if not self.ready:
             return
+        assert self.uuid is not None
         while True:
             try:
                 packet = self.packet_queue.get_nowait()
@@ -302,7 +310,7 @@ class Client:
                         packet.x = prev_x
                         packet.y = prev_y
                         logging.warn('Player %s moved too quickly! %f, %f', self, new_x, new_y)
-                        packet = PlayerPositionPacket(self.player.x, self.player.y)
+                        packet = PlayerPositionPacket(self.uuid, self.player.x, self.player.y)
                         self.player.physics.x_velocity = 0
                         self.player.physics.y_velocity = 0
                         await write_packet(packet, self.writer)

@@ -113,6 +113,7 @@ should_show_debug = DEBUG
 globals.events = []
 globals.local_world = ClientWorld()
 globals.player = ClientPlayer()
+globals.all_players = {}
 globals.chat_client = ChatClient()
 chat_open = False
 
@@ -243,6 +244,7 @@ while globals.running:
                     globals.connecting_status = 'Stopping singleplayer server'
                     globals.close_singleplayer_server(False)
                     globals.singleplayer_pipe_out = None
+                globals.all_players.clear()
                 disconnect_reason = event.reason
 
         if should_chat_open:
@@ -302,7 +304,9 @@ while globals.running:
                     globals.player.add_velocity(y=JUMP_SPEED)
                     move_up = False
             globals.local_world.tick(screen)
-            globals.player.render(screen)
+            # globals.player.render(screen)
+            for player in globals.all_players.values():
+                player.render(screen)
             if periodic:
                 globals.chat_client.dirty = True
             globals.chat_client.render(screen, chat_open)

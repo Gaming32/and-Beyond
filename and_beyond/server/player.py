@@ -25,14 +25,14 @@ class Player(AbstractPlayer):
 
     def __init__(self, client: 'Client', name: str = None) -> None:
         world = client.server.world
-        self.data_path = world.players_path / f'{client.auth_uuid}.json'
-        if client.auth_uuid is not None and client.auth_uuid.int == 0:
+        self.data_path = world.players_path / f'{client.uuid}.json'
+        if client.uuid is not None and client.uuid.int == 0:
             old_path = world.players_path / '00000000-0000-0000-0000-000000005db0.json'
             if old_path.exists():
                 logging.info('Player used old save filename, renaming...')
                 old_path.rename(self.data_path) # Rename singleplayer saves
         self.client = client
-        self.name = name or str(self.client.auth_uuid)
+        self.name = name or str(self.client.uuid)
         self.physics = PlayerPhysics(self)
         self.loaded_chunks = client.loaded_chunks # Reference to fulfill AbstractPlayer
 
@@ -58,8 +58,7 @@ class Player(AbstractPlayer):
         else:
             self.x = spawn_x
             self.y = spawn_y
-        packet = PlayerPositionPacket(self.x, self.y)
-        await write_packet(packet, self.client.writer)
+        await self.send_position(force=True)
 
     async def save(self) -> None:
         data = {
@@ -82,12 +81,16 @@ class Player(AbstractPlayer):
         self.y = y
         await self.send_position()
 
-    async def send_position(self) -> None:
-        packet = PlayerPositionPacket(self.x, self.y)
-        await write_packet(packet, self.client.writer)
+    async def send_position(self, force: bool = False) -> None:
+        assert self.client.uuid is not None
+        packet = PlayerPositionPacket(self.client.uuid, self.x, self.y)
+        if force:
+            await self.client.server.send_to_all(packet)
+        else:
+            await self.client.server.send_to_all(packet, (int(packet.x) >> 4, int(packet.y) >> 4))
 
     def __str__(self) -> str:
         return self.name
 
     def __repr__(self) -> str:
-        return f'<Player uuid={self.client.auth_uuid!r} name={self.name!r} x={self.x} y={self.y}>'
+        return f'<Player uuid={self.client.uuid!r} name={self.name!r} x={self.x} y={self.y}>'
