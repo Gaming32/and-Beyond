@@ -4,7 +4,7 @@ import logging
 import time
 from asyncio import StreamReader, StreamWriter
 from asyncio.events import AbstractEventLoop
-from asyncio.tasks import create_task, shield
+from asyncio.tasks import shield
 from typing import TYPE_CHECKING, Optional, TypeVar
 from uuid import UUID
 
@@ -53,6 +53,7 @@ class Client:
     uuid: Optional[UUID]
     ping_task: Optional[asyncio.Task]
     packet_task: Optional[asyncio.Task]
+    send_players_task: Optional[asyncio.Task]
     load_chunks_task: Optional[asyncio.Task]
     loaded_chunks: dict[tuple[int, int], WorldChunk]
 
@@ -69,6 +70,7 @@ class Client:
         self.uuid = None
         self.ping_task = None
         self.packet_task = None
+        self.send_players_task = None
         self.load_chunks_task = None
         self.loaded_chunks = {}
         self.player = None # type: ignore (A single ignore is easier than convincing the type checker that this is almost never null)
