@@ -1,11 +1,7 @@
-import itertools
 import logging
 import sys
-from asyncio.streams import StreamWriter
-from io import BytesIO
 from typing import (Any, Awaitable, Callable, Generator, Generic, Iterable,
-                    MutableSequence, Optional, Sequence, TypeVar, Union,
-                    overload)
+                    MutableSequence, Optional, Sequence, TypeVar, Union)
 
 _T = TypeVar('_T')
 _T_type = TypeVar('_T_type', bound=type)

@@ -6,7 +6,7 @@ import pygame
 from and_beyond.client import globals
 from and_beyond.client.globals import GameStatus
 from and_beyond.client.server_connection import ServerConnection
-from and_beyond.client.ui import Ui, UiButton, UiLabel, UiTextInput
+from and_beyond.client.ui import Ui, UiButton, UiLabel
 from and_beyond.client.ui.accounts import AccountsMenu
 from and_beyond.client.ui.label_screen import LabelScreen
 from and_beyond.client.ui.options_menu import OptionsMenu
