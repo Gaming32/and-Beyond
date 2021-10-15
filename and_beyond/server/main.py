@@ -10,7 +10,7 @@ from asyncio.base_events import Server
 from asyncio.events import AbstractEventLoop
 from asyncio.streams import StreamReader, StreamWriter
 from collections import deque
-from typing import BinaryIO, Optional
+from typing import Any, BinaryIO, Optional
 from uuid import UUID
 
 import colorama
@@ -20,9 +20,11 @@ from and_beyond.http_errors import InsecureAuth
 from and_beyond.packet import ChunkUpdatePacket, Packet, write_packet
 from and_beyond.pipe_commands import PipeCommandsToServer, read_pipe
 from and_beyond.server.client import Client
+from and_beyond.server.command import AbstractCommandSender, ConsoleCommandSender
+from and_beyond.server.commands import COMMANDS
 from and_beyond.server.consts import GC_TIME_SECONDS
 from and_beyond.server.world_gen.core import WorldGenerator
-from and_beyond.utils import autoslots, get_opt, init_logger, mean
+from and_beyond.utils import ainput, autoslots, get_opt, init_logger, mean
 from and_beyond.world import BlockTypes, World, WorldChunk
 
 if sys.platform == 'win32':
@@ -38,7 +40,7 @@ class AsyncServer:
     running: bool
     paused: bool
     has_been_shutdown: bool
-    gc_task: asyncio.Task
+    gc_task: Optional[asyncio.Task]
     skip_gc: bool
 
     host: str
@@ -51,10 +53,14 @@ class AsyncServer:
     last_tps_values: deque[float]
     last_mspt_values: deque[float]
     auth_client: Optional[AuthClient]
+    command_sender: ConsoleCommandSender
 
     last_spt: float
     world: World
     world_generator: WorldGenerator
+
+    pipe_commands_task: Optional[asyncio.Task]
+    console_commands_task: Optional[asyncio.Task]
 
     def __init__(self) -> None:
         self.loop = None # type: ignore
@@ -64,7 +70,7 @@ class AsyncServer:
         self.running = False
         self.paused = False
         self.has_been_shutdown = False
-        self.gc_task = None # type: ignore
+        self.gc_task = None
         self.skip_gc = True
         self.async_server = None # type: ignore
         self.world = None # type: ignore
@@ -74,6 +80,9 @@ class AsyncServer:
         self.last_spt = 0
         self.last_tps_values = deque(maxlen=600)
         self.last_mspt_values = deque(maxlen=600)
+        self.command_sender = ConsoleCommandSender(self)
+        self.pipe_commands_task = None
+        self.console_commands_task = None
 
     def start(self) -> None:
         if sys.platform == 'win32':
@@ -96,6 +105,17 @@ class AsyncServer:
 
     def quit(self) -> None:
         self.running = False
+
+    async def read_console_commands(self):
+        while not self.running:
+            await asyncio.sleep(0)
+        while self.running:
+            command = (await ainput()).strip()
+            if not command:
+                continue
+            if command[0] == '/':
+                command = command[1:]
+            await self.run_command(command, self.command_sender)
 
     async def receive_singleplayer_commands(self, pipe: BinaryIO):
         while not self.running:
@@ -130,8 +150,6 @@ class AsyncServer:
         await asyncio.gather(*tasks)
 
     async def main(self):
-        self.loop = asyncio.get_running_loop()
-
         try:
             singleplayer_pos = sys.argv.index('--singleplayer')
             singleplayer_fd_in = int(sys.argv[singleplayer_pos + 1])
@@ -142,6 +160,9 @@ class AsyncServer:
             self.multiplayer = True
             host = '0.0.0.0'
             port = PORT
+            self.console_commands_task = self.loop.create_task(
+                self.read_console_commands()
+            )
         else:
             logging.debug('Server running in singleplayer mode (fd/handle: %i (in), %i (out))', singleplayer_fd_in, singleplayer_fd_out)
             if sys.platform == 'win32':
@@ -151,7 +172,9 @@ class AsyncServer:
                 os.set_blocking(singleplayer_fd_in, True)
             self.singleplayer_pipe_in = os.fdopen(singleplayer_fd_in, 'rb', closefd=False)
             self.singleplayer_pipe_out = os.fdopen(singleplayer_fd_out, 'wb', closefd=False)
-            self.loop.create_task(self.receive_singleplayer_commands(self.singleplayer_pipe_in))
+            self.pipe_commands_task = self.loop.create_task(
+                self.receive_singleplayer_commands(self.singleplayer_pipe_in)
+            )
             self.multiplayer = False
             host = '127.0.0.1'
             port = None
@@ -294,6 +317,8 @@ class AsyncServer:
 
     async def shutdown(self) -> None:
         logging.info('Shutting down...')
+        if self.console_commands_task is not None:
+            self.console_commands_task.cancel()
         if self.gc_task is not None:
             logging.debug('Cancelling GC task...')
             self.gc_task.cancel()
@@ -310,6 +335,8 @@ class AsyncServer:
             self.singleplayer_pipe_in.close()
         if self.singleplayer_pipe_out is not None:
             self.singleplayer_pipe_out.close()
+        if self.pipe_commands_task is not None:
+            self.pipe_commands_task.cancel()
         if self.world is not None:
             logging.info('Saving world...')
             section_count = len(self.world.open_sections)
@@ -334,6 +361,16 @@ class AsyncServer:
             if cpos_only is None or cpos_only in client.loaded_chunks:
                 tasks.append(self.loop.create_task(write_packet(packet, client.writer)))
         return await asyncio.gather(*tasks)
+
+    async def run_command(self, cmd: str, sender: AbstractCommandSender) -> Any:
+        name, *rest = cmd.split(' ', 1)
+        if name in COMMANDS:
+            command = COMMANDS[name]
+            await command(sender, rest[0] if rest else '')
+        else:
+            if not isinstance(sender, ConsoleCommandSender):
+                logging.info('<%s> No command named "%s"', sender, name)
+            await sender.reply(f'No command named "{name}"')
 
     def get_tps(self, time: int = 60):
         return mean(itertools.islice(self.last_tps_values, max(len(self.last_tps_values) - time, 0), None))
@@ -364,7 +401,9 @@ class AsyncServer:
     def __repr__(self) -> str:
         return f'<AsyncServer{" SINGLEPLAYER" * (not self.multiplayer)} bind={self.host}:{self.port} world={str(self.world)!r} tps={self.get_tps_str()}>'
 
-    async def send_chat(self, message: str, at: float = None) -> None:
+    async def send_chat(self, message: str, at: float = None, log: bool = False) -> None:
+        if log:
+            logging.info('CHAT: %s', message)
         if at is None:
             at = time.time()
         await asyncio.gather(*(

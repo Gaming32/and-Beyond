@@ -1,5 +1,7 @@
+import asyncio
 import logging
 import sys
+from asyncio.events import AbstractEventLoop
 from typing import (Any, Awaitable, Callable, Generator, Generic, Iterable,
                     MutableSequence, Optional, Sequence, TypeVar, Union)
 
@@ -163,6 +165,14 @@ async def spiral_loop_async(w: int, h: int, cb: Callable[[int, int], Awaitable[A
         if x == y or (x < 0 and x == -y) or (x > 0 and x == 1-y):
             dx, dy = -dy, dx
         x, y = x+dx, y+dy
+
+
+async def ainput(prompt: str = '', loop: Optional[AbstractEventLoop] = None):
+    if loop is None:
+        loop = asyncio.get_running_loop()
+    if prompt:
+        sys.stdout.write(prompt)
+    return await loop.run_in_executor(None, sys.stdin.readline)
 
 
 def copy_obj_to_class(obj: Any, to: Union[type[_T], _T]) -> _T:

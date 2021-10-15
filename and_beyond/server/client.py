@@ -22,6 +22,7 @@ from and_beyond.packet import (AddVelocityPacket, BasicAuthPacket, ChatPacket,
                                PlayerPositionPacket, RemovePlayerPacket,
                                ServerInfoPacket, UnloadChunkPacket,
                                read_packet, read_packet_timeout, write_packet)
+from and_beyond.server.command import ClientCommandSender
 from and_beyond.server.commands import COMMANDS
 from and_beyond.server.player import Player
 from and_beyond.utils import spiral_loop_gen
@@ -59,6 +60,7 @@ class Client:
 
     player: Player
     nickname: Optional[str]
+    command_sender: ClientCommandSender
 
     def __init__(self, server: 'AsyncServer', reader: StreamReader, writer: StreamWriter) -> None:
         self.server = server
@@ -75,6 +77,7 @@ class Client:
         self.loaded_chunks = {}
         self.player = None # type: ignore (A single ignore is easier than convincing the type checker that this is almost never null)
         self.nickname = None
+        self.command_sender = ClientCommandSender(self)
 
     async def start(self) -> None:
         self.ready = False
@@ -355,20 +358,10 @@ class Client:
                         self.player.physics.y_velocity = new_y
                 elif isinstance(packet, ChatPacket):
                     if packet.message[0] == '/':
-                        name, *rest = packet.message[1:].split(' ', 1)
-                        if name in COMMANDS:
-                            command = COMMANDS[name]
-                            await command(self, rest[0] if rest else '')
-                        else:
-                            logging.info('<%s> No command named "%s"', self.player, name)
-                            await self.send_chat(f'No command named "{name}"')
+                        await self.server.run_command(packet.message[1:], self.command_sender)
                     else:
                         packet.message = f'<{self.player}> {packet.message}'
-                        logging.info('CHAT: %s', packet.message)
-                        await asyncio.gather(*(
-                            write_packet(packet, client.writer)
-                            for client in self.server.clients
-                        ))
+                        await self.server.send_chat(f'<{self.player}> {packet.message}', log=True)
                 else:
                     logging.warn('Client %s sent illegal packet: %s', self, packet.type.name)
                     await self.disconnect(f'Packet type not legal for C->S: {packet.type.name}')
