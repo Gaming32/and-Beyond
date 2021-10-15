@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Optional, TypeVar
 from uuid import UUID
 
 from and_beyond.common import (KEY_LENGTH, MOVE_SPEED_CAP_SQ, PROTOCOL_VERSION,
-                               VERSION_DISPLAY_NAME, VIEW_DISTANCE_BOX,
-                               get_version_name)
+                               USERNAME_REGEX, VERSION_DISPLAY_NAME,
+                               VIEW_DISTANCE_BOX, get_version_name)
 from and_beyond.middleware import (BufferedWriterMiddleware,
                                    EncryptedReaderMiddleware,
                                    EncryptedWriterMiddleware, ReaderMiddleware,
@@ -24,7 +24,7 @@ from and_beyond.packet import (AddVelocityPacket, BasicAuthPacket, ChatPacket,
                                read_packet, read_packet_timeout, write_packet)
 from and_beyond.server.commands import COMMANDS
 from and_beyond.server.player import Player
-from and_beyond.utils import spiral_loop_async, spiral_loop_gen
+from and_beyond.utils import spiral_loop_gen
 from and_beyond.world import BlockTypes, WorldChunk
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -82,6 +82,14 @@ class Client:
             return
         assert self.uuid is not None
         logging.info('Player logged in with UUID %s', self.uuid)
+        for client in self.server.clients:
+            if client is self:
+                continue
+            if client.uuid == self.uuid:
+                await client.disconnect('You logged in from elsewhere.')
+            elif client.nickname == self.nickname:
+                await self.disconnect('That name is taken.')
+                return
         self.packet_queue = asyncio.Queue()
         self.ping_task = self.aloop.create_task(self.periodic_ping())
         self.packet_task = self.aloop.create_task(self.packet_tick())
@@ -154,6 +162,10 @@ class Client:
                 return False
             self.uuid = packet.uuid
             self.nickname = packet.name
+            # Prevent people with illegal nicknames from joining
+            if not USERNAME_REGEX.fullmatch(packet.name):
+                await self.disconnect('Your username is invalid.')
+                return False
         else:
             assert auth_client is not None
             client_token = binascii.b2a_hex(client_token).decode('ascii')
