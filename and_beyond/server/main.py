@@ -11,6 +11,7 @@ from asyncio.events import AbstractEventLoop
 from asyncio.streams import StreamReader, StreamWriter
 from collections import deque
 from typing import BinaryIO, Optional
+from uuid import UUID
 
 import colorama
 from and_beyond.common import AUTH_SERVER, PORT
@@ -44,6 +45,8 @@ class AsyncServer:
     port: int
     async_server: Server
     clients: list[Client]
+    clients_by_uuid: dict[UUID, Client]
+    clients_by_name: dict[str, Client]
 
     last_tps_values: deque[float]
     last_mspt_values: deque[float]
@@ -66,6 +69,8 @@ class AsyncServer:
         self.async_server = None # type: ignore
         self.world = None # type: ignore
         self.clients = []
+        self.clients_by_uuid = {}
+        self.clients_by_name = {}
         self.last_spt = 0
         self.last_tps_values = deque(maxlen=600)
         self.last_mspt_values = deque(maxlen=600)
@@ -274,6 +279,8 @@ class AsyncServer:
             start = time.perf_counter()
             chunks: set[tuple[int, int]] = set()
             for client in self.clients:
+                if not client.ready:
+                    continue
                 chunks.update(client.loaded_chunks)
             sections: set[tuple[int, int]] = set()
             for (cx, cy) in chunks:
@@ -283,7 +290,7 @@ class AsyncServer:
                 self.world.get_section(sx, sy).close()
             end = time.perf_counter()
             logging.debug('Successfully closed %i section(s) in %f seconds', len(to_close), end - start)
-            self.skip_gc = len(self.clients) == 0
+            self.skip_gc = not self.clients
 
     async def shutdown(self) -> None:
         logging.info('Shutting down...')
@@ -321,11 +328,11 @@ class AsyncServer:
 
     async def send_to_all(self, packet: Packet, cpos_only: Optional[tuple[int, int]] = None, exclude_player: Client = None) -> tuple[None, ...]:
         tasks: list[asyncio.Task] = []
-        for player in self.clients:
-            if player is exclude_player:
+        for client in self.clients:
+            if client is exclude_player:
                 continue
-            if cpos_only is None or cpos_only in player.loaded_chunks:
-                tasks.append(self.loop.create_task(write_packet(packet, player.writer)))
+            if cpos_only is None or cpos_only in client.loaded_chunks:
+                tasks.append(self.loop.create_task(write_packet(packet, client.writer)))
         return await asyncio.gather(*tasks)
 
     def get_tps(self, time: int = 60):

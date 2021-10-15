@@ -58,7 +58,7 @@ class Client:
     loaded_chunks: dict[tuple[int, int], WorldChunk]
 
     player: Player
-    nickname: str
+    nickname: Optional[str]
 
     def __init__(self, server: 'AsyncServer', reader: StreamReader, writer: StreamWriter) -> None:
         self.server = server
@@ -74,6 +74,7 @@ class Client:
         self.load_chunks_task = None
         self.loaded_chunks = {}
         self.player = None # type: ignore (A single ignore is easier than convincing the type checker that this is almost never null)
+        self.nickname = None
 
     async def start(self) -> None:
         self.ready = False
@@ -81,15 +82,21 @@ class Client:
         if not await self.handshake():
             return
         assert self.uuid is not None
+        assert self.nickname is not None
         logging.info('Player logged in with UUID %s', self.uuid)
-        for client in self.server.clients:
-            if client is self:
-                continue
-            if client.uuid == self.uuid:
-                await client.disconnect('You logged in from elsewhere.')
-            elif client.nickname == self.nickname:
-                await self.disconnect('That name is taken.')
-                return
+        # for client in self.server.clients:
+        #     if client is self:
+        #         continue
+        #     if client.uuid == self.uuid:
+        #         await client.disconnect('You logged in from elsewhere.')
+        #     elif client.nickname == self.nickname:
+        #         await self.disconnect('That name is taken.')
+        #         return
+        if (client := self.server.clients_by_uuid.get(self.uuid)) is not None:
+            await client.disconnect('You logged in from elsewhere.')
+        elif self.nickname in self.server.clients_by_name:
+            await self.disconnect('That name is taken.')
+            return
         self.packet_queue = asyncio.Queue()
         self.ping_task = self.aloop.create_task(self.periodic_ping())
         self.packet_task = self.aloop.create_task(self.packet_tick())
@@ -98,6 +105,7 @@ class Client:
         for client in self.server.clients:
             if client is not self and client.ready:
                 assert client.uuid is not None
+                assert client.nickname is not None
                 packet = PlayerInfoPacket(client.uuid, client.nickname)
                 await write_packet(packet, self.writer)
         packet = PlayerInfoPacket(self.uuid, self.nickname)
@@ -105,6 +113,8 @@ class Client:
         await self.load_chunks_around_player(9)
         self.send_players_task = self.aloop.create_task(self.send_player_positions())
         self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
+        self.server.clients_by_uuid[self.uuid] = self
+        self.server.clients_by_name[self.nickname] = self
         self.ready = True
         self.server.skip_gc = False
         logging.info('%s joined the game', self.player)
@@ -391,6 +401,10 @@ class Client:
             self.server.clients.remove(self)
         except ValueError:
             pass
+        if self.uuid is not None:
+            self.server.clients_by_uuid.pop(self.uuid, None)
+        if self.nickname is not None:
+            self.server.clients_by_name.pop(self.nickname, None)
         if self.packet_task is not None:
             self.packet_task.cancel()
         if self.ping_task is not None:
