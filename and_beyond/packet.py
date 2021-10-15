@@ -95,6 +95,16 @@ async def _read_bool(reader: ReaderMiddleware) -> bool:
     return (await reader.readexactly(1))[0] != 0
 
 
+async def _read_bools(count: int, reader: ReaderMiddleware) -> list[bool]:
+    data = int.from_bytes(await reader.readexactly((count + 7) // 8), 'little', signed=False)
+    result: list[bool] = []
+    mask = 1
+    for i in range(count):
+        result.append((data & mask) != 0)
+        mask <<= 1
+    return result
+
+
 def _write_ushort(value: int, writer: WriterMiddleware) -> None:
     writer.write(value.to_bytes(2, 'little', signed=False))
 
@@ -128,6 +138,13 @@ def _write_uuid(value: UUID, writer: WriterMiddleware) -> None:
 
 def _write_bool(value: bool, writer: WriterMiddleware) -> None:
     writer.write(bytes((value,)))
+
+
+def _write_bools(writer: WriterMiddleware, *bools: bool) -> None:
+    r = 0
+    for (i, v) in enumerate(bools):
+        r += v << i
+    writer.write(r.to_bytes((len(bools) + 7) // 8, 'little', signed=False))
 
 
 # Packet classes

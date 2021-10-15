@@ -113,10 +113,10 @@ class ServerConnection:
         while self.running:
             it_end = time.perf_counter()
             time_since_ping += it_end - it_start
-            # if time_since_ping > 10: # Server hasn't responded for 10 seconds, it's probably down
-            #     self.disconnect_reason = 'The server stopped responding'
-            #     self.running = False
-            #     break
+            if time_since_ping > 10: # Server hasn't responded for 10 seconds, it's probably down
+                self.disconnect_reason = 'The server stopped responding'
+                self.running = False
+                break
             it_start = time.perf_counter()
             try:
                 packet = await read_packet(self.reader)
