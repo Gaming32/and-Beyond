@@ -45,7 +45,7 @@ class UiLabel(UiElement):
         self.text = text
 
     def get_height(self) -> float:
-        return 40 * len(self._lines) + 10
+        return (40 * len(self._lines) + 10) if self._lines else 0
 
     def draw_and_call(self, surf: Surface, at: Vector2, preseed: list[bool], released: list[bool]) -> Any:
         y_offset = self.get_height() - len(self._lines) * 40
@@ -77,17 +77,27 @@ class UiTextInput(UiElement):
     selected: bool
     width: int
     show_time: float
+    mask: Optional[str]
+    placeholder: str
 
-    def __init__(self, update_cb: TextInputCallback, default_text: str = '') -> None:
+    def __init__(self, update_cb: TextInputCallback, default_text: str = '', mask: Optional[str] = None, placeholder: str = '') -> None:
         self.text = default_text
         self.callback = update_cb
         self.selected = False
         self.width = DEFAULT_ELEMENT_WIDTH
         self.show_time = 0
+        self.mask = mask
+        self.placeholder = placeholder
 
     def draw_and_call(self, surf: Surface, at: Vector2, pressed: list[bool], released: list[bool]) -> Any:
         self.show_time += globals.delta
-        text_render = GAME_FONT.render(self.text, True, UI_FG)
+        text = self.text if self.mask is None else (self.mask * len(self.text))
+        if not text:
+            text = self.placeholder
+            placeholder = True
+        else:
+            placeholder = False
+        text_render = GAME_FONT.render(text, True, UI_FG)
         if text_render.get_width() > self.width - 20 or (text_render.get_width() < self.width - 20 and self.width > DEFAULT_ELEMENT_WIDTH):
             self.width = max(text_render.get_width() + 20, DEFAULT_ELEMENT_WIDTH)
         area = Rect(at + Vector2(DEFAULT_ELEMENT_WIDTH // 2 - self.width // 2, 0), (self.width, DEFAULT_ELEMENT_HEIGHT))
@@ -114,6 +124,12 @@ class UiTextInput(UiElement):
                             else:
                                 self.text = self.text[:-1]
                             changed = True
+                    elif event.key == pygame.K_v and (event.mod & pygame.KMOD_CTRL):
+                        if pygame.scrap.get_init():
+                            clip = pygame.scrap.get(SCRAP_TEXT)
+                            if clip is not None:
+                                assert isinstance(clip, bytes)
+                                self.text += clip.rstrip(b'\0').decode('utf-8')
         surf.blit(
             text_render,
             (
@@ -122,7 +138,8 @@ class UiTextInput(UiElement):
             )
         )
         if self.selected and (int(self.show_time * 2) & 1):
-            surf.fill(UI_FG, (area.x + text_render.get_width() + 10, area.y + 10, 3, area.height - 20))
+            render_width = 0 if placeholder else text_render.get_width()
+            surf.fill(UI_FG, (area.x + render_width + 10, area.y + 10, 3, area.height - 20))
         if changed:
             self.callback(self.text)
 

@@ -1,13 +1,14 @@
 # pyright: reportWildcardImportFromLibrary=false
 
-from and_beyond.client.ui.label_screen import LabelScreen
 import ipaddress
 
 import pygame
 from and_beyond.client import globals
 from and_beyond.client.globals import GameStatus
 from and_beyond.client.server_connection import ServerConnection
-from and_beyond.client.ui import Ui, UiButton, UiLabel, UiTextInput
+from and_beyond.client.ui import Ui, UiButton, UiLabel
+from and_beyond.client.ui.accounts import AccountsMenu
+from and_beyond.client.ui.label_screen import LabelScreen
 from and_beyond.client.ui.options_menu import OptionsMenu
 from and_beyond.client.ui.question_screen import QuestionScreen
 from and_beyond.common import PORT
@@ -22,6 +23,7 @@ class TitleScreen(Ui):
             UiButton('Singleplayer', self.singleplayer),
             UiButton('Multiplayer', self.multiplayer),
             UiButton('Options', self.show_options),
+            UiButton('Account', self.show_account_menu),
             UiButton('Quit', self.quit),
         ])
 
@@ -56,6 +58,11 @@ class TitleScreen(Ui):
             globals.config.config['last_server'] = ip
             globals.game_status = GameStatus.CONNECTING
             TitleScreen.load_multiplayer(host, port)
+        if globals.config.uuid is None:
+            globals.ui_override = LabelScreen(
+                'You must have logged in to play multiplayer'
+            )
+            return
         screen = globals.ui_override = QuestionScreen(
             'Enter Server Address/IP:',
             'Connect',
@@ -66,6 +73,9 @@ class TitleScreen(Ui):
 
     def show_options(self) -> None:
         globals.ui_override = OptionsMenu()
+
+    def show_account_menu(self) -> None:
+        AccountsMenu().show()
 
     @staticmethod
     def load_multiplayer(server: str, port: int = PORT):

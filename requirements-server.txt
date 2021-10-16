@@ -1,3 +1,5 @@
 colorama
-aiofiles
+aiofiles # Asynchronous reading of metadata
 opensimplex # World generation
+cryptography # Key exchange
+aiohttp # Authentication

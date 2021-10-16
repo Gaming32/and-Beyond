@@ -51,13 +51,40 @@ if not has_colorama:
     missing_deps_text += ' - Colorama (colorama)\n'
     missing_deps.append('colorama')
 
+has_cryptography = True
+try:
+    import cryptography
+except ModuleNotFoundError:
+    has_cryptography = False
+if not has_cryptography:
+    missing_deps_text += ' - Cryptography (cryptography)\n'
+    missing_deps.append('cryptography')
+
+has_aiohttp = True
+try:
+    import aiohttp
+except ModuleNotFoundError:
+    has_aiohttp = False
+if not has_aiohttp:
+    missing_deps_text += ' - Asynchronous HTTP (aiohttp)\n'
+    missing_deps.append('aiohttp')
+
+has_zxcvbn = True
+try:
+    import zxcvbn
+except ModuleNotFoundError:
+    has_zxcvbn = False
+if not has_zxcvbn:
+    missing_deps_text += ' - Password strength checker (zxcvbn)\n'
+    missing_deps.append('zxcvbn')
+
 has_aiofiles = True
 try:
     import aiofiles
 except ModuleNotFoundError:
     has_aiofiles = False
 if not has_aiofiles:
-    missing_deps_text += ' - aiofiles (aiofiles)\n'
+    missing_deps_text += ' - Asynchronous files (aiofiles)\n'
     missing_deps.append('aiofiles')
 
 has_opensimplex = True

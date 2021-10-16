@@ -18,7 +18,6 @@ if TYPE_CHECKING:
     from and_beyond.server.world_gen.core import WorldGenerator
 
 ALLOWED_FILE_CHARS = ' ._'
-UINT32_MAX = 2 ** 32 - 1
 SECTION_SIZE = 262176
 
 

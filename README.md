@@ -8,29 +8,33 @@ Simply run `run_game.py`! If you have an incorrect version of Python, it will te
 
 ## Controls
 
-Control | Action
-------- | ------
-A       | Move left
-D       | Move right
-Space   | Jump
-Escape  | Pause
-Left click | Break block
+Control     | Action
+----------- | ---------------------------
+A           | Move left
+D           | Move right
+Space       | Jump
+Escape      | Pause
+Left click  | Break block
 Right click | Place block
-F3      | Open debug menu
-1       | Select stone block
-2       | Select dirt block
-3       | Select grass block
+T           | Open chat
+/           | Open chat with `/` pretyped
+1           | Select stone block
+2           | Select dirt block
+3           | Select grass block
+F3          | Open debug menu
 
 ## Command-line arguments
 
-Argument | Action
--------- | ------
-`--debug` | Run in debug mode (shows debug messages)
+Argument                  | Action
+--------------------------| ----------------------------------------------------------------
+`--auth-server <address>` | Use the specified authentication server instead of the default
+`--insecure-auth`         | Allow the auth server to be insecure (use HTTP instead of HTTPS)
+`--debug`                 | Run in debug mode (shows debug messages)
 
 ### Servers
 
-Argument | Action
--------- | ------
-`--world <name>` | Use the world called `<name>`
-`--listen <[host]:[port]>` | Listen on the specified host and port (default host: `0.0.0.0`, default port: `7932`)
+Argument                          | Action
+--------------------------------- | -------------------------------------------------------------------------------------
+`--world <name>`                  | Use the world called `<name>`
+`--listen <[host]:[port]>`        | Listen on the specified host and port (default host: `0.0.0.0`, default port: `7932`)
 `--singleplayer <fd_in> <fd_out>` | **Internal use only**

@@ -1,11 +1,9 @@
-import itertools
+import asyncio
 import logging
 import sys
-from asyncio.streams import StreamWriter
-from io import BytesIO
+from asyncio.events import AbstractEventLoop
 from typing import (Any, Awaitable, Callable, Generator, Generic, Iterable,
-                    MutableSequence, Optional, Sequence, TypeVar, Union,
-                    overload)
+                    MutableSequence, Optional, Sequence, TypeVar, Union)
 
 _T = TypeVar('_T')
 _T_type = TypeVar('_T_type', bound=type)
@@ -69,6 +67,10 @@ def autoslots(cls: _T_type) -> _T_type:
     return cls
 
 
+def get_opt(opt: str, offset: int = 1) -> str:
+    return sys.argv[sys.argv.index(opt) + offset]
+
+
 @autoslots
 class View(Generic[_T]):
     c: Sequence[_T]
@@ -129,23 +131,6 @@ class MaxSizedDict(dict):
             del self[next(iter(self))]
 
 
-class BufferedStreamWriter(StreamWriter):
-    _buffer: BytesIO
-
-    @copy_signature(StreamWriter.__init__)
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self._buffer = BytesIO()
-
-    def write(self, data: bytes) -> None:
-        self._buffer.write(data)
-
-    async def drain(self) -> None:
-        super().write(self._buffer.getvalue())
-        self._buffer.truncate(0)
-        await super().drain()
-
-
 def spiral_loop(w: int, h: int, cb: Callable[[int, int], Any]) -> None:
     x = y = 0
     dx = 0
@@ -180,6 +165,14 @@ async def spiral_loop_async(w: int, h: int, cb: Callable[[int, int], Awaitable[A
         if x == y or (x < 0 and x == -y) or (x > 0 and x == 1-y):
             dx, dy = -dy, dx
         x, y = x+dx, y+dy
+
+
+async def ainput(prompt: str = '', loop: Optional[AbstractEventLoop] = None):
+    if loop is None:
+        loop = asyncio.get_running_loop()
+    if prompt:
+        sys.stdout.write(prompt)
+    return await loop.run_in_executor(None, sys.stdin.readline)
 
 
 def copy_obj_to_class(obj: Any, to: Union[type[_T], _T]) -> _T:

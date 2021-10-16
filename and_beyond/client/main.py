@@ -12,8 +12,6 @@ import pygame.draw
 import pygame.event
 import pygame.mouse
 import pygame.time
-from and_beyond.packet import ChatPacket
-from and_beyond.pipe_commands import read_pipe
 from and_beyond.utils import DEBUG, init_logger
 
 init_logger('client.log')
@@ -36,12 +34,15 @@ from and_beyond.client.consts import (PERIODIC_TICK_EVENT,
 from and_beyond.client.globals import ConfigManager, GameStatus
 from and_beyond.client.mixer import Mixer
 from and_beyond.client.player import ClientPlayer
+from and_beyond.client.ui.accounts import AccountsMenu
 from and_beyond.client.ui.label_screen import LabelScreen
 from and_beyond.client.ui.pause_menu import PauseMenu
 from and_beyond.client.ui.title_screen import TitleScreen
 from and_beyond.client.utils import screen_to_world
 from and_beyond.client.world import ClientWorld
 from and_beyond.common import JUMP_SPEED, MOVE_SPEED, VERSION_DISPLAY_NAME
+from and_beyond.packet import ChatPacket
+from and_beyond.pipe_commands import read_pipe
 from and_beyond.world import BlockTypes
 from pygame import *
 from pygame.locals import *
@@ -62,11 +63,16 @@ def reset_window() -> Surface:
     else:
         globals.w_width = config.config['w_width']
         globals.w_height = config.config['w_height']
-    # type: ignore is needed to shut type checkers up about https://github.com/pygame/pygame/issues/839#issuecomment-812919220
-    return pygame.display.set_mode(
+    surf = pygame.display.set_mode(
         (globals.w_width, globals.w_height),
         (FULLSCREEN if globals.fullscreen else 0) | RESIZABLE
-    ) # type: ignore
+    )
+    try:
+        pygame.scrap.init()
+    except pygame.error:
+        logging.warn('pygame.scrap unavailable. Clipboard support is disabled.')
+    # type: ignore is needed to shut type checkers up about https://github.com/pygame/pygame/issues/839#issuecomment-812919220
+    return surf # type: ignore
 
 
 def render_debug() -> None:
@@ -108,6 +114,7 @@ should_show_debug = DEBUG
 globals.events = []
 globals.local_world = ClientWorld()
 globals.player = ClientPlayer()
+globals.all_players = {}
 globals.chat_client = ChatClient()
 chat_open = False
 
@@ -203,6 +210,12 @@ while globals.running:
                         globals.chat_client.current_chat = ''
                         globals.chat_client.dirty = True
                         chat_open = False
+                    elif event.key == pygame.K_v and (event.mod & pygame.KMOD_CTRL):
+                        if pygame.scrap.get_init():
+                            clip = pygame.scrap.get(SCRAP_TEXT)
+                            if clip is not None:
+                                assert isinstance(clip, bytes)
+                                globals.chat_client.current_chat += clip.rstrip(b'\0').decode('utf-8')
             elif event.type == KEYUP:
                 if not chat_open:
                     if event.key == K_d:
@@ -232,6 +245,7 @@ while globals.running:
                     globals.connecting_status = 'Stopping singleplayer server'
                     globals.close_singleplayer_server(False)
                     globals.singleplayer_pipe_out = None
+                globals.all_players.clear()
                 disconnect_reason = event.reason
 
         if should_chat_open:
@@ -291,7 +305,9 @@ while globals.running:
                     globals.player.add_velocity(y=JUMP_SPEED)
                     move_up = False
             globals.local_world.tick(screen)
-            globals.player.render(screen)
+            # globals.player.render(screen)
+            for player in globals.all_players.values():
+                player.render(screen)
             if periodic:
                 globals.chat_client.dirty = True
             globals.chat_client.render(screen, chat_open)
@@ -322,4 +338,6 @@ pygame.display.quit()
 if globals.game_connection is not None:
     globals.game_connection.stop()
 globals.close_singleplayer_server()
+if globals.auth_client is not None:
+    asyncio.get_event_loop().run_until_complete(globals.auth_client.close())
 config.save()

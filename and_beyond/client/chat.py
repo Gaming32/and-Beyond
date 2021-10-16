@@ -1,5 +1,4 @@
 import time
-from typing import Optional
 
 from and_beyond.chat import ChatMessage
 from and_beyond.client import globals
