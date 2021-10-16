@@ -7,10 +7,9 @@ from and_beyond.common import VERSION_DISPLAY_NAME
 
 PYZ_DIR = Path('pyz')
 PYZ_DIR.mkdir(exist_ok=True)
-DEST_FILE = PYZ_DIR / f'and-Beyond-{VERSION_DISPLAY_NAME}.pyz'
+DEST_FILE = PYZ_DIR / f'and-Beyond-{VERSION_DISPLAY_NAME}-server.pyz'
 
 AND_BEYOND_DIR = Path('and_beyond')
-ASSETS_DIR = Path('assets')
 
 
 def copy_to_zip(zfp: zipfile.ZipFile, file: Path, arcname: str = None):
@@ -32,7 +31,7 @@ with open(DEST_FILE, 'wb') as fp:
     with zipfile.ZipFile(fp, 'w', zipfile.ZIP_DEFLATED) as zfp:
         for child in AND_BEYOND_DIR.rglob('*'):
             rel = child.relative_to('.').as_posix()
-            if '__pycache__' in (child.name, child.parent.name):
+            if '__pycache__' in (child.name, child.parent.name) or 'client' in child.parts:
                 print('Skipping', rel)
                 continue
             if child.is_dir():
@@ -48,11 +47,8 @@ with open(DEST_FILE, 'wb') as fp:
                 print('Cleaning', pyc_rel)
                 child_pyc.unlink()
 
-        for child in ASSETS_DIR.rglob('*'):
-            copy_to_zip(zfp, child)
-
         print('Writing __main__.py')
-        zfp.write('run_game.py', '__main__.py')
+        zfp.write('run_server.py', '__main__.py')
 
         print('Writing LICENSE')
         zfp.write('LICENSE')
