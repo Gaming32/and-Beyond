@@ -10,6 +10,7 @@ jobs:
         with:
           python-version: '3.9'
       - run: python to_pyz.py
+      - run: python to_pyz_server.py
       - uses: actions/upload-artifact@v2
         with:
           name: pyz-executable
