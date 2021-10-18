@@ -36,7 +36,7 @@
             "name": "PW32: Server",
             "type": "python",
             "request": "launch",
-            "module": "and_beyond.server",
+            "program": "${workspaceFolder}/run_server.py",
             "args": [
                 "--debug",
                 "--world", "server_world",

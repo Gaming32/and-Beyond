@@ -238,6 +238,7 @@ class Client:
             if c.mark_unloaded() <= 0:
                 self.server.all_loaded_chunks.pop((x, y), None)
                 if c.section is not None:
+                    c.section.cached_chunks.pop((c.x, c.y), None)
                     if c.section.mark_unloaded() <= 0:
                         logging.debug('Closing section (%i, %i) because its reference count reached 0', x >> 4, y >> 4)
                         start = time.perf_counter()
@@ -250,7 +251,7 @@ class Client:
 
     async def load_chunks_around_player(self, diameter: int = VIEW_DISTANCE_BOX) -> None:
         async def load_chunk_rel(x, y):
-            await asyncio.sleep(0) # Why do I have to do this? I *do* have to for some reason
+            await asyncio.sleep(0)
             x += cx
             y += cy
             loaded.add((x, y))
@@ -389,7 +390,7 @@ class Client:
             cx = int(self.player.x) >> 4
             cy = int(self.player.y) >> 4
             if cx != old_cx or cy != old_cy:
-                await self.load_chunks_around_player()
+                self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
 
     async def disconnect(self, reason: str = '', kick: bool = True) -> None:
         # Shield is necessary, as this shutdown method *must* be called.
