@@ -239,7 +239,11 @@ class Client:
                 self.server.all_loaded_chunks.pop((x, y), None)
                 if c.section is not None:
                     if c.section.mark_unloaded() <= 0:
+                        logging.debug('Closing section (%i, %i) because its reference count reached 0', x >> 4, y >> 4)
+                        start = time.perf_counter()
                         c.section.close()
+                        end = time.perf_counter()
+                        logging.debug('Closed section (%i, %i) in %f seconds', x >> 4, y >> 4, end - start)
         if not server_only:
             packet = UnloadChunkPacket(x, y)
             await write_packet(packet, self.writer)
@@ -431,7 +435,6 @@ class Client:
         for (cx, cy) in list(self.loaded_chunks.keys()):
             await self.unload_chunk(cx, cy, True)
         await self._writer.wait_closed()
-        print(self.server.world.open_sections)
         if self.uuid is not None:
             logging.debug('Sending removal packets to remaining players')
             packet = RemovePlayerPacket(self.uuid)
