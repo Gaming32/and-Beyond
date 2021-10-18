@@ -360,7 +360,6 @@ class Client:
                     if packet.message[0] == '/':
                         await self.server.run_command(packet.message[1:], self.command_sender)
                     else:
-                        packet.message = f'<{self.player}> {packet.message}'
                         await self.server.send_chat(f'<{self.player}> {packet.message}', log=True)
                 else:
                     logging.warn('Client %s sent illegal packet: %s', self, packet.type.name)
