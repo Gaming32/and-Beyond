@@ -29,9 +29,11 @@ from and_beyond.middleware import (BufferedWriterMiddleware,
 from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket,
                                ChunkUpdatePacket, ClientRequestPacket,
                                DisconnectPacket, Packet, PingPacket,
-                               PlayerInfoPacket, PlayerPositionPacket, RemovePlayerPacket,
-                               ServerInfoPacket, UnloadChunkPacket,
-                               read_packet, read_packet_timeout, write_packet)
+                               PlayerInfoPacket, PlayerPositionPacket,
+                               RemovePlayerPacket, ServerInfoPacket,
+                               UnloadChunkPacket, read_packet,
+                               read_packet_timeout, write_packet)
+from and_beyond.utils import DEBUG
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
@@ -114,9 +116,12 @@ class ServerConnection:
             it_end = time.perf_counter()
             time_since_ping += it_end - it_start
             if time_since_ping > 10: # Server hasn't responded for 10 seconds, it's probably down
-                self.disconnect_reason = 'The server stopped responding'
-                self.running = False
-                break
+                if DEBUG:
+                    logging.warn("Server hasn't sent a ping in 10 seconds. Is it down?")
+                else:
+                    self.disconnect_reason = 'The server stopped responding'
+                    self.running = False
+                    break
             it_start = time.perf_counter()
             try:
                 packet = await read_packet(self.reader)

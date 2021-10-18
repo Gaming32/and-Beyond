@@ -118,7 +118,8 @@ class ClientChunk(WorldChunk):
         self.abs_y = chunk.abs_y
         self.address = chunk.address
         self.fp = chunk.fp
-        self._has_generated = chunk._has_generated
+        self._version = chunk._version
+        self.load_counter = chunk.load_counter
         # Initialization
         self.dirty = True
         self.surf = Surface((CHUNK_RENDER_SIZE, CHUNK_RENDER_SIZE)).convert_alpha() # type: ignore

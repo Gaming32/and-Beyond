@@ -8,7 +8,8 @@ from functools import partial
 from json.decoder import JSONDecodeError
 from mmap import ACCESS_WRITE, mmap
 from pathlib import Path
-from typing import TYPE_CHECKING, ByteString, Optional, TypedDict, Union
+from typing import (TYPE_CHECKING, Any, ByteString, Callable, Optional, TypedDict,
+                    Union)
 
 import aiofiles
 
@@ -173,7 +174,7 @@ class World:
         c = self.get_chunk(x, y)
         if not c.has_generated:
             gen.generate_chunk(c)
-            c.has_generated = True
+            c.version = CHUNK_VERSION
         return c
 
     def get_generated_tile_type(self, x: int, y: int, gen: 'WorldGenerator') -> 'BlockTypes':
@@ -205,6 +206,7 @@ class WorldSection:
     path: Path
     fp: mmap
     cached_chunks: dict[tuple[int, int], 'WorldChunk']
+    load_counter: int
 
     def __init__(self, world: World, x: int, y: int) -> None:
         self.world = world
@@ -216,7 +218,8 @@ class WorldSection:
                 fp.write(bytes(SECTION_SIZE - fp.tell()))
             self.fp = mmap(fp.fileno(), SECTION_SIZE, access=ACCESS_WRITE)
         world.open_sections[(x, y)] = self
-        self.cached_chunks = MaxSizedDict(max_size=8)
+        self.cached_chunks = {}
+        self.load_counter = 0
 
     def close(self) -> None:
         self._close()
@@ -226,10 +229,11 @@ class WorldSection:
         self.fp.close()
 
     def __enter__(self) -> 'WorldSection':
+        self.mark_loaded()
         return self
 
     def __exit__(self, *args) -> None:
-        self.close()
+        self.mark_unloaded(self.__class__.close)
 
     def __del__(self) -> None:
         self._close()
@@ -245,6 +249,16 @@ class WorldSection:
     def flush(self) -> None:
         self.fp.flush()
 
+    def mark_loaded(self) -> int:
+        self.load_counter += 1
+        return self.load_counter
+
+    def mark_unloaded(self, cb: Callable[['WorldSection'], Any] = None) -> int:
+        self.load_counter -= 1
+        if self.load_counter <= 0 and cb is not None:
+            cb(self)
+        return self.load_counter
+
 
 @autoslots
 class WorldChunk:
@@ -255,9 +269,11 @@ class WorldChunk:
     abs_y: int
     address: int
     fp: Union[bytearray, mmap]
-    _has_generated: Optional[bool]
+    _version: Optional[int]
+    load_counter: int
 
     def __init__(self, section: WorldSection, x: int, y: int) -> None:
+        section.mark_loaded()
         self.section = section
         self.x = x
         self.y = y
@@ -265,7 +281,8 @@ class WorldChunk:
         self.abs_y = y + (section.y << 4)
         self.address = section._get_sect_address(x, y)
         self.fp = section.fp
-        self._has_generated = None
+        self._version = None
+        self.load_counter = 0
 
     @classmethod
     def virtual_chunk(cls, x: int, y: int, abs_x: int, abs_y: int, data: ByteString) -> 'WorldChunk':
@@ -277,8 +294,19 @@ class WorldChunk:
         self.abs_y = abs_y
         self.address = 0
         self.fp = data if isinstance(data, bytearray) else bytearray(data) # Copy if necessary, otherwise don't
-        self._has_generated = None
+        self._version = None
+        self.load_counter = 0
         return self
+
+    def mark_loaded(self) -> int:
+        self.load_counter += 1
+        return self.load_counter
+
+    def mark_unloaded(self, cb: Callable[['WorldChunk'], Any] = None) -> int:
+        self.load_counter -= 1
+        if self.load_counter <= 0 and cb is not None:
+            cb(self)
+        return self.load_counter
 
     def _get_tile_address(self, x: int, y: int) -> int:
         return self.address + (x * 16 + y) * 2
@@ -298,15 +326,24 @@ class WorldChunk:
         return ChunkDataView(self.fp, self.address + 512, self.address + 1024)
 
     @property
-    def has_generated(self) -> bool:
-        if self._has_generated is None:
-            self._has_generated = self.fp[self.address + 512] > 0
-        return self._has_generated
+    def version(self) -> int:
+        if self._version is None:
+            self._version = int.from_bytes(
+                self.fp[self.address + 512:self.address + 516],
+                'little', signed=False
+            )
+        return self._version
 
-    @has_generated.setter
-    def has_generated(self, gen: bool) -> None:
-        self._has_generated = gen
-        self.fp[self.address + 512] = gen
+    @version.setter
+    def version(self, version: int) -> None:
+        self._version = version
+        self.fp[self.address + 512:self.address + 516] = (
+            version.to_bytes(4, 'little', signed=False)
+        )
+
+    @property
+    def has_generated(self) -> bool:
+        return self.version > 0
 
 
 @autoslots
@@ -324,7 +361,7 @@ class ChunkDataView:
         fp_repr = self.fp if isinstance(self.fp, mmap) else f'<bytearray len={len(self.fp)}>'
         raise IndexError(f'{i} out of bounds for View({fp_repr}, {self.start}, {self.end})')
 
-    def _get_index(self, i):
+    def _get_index(self, i: Union[int, slice]) -> Union[int, slice]:
         if isinstance(i, slice):
             start = self._get_index(i.start)
             stop = None if slice.stop is None else self._get_index(i.stop)
@@ -360,3 +397,11 @@ class BlockTypes(enum.IntEnum):
     STONE = 1
     DIRT = 2
     GRASS = 3
+
+
+CHUNK_VERSION = 1
+CHUNK_VERSION_MAP = [
+    'NOT GENERATED', # 0
+    'a1.0.0', # 1
+]
+CHUNK_VERSION_DISPLAY_NAME = 'a1.3.0'

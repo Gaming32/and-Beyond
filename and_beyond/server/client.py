@@ -23,7 +23,6 @@ from and_beyond.packet import (AddVelocityPacket, BasicAuthPacket, ChatPacket,
                                ServerInfoPacket, UnloadChunkPacket,
                                read_packet, read_packet_timeout, write_packet)
 from and_beyond.server.command import ClientCommandSender
-from and_beyond.server.commands import COMMANDS
 from and_beyond.server.player import Player
 from and_beyond.utils import spiral_loop_gen
 from and_beyond.world import BlockTypes, WorldChunk
@@ -119,7 +118,7 @@ class Client:
         self.server.clients_by_uuid[self.uuid] = self
         self.server.clients_by_name[self.nickname] = self
         self.ready = True
-        self.server.skip_gc = False
+        # self.server.skip_gc = False
         logging.info('%s joined the game', self.player)
         if self.uuid.int != 0 or self.server.multiplayer: # Don't show in singleplayer
             await self.server.send_chat(f'{self.player} joined the game')
@@ -223,15 +222,27 @@ class Client:
         return True
 
     async def load_chunk(self, x: int, y: int) -> None:
-        chunk = self.server.world.get_generated_chunk(x, y, self.server.world_generator)
+        if (x, y) in self.server.all_loaded_chunks:
+            chunk = self.server.all_loaded_chunks[(x, y)]
+        else:
+            chunk = self.server.world.get_generated_chunk(x, y, self.server.world_generator)
         self.loaded_chunks[(x, y)] = chunk
+        self.server.all_loaded_chunks[(x, y)] = chunk
+        chunk.mark_loaded()
         packet = ChunkPacket(chunk)
         await write_packet(packet, self.writer)
 
-    async def unload_chunk(self, x: int, y: int) -> None:
-        self.loaded_chunks.pop((x, y), None)
-        packet = UnloadChunkPacket(x, y)
-        await write_packet(packet, self.writer)
+    async def unload_chunk(self, x: int, y: int, server_only: bool = False) -> None:
+        c = self.loaded_chunks.pop((x, y), None)
+        if c is not None:
+            if c.mark_unloaded() <= 0:
+                self.server.all_loaded_chunks.pop((x, y), None)
+                if c.section is not None:
+                    if c.section.mark_unloaded() <= 0:
+                        c.section.close()
+        if not server_only:
+            packet = UnloadChunkPacket(x, y)
+            await write_packet(packet, self.writer)
 
     async def load_chunks_around_player(self, diameter: int = VIEW_DISTANCE_BOX) -> None:
         async def load_chunk_rel(x, y):
@@ -417,7 +428,10 @@ class Client:
             await self.player.save()
             end = time.perf_counter()
             logging.debug('Player %s data saved in %f seconds', self, end - start)
+        for (cx, cy) in list(self.loaded_chunks.keys()):
+            await self.unload_chunk(cx, cy, True)
         await self._writer.wait_closed()
+        print(self.server.world.open_sections)
         if self.uuid is not None:
             logging.debug('Sending removal packets to remaining players')
             packet = RemovePlayerPacket(self.uuid)

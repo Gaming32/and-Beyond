@@ -27,8 +27,9 @@
             "console": "integratedTerminal",
             "args": [
                 "--debug",
-                "--auth-server", "http://localhost:8932",
-                "--insecure-auth"
+                // Uncomment if you need to test with a local auth server
+                // "--auth-server", "http://localhost:8932",
+                // "--insecure-auth"
             ]
         },
         {
@@ -39,8 +40,9 @@
             "args": [
                 "--debug",
                 "--world", "server_world",
-                "--auth-server", "http://localhost:8932",
-                "--insecure-auth"
+                // Uncomment if you need to test with a local auth server
+                // "--auth-server", "http://localhost:8932",
+                // "--insecure-auth"
             ]
         }
     ]

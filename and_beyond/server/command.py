@@ -1,4 +1,7 @@
 import abc
+import asyncio
+import logging
+import time
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID
 
@@ -15,6 +18,19 @@ class AbstractCommandSender(abc.ABC):
     @abc.abstractmethod
     async def reply(self, message: str) -> None:
         pass
+
+    async def reply_broadcast(self, message: str) -> None:
+        await self.reply(message)
+        logging_message = f'[{self}: {message}]'
+        logging.info(logging_message)
+        at = time.time()
+        check = self.client if isinstance(self, ClientCommandSender) else None
+        await asyncio.gather(*(
+            self.server.loop.create_task(client.send_chat(logging_message, at))
+            for client in self.server.clients
+            if (client.ready
+                and client is not check)
+        ))
 
     async def no_permissions(self, min_level: int) -> None:
         await self.reply('You do not have the permissions for that command.')
@@ -58,7 +74,8 @@ class ClientCommandSender(AbstractCommandSender):
         return await self.client.send_chat(message)
 
 
-def evaluate_client(arg: str, server: 'AsyncServer') -> Optional['Client']:
+def evaluate_client(arg: str, sender: AbstractCommandSender) -> Optional['Client']:
+    server = sender.server
     if arg in server.clients_by_name:
         return server.clients_by_name[arg]
     try:
