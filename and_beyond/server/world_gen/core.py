@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from and_beyond.server.world_gen.phase import AbstractPhase
 from and_beyond.server.world_gen.phases.caves import CavePhase
+from and_beyond.server.world_gen.phases.sky_islands import SkyIslandsPhase
 from and_beyond.utils import autoslots
 
 if TYPE_CHECKING:
@@ -20,6 +21,7 @@ class WorldGenerator:
         self.phases = [
             GroundPhase(self),
             CavePhase(self),
+            SkyIslandsPhase(self),
         ]
 
     def generate_chunk(self, chunk: 'WorldChunk') -> None:
