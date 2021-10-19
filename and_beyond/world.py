@@ -199,6 +199,15 @@ class World:
 
 @autoslots
 class WorldSection:
+    """
+    Section format:
+        0:32      -- Unused
+        32:262176 -- Chunk data (see chunk data format)
+    Chunk data format:
+        Each chunk is stored at an address (relative to the start of the
+        section) of `32 + (x * 16 + y) * 1024`. Each chunk is stored in
+        chunk format (see the WorldChunk doc)
+    """
     world: World
     x: int
     y: int
@@ -238,7 +247,7 @@ class WorldSection:
     def __del__(self) -> None:
         self._close()
 
-    def _get_sect_address(self, x: int, y: int) -> int:
+    def _get_chunk_address(self, x: int, y: int) -> int:
         return 32 + (x * 16 + y) * 1024
 
     def get_chunk(self, x: int, y: int) -> 'WorldChunk':
@@ -262,6 +271,24 @@ class WorldSection:
 
 @autoslots
 class WorldChunk:
+    """
+    Chunk format:
+        0:512    -- Block data (see block data format)
+        512:516  -- Chunk data version (UINT4)
+        516:548  -- Biome data (see biome data format)
+        548:1024 -- Unused
+    Block data format:
+        Each block is stored at an address (relative to the start of the
+        chunk) of `(x * 16 + y) * 2`. Each block is two bytes: a UINT8
+        representing the type, and a single representing any metadata
+        (could be any format)
+    Biome data format:
+        Each biome is stored at an address (relative to the start of the
+        chunk) of `516 + (x * 16 + y) * 2`. Each biome is two bytes: a UINT8
+        representing the type, and a single representing any metadata
+        (could be any format)
+    """
+
     section: Optional[WorldSection]
     x: int
     y: int
@@ -279,7 +306,7 @@ class WorldChunk:
         self.y = y
         self.abs_x = x + (section.x << 4)
         self.abs_y = y + (section.y << 4)
-        self.address = section._get_sect_address(x, y)
+        self.address = section._get_chunk_address(x, y)
         self.fp = section.fp
         self._version = None
         self.load_counter = 0
@@ -309,6 +336,9 @@ class WorldChunk:
         return self.load_counter
 
     def _get_tile_address(self, x: int, y: int) -> int:
+        return self.address + (x * 16 + y) * 2
+
+    def _get_biome_address(self, x: int, y: int) -> int:
         return self.address + (x * 16 + y) * 2
 
     def get_tile_type(self, x: int, y: int) -> 'BlockTypes':
@@ -397,6 +427,10 @@ class BlockTypes(enum.IntEnum):
     STONE = 1
     DIRT = 2
     GRASS = 3
+
+
+class BiomeTypes(enum.IntEnum):
+    HILLS = 0
 
 
 CHUNK_VERSION = 1
