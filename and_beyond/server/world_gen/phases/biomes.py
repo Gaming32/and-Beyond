@@ -8,28 +8,28 @@ from and_beyond.world import BiomeTypes, WorldChunk
 if TYPE_CHECKING:
     from and_beyond.server.world_gen.core import WorldGenerator
 
-FLIP_CONSTANT = 8112343193046603085
-
 SCALE = 250
 
 
 def biome_from_val(val: float) -> BiomeTypes:
-    return BiomeTypes.HILLS
+    if val > 0:
+        return BiomeTypes.HILLS
+    else:
+        return BiomeTypes.PLAINS
+
+
+def sample_biome_at(x: int, noise: PerlinNoise) -> BiomeTypes:
+    return biome_from_val(noise.noise_1d(x / SCALE))
 
 
 @autoslots
 class BiomeTypesPhase(AbstractPhase):
-    perlin: PerlinNoise
-
     def __init__(self, generator: 'WorldGenerator') -> None:
         super().__init__(generator)
-        self.perlin = PerlinNoise(generator.seed ^ FLIP_CONSTANT)
 
     def generate_chunk(self, chunk: 'WorldChunk') -> None:
         cx = chunk.abs_x << 2
         for x in range(4):
-            abs_x = cx + x
-            val = self.perlin.noise_1d(abs_x / SCALE)
-            biome = biome_from_val(val)
+            biome = self.generator.sample_biome_at(cx + x)
             for y in range(4):
                 chunk.set_biome_type(x, y, biome)

@@ -43,7 +43,7 @@ from and_beyond.client.world import ClientWorld
 from and_beyond.common import JUMP_SPEED, MOVE_SPEED, VERSION_DISPLAY_NAME
 from and_beyond.packet import ChatPacket
 from and_beyond.pipe_commands import read_pipe
-from and_beyond.world import BlockTypes
+from and_beyond.world import BiomeTypes, BlockTypes
 from pygame import *
 from pygame.locals import *
 
@@ -82,12 +82,23 @@ def render_debug() -> None:
         f'X/Y: {globals.player.x:.1f}/{globals.player.y:.1f}',
     ]
     if globals.player.x != inf and globals.player.y != inf:
-        cx = int(globals.player.x) >> 4
-        cy = int(globals.player.y) >> 4
+        int_x = int(globals.player.x)
+        int_y = int(globals.player.y)
+        cx = int_x >> 4
+        cy = int_y >> 4
+        sx = cx >> 4
+        sy = cy >> 4
+        bx = int_x - (cx << 4)
+        by = int_y - (cy << 4)
         lines.extend([
             f'CX/CY: {cx}/{cy}',
-            f'SX/SY: {cx >> 4}/{cy >> 4}',
+            f'SX/SY: {sx}/{sy}',
+            f'BX/BY: {bx}/{by}',
         ])
+        if (chunk := globals.local_world.loaded_chunks.get((cx, cy))) is not None:
+            lines.extend([
+                f'Biome: {chunk.get_biome_type(bx >> 2, by >> 2)!s}'
+            ])
     lines.extend([
         f'Loaded chunks: {len(globals.local_world.loaded_chunks)}',
     ])

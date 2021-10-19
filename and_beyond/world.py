@@ -439,6 +439,7 @@ class BlockTypes(enum.IntEnum):
 
 class BiomeTypes(enum.IntEnum):
     HILLS = 0
+    PLAINS = 1
 
 
 CHUNK_VERSION = 1
