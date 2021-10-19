@@ -138,7 +138,6 @@ async def stop_command(sender: 'AbstractCommandSender', args: str) -> None:
         await sender.no_permissions(3)
         return
     await sender.reply_broadcast('Stopping server...')
-    logging.info('%s stopped server with /stop.', sender)
     sender.server.running = False
 
 

@@ -40,6 +40,7 @@ class AsyncServer:
     running: bool
     paused: bool
     has_been_shutdown: bool
+    gc_task: Optional[asyncio.Task]
     all_loaded_chunks: dict[tuple[int, int], 'WorldChunk']
 
     host: str
@@ -69,6 +70,7 @@ class AsyncServer:
         self.running = False
         self.paused = False
         self.has_been_shutdown = False
+        self.gc_task = None
         self.all_loaded_chunks = {}
         self.async_server = None # type: ignore
         self.world = None # type: ignore
@@ -239,6 +241,8 @@ class AsyncServer:
 
         logging.info('Server started')
         self.running = True
+        logging.debug('Setting up backup section GC')
+        self.gc_task = self.loop.create_task(self.section_gc())
         time_since_last_second = 0
         while self.running:
             if not self.multiplayer:
@@ -283,10 +287,34 @@ class AsyncServer:
         else:
             await asyncio.sleep(0)
 
+    async def section_gc(self):
+        while self.running:
+            await asyncio.sleep(GC_TIME_SECONDS)
+            logging.debug('Running backup section GC')
+            start = time.perf_counter()
+            chunks: set[tuple[int, int]] = set()
+            for client in self.clients:
+                if not client.ready:
+                    continue
+                chunks.update(client.loaded_chunks)
+            for chunk in set(self.all_loaded_chunks) - chunks:
+                self.all_loaded_chunks.pop(chunk, None)
+            sections: set[tuple[int, int]] = set()
+            for (cx, cy) in chunks:
+                sections.add((cx >> 4, cy >> 4))
+            to_close = set(self.world.open_sections).difference(sections)
+            for (sx, sy) in to_close:
+                self.world.get_section(sx, sy).close()
+            end = time.perf_counter()
+            logging.debug('Successfully closed %i section(s) in %f seconds', len(to_close), end - start)
+
     async def shutdown(self) -> None:
         logging.info('Shutting down...')
         if self.console_commands_task is not None:
             self.console_commands_task.cancel()
+        if self.gc_task is not None:
+            logging.debug('Cancelling backup GC task...')
+            self.gc_task.cancel()
         logging.debug('Kicking clients...')
         await asyncio.gather(*(client.disconnect('Server closed') for client in self.clients))
         if self.async_server is not None:
