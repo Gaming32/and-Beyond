@@ -347,7 +347,7 @@ class WorldChunk:
         self.fp[addr] = type
 
     def _get_biome_address(self, x: int, y: int) -> int:
-        return self.address + (x * 16 + y) * 2
+        return self.address + 516 + (x * 16 + y) * 2
 
     def get_biome_type(self, x: int, y: int) -> 'BiomeTypes':
         addr = self._get_biome_address(x, y)

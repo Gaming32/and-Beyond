@@ -139,7 +139,8 @@ class Client:
         if packet.protocol_version != PROTOCOL_VERSION:
             await self.disconnect(f'This server is on version {VERSION_DISPLAY_NAME} '
                                   f'(requires minimum {get_version_name(PROTOCOL_VERSION)} to join), '
-                                  f'but you connected with {get_version_name(packet.protocol_version)}')
+                                  f'but you connected with a '
+                                  f'{get_version_name(packet.protocol_version)} client')
             return False
         is_localhost = self._writer.get_extra_info('peername')[0] in ('localhost', '127.0.0.1', '::1')
         auth_client = self.server.auth_client

@@ -1,4 +1,3 @@
-import random
 from typing import TYPE_CHECKING
 
 from and_beyond.server.world_gen.perlin import PerlinNoise
@@ -8,6 +7,8 @@ from and_beyond.world import BlockTypes, WorldChunk
 
 if TYPE_CHECKING:
     from and_beyond.server.world_gen.core import WorldGenerator
+
+FLIP_CONSTANT = 10058735888722539265
 
 OCTAVES = 3
 X_SCALE_ISLAND = 150
@@ -24,8 +25,7 @@ class SkyIslandsPhase(AbstractPhase):
 
     def __init__(self, generator: 'WorldGenerator') -> None:
         super().__init__(generator)
-        flip = random.Random(generator.seed).randrange(2**30)
-        self.perlin = PerlinNoise(generator.seed ^ flip)
+        self.perlin = PerlinNoise(generator.seed ^ FLIP_CONSTANT)
 
     def generate_chunk(self, chunk: 'WorldChunk') -> None:
         if chunk.abs_y < 24:
@@ -39,7 +39,6 @@ class SkyIslandsPhase(AbstractPhase):
             island_height += Y_OFFSET_ISLAND
             if island_height > surface_height:
                 continue
-            # print(island_height, surface_height)
             for y in range(16):
                 abs_y = cy + y
                 if abs_y > surface_height or abs_y < island_height:

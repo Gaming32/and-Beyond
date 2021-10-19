@@ -3,6 +3,7 @@
 from typing import TYPE_CHECKING
 
 from and_beyond.server.world_gen.phase import AbstractPhase
+from and_beyond.server.world_gen.phases.biome import BiomeTypesPhase
 from and_beyond.server.world_gen.phases.caves import CavePhase
 from and_beyond.server.world_gen.phases.sky_islands import SkyIslandsPhase
 from and_beyond.utils import autoslots
@@ -19,6 +20,7 @@ class WorldGenerator:
     def __init__(self, seed: int) -> None:
         self.seed = seed
         self.phases = [
+            BiomeTypesPhase(self),
             GroundPhase(self),
             CavePhase(self),
             SkyIslandsPhase(self),
