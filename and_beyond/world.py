@@ -338,15 +338,23 @@ class WorldChunk:
     def _get_tile_address(self, x: int, y: int) -> int:
         return self.address + (x * 16 + y) * 2
 
-    def _get_biome_address(self, x: int, y: int) -> int:
-        return self.address + (x * 16 + y) * 2
-
     def get_tile_type(self, x: int, y: int) -> 'BlockTypes':
         addr = self._get_tile_address(x, y)
         return BlockTypes(self.fp[addr])
 
     def set_tile_type(self, x: int, y: int, type: 'BlockTypes') -> None:
         addr = self._get_tile_address(x, y)
+        self.fp[addr] = type
+
+    def _get_biome_address(self, x: int, y: int) -> int:
+        return self.address + (x * 16 + y) * 2
+
+    def get_biome_type(self, x: int, y: int) -> 'BiomeTypes':
+        addr = self._get_biome_address(x, y)
+        return BiomeTypes(self.fp[addr])
+
+    def set_biome_type(self, x: int, y: int, type: 'BiomeTypes') -> None:
+        addr = self._get_biome_address(x, y)
         self.fp[addr] = type
 
     def get_data(self) -> 'ChunkDataView':
