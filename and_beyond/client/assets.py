@@ -12,6 +12,8 @@ from pygame import *
 from pygame.locals import *
 
 
+ASSET_COUNT = 0
+
 _missing_texture_cache: dict[str, pygame.surface.Surface] = {}
 _MISSING_MAGENTA = (255, 0, 220)
 def try_load_texture(filename: str, desired_size: tuple[int, int]) -> pygame.surface.Surface:
@@ -39,6 +41,7 @@ pygame.font.init()
 GAME_FONT = pygame.font.SysFont('Calibri', 30)
 DEBUG_FONT = pygame.font.SysFont('Courier', 20, bold=True)
 CHAT_FONT = pygame.font.SysFont('Courier', 20)
+ASSET_COUNT += 3
 
 MISSING_TEXTURE = [pygame.surface.Surface((BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE))]
 MISSING_TEXTURE[0].fill(_MISSING_MAGENTA, (
@@ -49,11 +52,13 @@ MISSING_TEXTURE[0].fill(_MISSING_MAGENTA, (
     BLOCK_RENDER_SIZE // 2, (BLOCK_RENDER_SIZE + 1) // 2,
     (BLOCK_RENDER_SIZE + 1) // 2, BLOCK_RENDER_SIZE // 2
 ))
+ASSET_COUNT += 1
 
 PERSON_SPRITES = [
     try_load_texture('assets/sprites/person1.png', (6, 9)),
     try_load_texture('assets/sprites/person2.png', (6, 9)),
 ]
+ASSET_COUNT += len(PERSON_SPRITES)
 
 _BLOCK_SPRITES = [
     try_load_texture('assets/sprites/stone.png', (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)),
@@ -63,12 +68,14 @@ _BLOCK_SPRITES = [
     try_load_texture('assets/sprites/planks.png', (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)),
     try_load_texture('assets/sprites/leaves.png', (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)),
 ]
+ASSET_COUNT += len(_BLOCK_SPRITES)
 
 BLOCK_SPRITES: list[list[pygame.surface.Surface]] = []
 ROTATABLE_BLOCKS = [False, True, True, False, False, False, True]
 
 
 SELECTED_ITEM_BG = [Surface((70, 70))]
+ASSET_COUNT += 1
 
 def transform_assets() -> int:
     count = 0
@@ -88,5 +95,3 @@ def transform_assets() -> int:
     SELECTED_ITEM_BG[0].fill((0, 0, 0, 192))
     count += 2
     return count
-
-ASSET_COUNT = 12
