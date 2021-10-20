@@ -21,6 +21,9 @@ T           | Open chat
 1           | Select stone block
 2           | Select dirt block
 3           | Select grass block
+4           | Select wood block
+5           | Select planks block
+6           | Select leaves block
 F3          | Open debug menu
 
 ## Command-line arguments

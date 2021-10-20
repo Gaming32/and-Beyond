@@ -59,10 +59,13 @@ _BLOCK_SPRITES = [
     try_load_texture('assets/sprites/stone.png', (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)),
     try_load_texture('assets/sprites/dirt.png', (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)),
     try_load_texture('assets/sprites/grass.png', (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)),
+    try_load_texture('assets/sprites/wood.png', (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)),
+    try_load_texture('assets/sprites/planks.png', (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)),
+    try_load_texture('assets/sprites/leaves.png', (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)),
 ]
 
 BLOCK_SPRITES: list[list[pygame.surface.Surface]] = []
-ROTATABLE_BLOCKS = [False, True, True, False]
+ROTATABLE_BLOCKS = [False, True, True, False, False, False, True]
 
 
 SELECTED_ITEM_BG = [Surface((70, 70))]
