@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import random
 import sys
 from asyncio.events import AbstractEventLoop
 from typing import (Any, Awaitable, Callable, Generator, Generic, Iterable,
@@ -187,6 +188,12 @@ def copy_obj_to_class(obj: Any, to: Union[type[_T], _T]) -> _T:
     for attr in copy_attrs:
         setattr(to, attr, getattr(obj, attr))
     return to # type: ignore
+
+
+def shuffled(it: Iterable[_T]) -> list[_T]:
+    l = list(it)
+    random.shuffle(l)
+    return l
 
 
 def init_logger(log_file: str) -> None:

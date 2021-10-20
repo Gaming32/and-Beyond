@@ -10,21 +10,24 @@ from asyncio.base_events import Server
 from asyncio.events import AbstractEventLoop
 from asyncio.streams import StreamReader, StreamWriter
 from collections import deque
+from fractions import Fraction
 from typing import Any, BinaryIO, Optional
 from uuid import UUID
 
 import colorama
-from and_beyond.common import AUTH_SERVER, PORT
+from and_beyond.common import AUTH_SERVER, PORT, RANDOM_TICK_RATE
 from and_beyond.http_auth import AuthClient
 from and_beyond.http_errors import InsecureAuth
 from and_beyond.packet import ChunkUpdatePacket, Packet, write_packet
 from and_beyond.pipe_commands import PipeCommandsToServer, read_pipe
 from and_beyond.server.client import Client
-from and_beyond.server.command import AbstractCommandSender, ConsoleCommandSender
+from and_beyond.server.command import (AbstractCommandSender,
+                                       ConsoleCommandSender)
 from and_beyond.server.commands import COMMANDS
 from and_beyond.server.consts import GC_TIME_SECONDS
 from and_beyond.server.world_gen.core import WorldGenerator
-from and_beyond.utils import ainput, autoslots, get_opt, init_logger, mean
+from and_beyond.utils import (ainput, autoslots, get_opt, init_logger, mean,
+                              shuffled)
 from and_beyond.world import BlockTypes, World, WorldChunk
 
 if sys.platform == 'win32':
@@ -33,6 +36,8 @@ if sys.platform == 'win32':
 
 @autoslots
 class AsyncServer:
+    random_tick_rate: Fraction
+
     loop: AbstractEventLoop
     singleplayer_pipe_in: Optional[BinaryIO]
     singleplayer_pipe_out: Optional[BinaryIO]
@@ -63,6 +68,7 @@ class AsyncServer:
     console_commands_task: Optional[asyncio.Task]
 
     def __init__(self) -> None:
+        self.random_tick_rate = Fraction(RANDOM_TICK_RATE)
         self.loop = None # type: ignore
         self.singleplayer_pipe_in = None
         self.singleplayer_pipe_out = None
@@ -284,8 +290,75 @@ class AsyncServer:
         if self.clients:
             for client in self.clients:
                 await client.tick()
+            await self.random_tick()
         else:
             await asyncio.sleep(0)
+
+    async def random_tick(self) -> None:
+        chunk_rate = self.random_tick_rate.denominator
+        block_rate = self.random_tick_rate.numerator
+        if chunk_rate == 1:
+            for chunk in list(self.all_loaded_chunks.values()):
+                for i in range(block_rate):
+                    await self.random_tick_chunk(chunk, random.randrange(16), random.randrange(16))
+        else:
+            chunk_rate -= 1
+            i = 0
+            for chunk in shuffled(self.all_loaded_chunks.values()):
+                if i == 0:
+                    for j in range(block_rate):
+                        await self.random_tick_chunk(chunk, random.randrange(16), random.randrange(16))
+                i += 1
+                if i > chunk_rate:
+                    i = 0
+
+    def get_block_rel_pos(self, chunk: Optional[WorldChunk], x: int, y: int) -> tuple[Optional[WorldChunk], int, int]:
+        if 0 <= x < 16 and 0 <= y < 16:
+            return chunk, x, y
+        if x > 15 or x < 0:
+            x2 = x >> 4
+            x -= x2 << 4
+        else:
+            x2 = 0
+        if y > 15 or y < 0:
+            y2 = y >> 4
+            y -= y2 << 4
+        else:
+            y2 = 0
+        if chunk is not None:
+            chunk = self.all_loaded_chunks.get((chunk.abs_x + x2, chunk.abs_y + y2))
+        return chunk, x, y
+
+    def get_block_rel_chunk(self, chunk: Optional[WorldChunk], x: int, y: int) -> Optional[BlockTypes]:
+        chunk, x, y = self.get_block_rel_pos(chunk, x, y)
+        if chunk is None:
+            return None
+        return chunk.get_tile_type(x, y)
+
+    def set_block_rel_chunk(self, chunk: Optional[WorldChunk], x: int, y: int, block: BlockTypes) -> bool:
+        chunk, x, y = self.get_block_rel_pos(chunk, x, y)
+        if chunk is None:
+            return False
+        chunk.set_tile_type(x, y, block)
+        return True
+
+    async def random_tick_chunk(self, chunk: WorldChunk, x: int, y: int) -> None:
+        block = chunk.get_tile_type(x, y)
+        if block == BlockTypes.GRASS:
+            block_above = self.get_block_rel_chunk(chunk, x, y + 1)
+            if block_above is None:
+                return
+            if block_above != BlockTypes.AIR:
+                # Reset to dirt
+                await self.set_tile_type_global(chunk, x, y, BlockTypes.DIRT)
+            else:
+                # Spread
+                dir = random.choice((-1, 1))
+                chunk_off, x_off, _ = self.get_block_rel_pos(chunk, x + dir, y)
+                if chunk_off is not None and chunk_off.get_tile_type(x_off, y) == BlockTypes.DIRT:
+                    block_above = self.get_block_rel_chunk(chunk_off, x_off, y + 1)
+                    if block_above == BlockTypes.AIR:
+                        await self.set_tile_type_global(chunk_off, x_off, y, block)
 
     async def section_gc(self):
         while self.running:

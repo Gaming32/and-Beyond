@@ -24,6 +24,7 @@ MOVE_SPEED_CAP = 7
 MOVE_SPEED_CAP_SQ = MOVE_SPEED_CAP * MOVE_SPEED_CAP
 JUMP_SPEED = 1.5
 GRAVITY = -5
+RANDOM_TICK_RATE = 1 / 2 # Numerator = blocks in chunk, denominator = blocks in chunk
 
 
 def get_version_name(protocol_version: int) -> str:
