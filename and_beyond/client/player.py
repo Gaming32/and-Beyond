@@ -113,7 +113,6 @@ class ClientPlayer(AbstractPlayer):
     def set_block(self, cx: int, cy: int, bx: int, by: int, block: BlockTypes) -> None:
         if (chunk := globals.local_world.loaded_chunks.get((cx, cy))) is not None:
             chunk.set_tile_type(bx, by, block)
-            chunk.dirty = True
         packet = ChunkUpdatePacket(cx, cy, bx, by, block)
         assert globals.game_connection is not None
         globals.game_connection.write_packet_sync(packet)

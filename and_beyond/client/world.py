@@ -106,6 +106,7 @@ class ClientWorld:
 
 @autoslots
 class ClientChunk(WorldChunk):
+    redraw: set[tuple[int, int]]
     dirty: bool
     surf: Surface
 
@@ -121,6 +122,7 @@ class ClientChunk(WorldChunk):
         self._version = chunk._version
         self.load_counter = chunk.load_counter
         # Initialization
+        self.redraw = set()
         self.dirty = True
         self.surf = Surface((CHUNK_RENDER_SIZE, CHUNK_RENDER_SIZE)).convert_alpha() # type: ignore
 
@@ -136,7 +138,21 @@ class ClientChunk(WorldChunk):
                     rpos = Vector2(x, 15 - y) * BLOCK_RENDER_SIZE
                     self.surf.blit(tex, Rect(rpos, (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)))
            self.dirty = False
+        elif self.redraw:
+            for (x, y) in list(self.redraw):
+                block = self.get_tile_type(x, y)
+                rpos = Vector2(x, 15 - y) * BLOCK_RENDER_SIZE
+                rect = Rect(rpos, (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE))
+                self.surf.fill((0, 0, 0, 0), rect)
+                if block != BlockTypes.AIR:
+                    tex = get_block_texture(block)
+                    self.surf.blit(tex, Rect(rpos, (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)))
+            self.redraw.clear()
         return self.surf
+
+    def set_tile_type(self, x: int, y: int, type: 'BlockTypes') -> None:
+        super().set_tile_type(x, y, type)
+        self.redraw.add((x, y))
 
 
 def get_block_texture(block: BlockTypes) -> Surface:
