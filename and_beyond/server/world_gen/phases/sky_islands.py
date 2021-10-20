@@ -2,7 +2,7 @@ import random
 from typing import TYPE_CHECKING
 
 from and_beyond.server.world_gen.perlin import PerlinNoise
-from and_beyond.server.world_gen.phase import AbstractPhase
+from and_beyond.server.world_gen.phase import HeightmappedPhase
 from and_beyond.utils import autoslots
 from and_beyond.world import BlockTypes, WorldChunk
 
@@ -19,13 +19,16 @@ Y_OFFSET_SURFACE = 480
 
 
 @autoslots
-class SkyIslandsPhase(AbstractPhase):
+class SkyIslandsPhase(HeightmappedPhase):
     perlin: PerlinNoise
 
     def __init__(self, generator: 'WorldGenerator') -> None:
         super().__init__(generator)
         flip = random.Random(generator.seed).randrange(2**30)
         self.perlin = PerlinNoise(generator.seed ^ flip)
+
+    def _get_height(self, x: int) -> int:
+        return int(self.perlin.noise_1d(x / X_SCALE_SURFACE) * Y_SCALE_SURFACE + Y_OFFSET_SURFACE)
 
     def generate_chunk(self, chunk: 'WorldChunk') -> None:
         if chunk.abs_y < 24:
@@ -35,7 +38,7 @@ class SkyIslandsPhase(AbstractPhase):
         for x in range(16):
             abs_x = cx + x
             island_height = int(self.perlin.fbm_1d(abs_x / X_SCALE_ISLAND, OCTAVES) * Y_SCALE_ISLAND)
-            surface_height = int(self.perlin.noise_1d(abs_x / X_SCALE_SURFACE) * Y_SCALE_SURFACE + Y_OFFSET_SURFACE)
+            surface_height = self.get_height(abs_x)
             island_height += Y_OFFSET_ISLAND
             if island_height > surface_height:
                 continue
