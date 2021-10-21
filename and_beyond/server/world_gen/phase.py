@@ -1,4 +1,5 @@
 import abc
+import sys
 from typing import TYPE_CHECKING
 
 from and_beyond.utils import autoslots
@@ -6,6 +7,8 @@ from and_beyond.utils import autoslots
 if TYPE_CHECKING:
     from and_beyond.server.world_gen.core import WorldGenerator
     from and_beyond.world import WorldChunk
+
+DEFAULT_HEIGHTMAP = sys.intern('DEFAULT')
 
 
 @autoslots
@@ -21,19 +24,20 @@ class AbstractPhase(abc.ABC):
 
 
 class HeightmappedPhase(AbstractPhase):
-    heightmap_cache: dict[int, int]
+    heightmaps: dict[str, dict[int, int]]
 
     def __init__(self, generator: 'WorldGenerator') -> None:
         super().__init__(generator)
-        self.heightmap_cache = {}
+        self.heightmaps = {DEFAULT_HEIGHTMAP: {}}
 
     @abc.abstractmethod
-    def _get_height(self, x: int) -> int:
+    def _get_height(self, x: int, heightmap: str) -> int:
         raise NotImplementedError
 
-    def get_height(self, x: int) -> int:
-        height = self.heightmap_cache.get(x)
+    def get_height(self, x: int, heightmap_name: str = DEFAULT_HEIGHTMAP) -> int:
+        heightmap = self.heightmaps.setdefault(heightmap_name, {})
+        height = heightmap.get(x)
         if height is None:
-            height = self._get_height(x)
-            self.heightmap_cache[x] = height
+            height = self._get_height(x, heightmap_name)
+            heightmap[x] = height
         return height

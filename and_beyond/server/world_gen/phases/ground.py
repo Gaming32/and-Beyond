@@ -22,7 +22,7 @@ class GroundPhase(HeightmappedPhase):
         super().__init__(generator)
         self.perlin = PerlinNoise(generator.seed)
 
-    def _get_height(self, x: int) -> int:
+    def _get_height(self, x: int, heightmap: str) -> int:
         return int(self.perlin.fbm_1d(x / X_SCALE, OCTAVES) * Y_SCALE + Y_OFFSET)
 
     def generate_chunk(self, chunk: 'WorldChunk') -> None:

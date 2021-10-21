@@ -1,4 +1,5 @@
 import random
+import sys
 from typing import TYPE_CHECKING
 
 from and_beyond.server.world_gen.perlin import PerlinNoise
@@ -17,6 +18,8 @@ X_SCALE_SURFACE = 225
 Y_SCALE_SURFACE = 32
 Y_OFFSET_SURFACE = 480
 
+ISLAND_HEIGHTMAP = sys.intern('ISLAND')
+
 
 @autoslots
 class SkyIslandsPhase(HeightmappedPhase):
@@ -27,7 +30,9 @@ class SkyIslandsPhase(HeightmappedPhase):
         flip = random.Random(generator.seed).randrange(2**30)
         self.perlin = PerlinNoise(generator.seed ^ flip)
 
-    def _get_height(self, x: int) -> int:
+    def _get_height(self, x: int, heightmap: str) -> int:
+        if heightmap == ISLAND_HEIGHTMAP:
+            return int(self.perlin.fbm_1d(x / X_SCALE_ISLAND, OCTAVES) * Y_SCALE_ISLAND)
         return int(self.perlin.noise_1d(x / X_SCALE_SURFACE) * Y_SCALE_SURFACE + Y_OFFSET_SURFACE)
 
     def generate_chunk(self, chunk: 'WorldChunk') -> None:
@@ -37,12 +42,11 @@ class SkyIslandsPhase(HeightmappedPhase):
         cy = chunk.abs_y << 4
         for x in range(16):
             abs_x = cx + x
-            island_height = int(self.perlin.fbm_1d(abs_x / X_SCALE_ISLAND, OCTAVES) * Y_SCALE_ISLAND)
+            island_height = self.get_height(abs_x, ISLAND_HEIGHTMAP)
             surface_height = self.get_height(abs_x)
             island_height += Y_OFFSET_ISLAND
             if island_height > surface_height:
                 continue
-            # print(island_height, surface_height)
             for y in range(16):
                 abs_y = cy + y
                 if abs_y > surface_height or abs_y < island_height:
