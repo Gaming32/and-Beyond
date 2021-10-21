@@ -96,6 +96,15 @@ if not has_opensimplex:
     missing_deps_text += ' - OpenSimplex Noise (opensimplex)\n'
     missing_deps.append('opensimplex')
 
+has_humanize = True
+try:
+    import humanize
+except ModuleNotFoundError:
+    has_humanize = False
+if not has_humanize:
+    missing_deps_text += ' - Humanizer (humanize)\n'
+    missing_deps.append('humanize')
+
 if missing_deps:
     print('You appear to be missing the following requirements for this game to run:')
     print(missing_deps_text, end='')

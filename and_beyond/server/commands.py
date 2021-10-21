@@ -1,12 +1,16 @@
-import logging
+import sys
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
+import humanize
 from and_beyond.server.client import Client
 from and_beyond.server.command import (ClientCommandSender,
                                        ConsoleCommandSender, evaluate_client)
 
 if TYPE_CHECKING:
     from and_beyond.server.command import AbstractCommandSender
+
+if sys.platform != 'win32':
+    import resource
 
 Command = Callable[['AbstractCommandSender', str], Awaitable[Any]]
 
@@ -60,6 +64,13 @@ async def mspt_command(sender: 'AbstractCommandSender', args: str) -> None:
 async def stats_command(sender: 'AbstractCommandSender', args: str) -> None:
     await tps_command(sender, args)
     await mspt_command(sender, args)
+    if sys.platform != 'win32':
+        memory_usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        await sender.reply(
+            f'Memory usage: '
+            f'{humanize.naturalsize(memory_usage * 1024, gnu=True)} '
+            f'({memory_usage}K)'
+        )
 
 
 async def tp_command(sender: 'AbstractCommandSender', args: str) -> None:

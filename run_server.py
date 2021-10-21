@@ -5,8 +5,6 @@ import os
 import shlex
 import subprocess
 import sys
-import time
-from pathlib import Path
 
 if sys.version_info[0] > 2:
     from typing import List
@@ -65,8 +63,17 @@ if not has_aiohttp:
     missing_deps_text += ' - Asynchronous HTTP (aiohttp)\n'
     missing_deps.append('aiohttp')
 
+has_humanize = True
+try:
+    import humanize
+except ModuleNotFoundError:
+    has_humanize = False
+if not has_humanize:
+    missing_deps_text += ' - Humanizer (humanize)\n'
+    missing_deps.append('humanize')
+
 if missing_deps:
-    print('You appear to be missing the following requirements for this game to run:')
+    print('You appear to be missing the following requirements for this server to run:')
     print(missing_deps_text, end='')
     yes = input('Would you like to install them? [Y/n] ')
     if not yes or yes[0].lower() == 'y':
