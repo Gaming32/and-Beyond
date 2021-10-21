@@ -143,7 +143,6 @@ class ServerConnection:
                 if chunk_pos in world.loaded_chunks:
                     chunk = world.loaded_chunks[chunk_pos]
                     chunk.set_tile_type(packet.bx, packet.by, packet.block)
-                    chunk.dirty = True
             elif isinstance(packet, PlayerPositionPacket):
                 # globals.player.last_x = globals.player.render_x = globals.player.x
                 # globals.player.last_y = globals.player.render_y = globals.player.y

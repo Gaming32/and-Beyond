@@ -184,6 +184,12 @@ while globals.running:
                         globals.player.change_selected_block(BlockTypes.DIRT)
                     elif event.key == K_3:
                         globals.player.change_selected_block(BlockTypes.GRASS)
+                    elif event.key == K_4:
+                        globals.player.change_selected_block(BlockTypes.WOOD)
+                    elif event.key == K_5:
+                        globals.player.change_selected_block(BlockTypes.PLANKS)
+                    elif event.key == K_6:
+                        globals.player.change_selected_block(BlockTypes.LEAVES)
                     if event.key == K_t:
                         should_chat_open = True
                     elif event.key == K_SLASH:
