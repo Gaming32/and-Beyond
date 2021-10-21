@@ -312,36 +312,6 @@ class AsyncServer:
                 if i > chunk_rate:
                     i = 0
 
-    def get_block_rel_pos(self, chunk: Optional[WorldChunk], x: int, y: int) -> tuple[Optional[WorldChunk], int, int]:
-        if 0 <= x < 16 and 0 <= y < 16:
-            return chunk, x, y
-        if x > 15 or x < 0:
-            x2 = x >> 4
-            x -= x2 << 4
-        else:
-            x2 = 0
-        if y > 15 or y < 0:
-            y2 = y >> 4
-            y -= y2 << 4
-        else:
-            y2 = 0
-        if chunk is not None:
-            chunk = self.all_loaded_chunks.get((chunk.abs_x + x2, chunk.abs_y + y2))
-        return chunk, x, y
-
-    def get_block_rel_chunk(self, chunk: Optional[WorldChunk], x: int, y: int) -> Optional[BlockTypes]:
-        chunk, x, y = self.get_block_rel_pos(chunk, x, y)
-        if chunk is None:
-            return None
-        return chunk.get_tile_type(x, y)
-
-    def set_block_rel_chunk(self, chunk: Optional[WorldChunk], x: int, y: int, block: BlockTypes) -> bool:
-        chunk, x, y = self.get_block_rel_pos(chunk, x, y)
-        if chunk is None:
-            return False
-        chunk.set_tile_type(x, y, block)
-        return True
-
     async def random_tick_chunk(self, chunk: WorldChunk, x: int, y: int) -> None:
         block = chunk.get_tile_type(x, y)
         if block == BlockTypes.GRASS:
@@ -353,12 +323,16 @@ class AsyncServer:
                 await self.set_tile_type_global(chunk, x, y, BlockTypes.DIRT)
             else:
                 # Spread
-                dir = random.choice((-1, 1))
-                chunk_off, x_off, _ = self.get_block_rel_pos(chunk, x + dir, y)
-                if chunk_off is not None and chunk_off.get_tile_type(x_off, y) == BlockTypes.DIRT:
-                    block_above = self.get_block_rel_chunk(chunk_off, x_off, y + 1)
-                    if block_above == BlockTypes.AIR:
-                        await self.set_tile_type_global(chunk_off, x_off, y, block)
+                for dir in (-1, 1):
+                    chunk_off, x_off, _ = self.get_block_rel_pos(chunk, x + dir, y)
+                    if chunk_off is not None:
+                        chunk_above, _, y_above = self.get_block_rel_pos(chunk_off, x_off, y + 1)
+                        block_above = self.get_block_rel_chunk(chunk_above, x_off, y_above)
+                        if (chunk_off.get_tile_type(x_off, y) == BlockTypes.DIRT
+                            and block_above == BlockTypes.AIR):
+                            await self.set_tile_type_global(chunk_off, x_off, y, block)
+                        elif block_above == BlockTypes.DIRT:
+                            await self.set_block_rel_chunk_global(chunk_above, x_off, y_above, block)
 
     async def section_gc(self):
         while self.running:
@@ -412,6 +386,43 @@ class AsyncServer:
             logging.info('World saved (with %i open section(s)) in %f seconds', section_count, end - start)
         if self.async_server is not None:
             await self.async_server.wait_closed()
+
+    def get_block_rel_pos(self, chunk: Optional[WorldChunk], x: int, y: int) -> tuple[Optional[WorldChunk], int, int]:
+        if 0 <= x < 16 and 0 <= y < 16:
+            return chunk, x, y
+        if x > 15 or x < 0:
+            x2 = x >> 4
+            x -= x2 << 4
+        else:
+            x2 = 0
+        if y > 15 or y < 0:
+            y2 = y >> 4
+            y -= y2 << 4
+        else:
+            y2 = 0
+        if chunk is not None:
+            chunk = self.all_loaded_chunks.get((chunk.abs_x + x2, chunk.abs_y + y2))
+        return chunk, x, y
+
+    def get_block_rel_chunk(self, chunk: Optional[WorldChunk], x: int, y: int) -> Optional[BlockTypes]:
+        chunk, x, y = self.get_block_rel_pos(chunk, x, y)
+        if chunk is None:
+            return None
+        return chunk.get_tile_type(x, y)
+
+    def set_block_rel_chunk(self, chunk: Optional[WorldChunk], x: int, y: int, block: BlockTypes) -> bool:
+        chunk, x, y = self.get_block_rel_pos(chunk, x, y)
+        if chunk is None:
+            return False
+        chunk.set_tile_type(x, y, block)
+        return True
+
+    async def set_block_rel_chunk_global(self, chunk: Optional[WorldChunk], x: int, y: int, block: BlockTypes) -> bool:
+        chunk, x, y = self.get_block_rel_pos(chunk, x, y)
+        if chunk is None:
+            return False
+        await self.set_tile_type_global(chunk, x, y, block)
+        return True
 
     async def set_tile_type_global(self, chunk: WorldChunk, x: int, y: int, type: BlockTypes, exclude_player: Client = None):
         chunk.set_tile_type(x, y, type)
