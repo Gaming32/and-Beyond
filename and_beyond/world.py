@@ -355,13 +355,12 @@ class WorldChunk:
 
     def set_biome_type(self, x: int, y: int, type: 'BiomeTypes') -> None:
         addr = self._get_biome_address(x, y)
-        self.fp[addr] = type
 
-    def get_data(self) -> 'ChunkDataView':
-        return ChunkDataView(self.fp, self.address, self.address + 1024)
+    def get_data(self) -> memoryview:
+        return memoryview(self.fp)[self.address:self.address + 1024]
 
-    def get_metadata_view(self) -> 'ChunkDataView':
-        return ChunkDataView(self.fp, self.address + 512, self.address + 1024)
+    def get_metadata_view(self) -> memoryview:
+        return memoryview(self.fp)[self.address + 512:self.address + 1024]
 
     @property
     def version(self) -> int:
@@ -382,44 +381,6 @@ class WorldChunk:
     @property
     def has_generated(self) -> bool:
         return self.version > 0
-
-
-@autoslots
-class ChunkDataView:
-    fp: Union[bytearray, mmap]
-    start: int
-    end: int
-
-    def __init__(self, fp: Union[bytearray, mmap], start: int, end: int) -> None:
-        self.fp = fp
-        self.start = start
-        self.end = end
-
-    def _index_error(self, i: int):
-        fp_repr = self.fp if isinstance(self.fp, mmap) else f'<bytearray len={len(self.fp)}>'
-        raise IndexError(f'{i} out of bounds for View({fp_repr}, {self.start}, {self.end})')
-
-    def _get_index(self, i: Union[int, slice]) -> Union[int, slice]:
-        if isinstance(i, slice):
-            start = self._get_index(i.start)
-            stop = None if slice.stop is None else self._get_index(i.stop)
-            return slice(start, i.step, stop)
-        if i < 0:
-            index = self.end + i
-        else:
-            index = self.start + i
-        if index < self.start or index >= self.end:
-            self._index_error(i)
-        return index
-
-    def __getitem__(self, i: Union[int, slice]) -> Union[int, bytes]:
-        return self.fp[self._get_index(i)]
-
-    def __setitem__(self, i: Union[int, slice], v: Union[int, bytes]) -> None:
-        self.fp[self._get_index(i)] = v # type: ignore
-
-    def __bytes__(self) -> bytes:
-        return self.fp[self.start:self.end]
 
 
 DEFAULT_META: WorldMeta = {

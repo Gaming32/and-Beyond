@@ -269,7 +269,7 @@ class ChunkPacket(Packet):
         _write_varint(self.chunk.abs_y, writer)
         _write_varint(self.chunk.x, writer)
         _write_varint(self.chunk.y, writer)
-        writer.write(bytes(self.chunk.get_data()))
+        writer.write(self.chunk.get_data())
 
 
 @autoslots
