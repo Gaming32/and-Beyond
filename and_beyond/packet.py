@@ -26,7 +26,7 @@ class PacketType(enum.IntEnum):
     CHUNK_UNLOAD = 8
     CHUNK_UPDATE = 9
     PLAYER_POS = 10
-    ADD_VELOCITY = 11
+    SIMPLE_PLAYER_POS = 11
     CHAT = 12
 
 
@@ -345,8 +345,8 @@ class PlayerPositionPacket(Packet):
 
 
 @autoslots
-class AddVelocityPacket(Packet):
-    type = PacketType.ADD_VELOCITY
+class SimplePlayerPositionPacket(Packet):
+    type = PacketType.SIMPLE_PLAYER_POS
     x: float
     y: float
 
@@ -393,6 +393,6 @@ PACKET_CLASSES: list[type[Packet]] = [
     UnloadChunkPacket, # CHUNK_UNLOAD
     ChunkUpdatePacket, # CHUNK_UPDATE
     PlayerPositionPacket, # PLAYER_POS
-    AddVelocityPacket, # ADD_VELOCITY
+    SimplePlayerPositionPacket, # SIMPLE_PLAYER_POS
     ChatPacket, # CHAT
 ]

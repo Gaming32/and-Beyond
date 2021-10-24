@@ -31,10 +31,11 @@ class PlayerPhysics:
         old_x = self.player.x
         old_y = self.player.y
         self.y_velocity += GRAVITY * delta
-        if self.x_velocity > 0.1 or self.x_velocity < -0.1:
-            self.x_velocity *= 0.7
-        else:
-            self.x_velocity = 0
+        self.x_velocity *= 0.75
+        # if self.x_velocity > 0.1 or self.x_velocity < -0.1:
+        #     pass # self.x_velocity *= 0.7
+        # else:
+        #     self.x_velocity = 0
         self.player.x += self.x_velocity
         if self.fix_collision_in_direction(self.x_velocity, 0):
             self.x_velocity = 0

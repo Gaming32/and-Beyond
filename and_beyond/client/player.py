@@ -12,7 +12,8 @@ from and_beyond.client.assets import CHAT_FONT, PERSON_SPRITES
 from and_beyond.client.consts import BLOCK_RENDER_SIZE
 from and_beyond.client.utils import lerp, world_to_screen
 from and_beyond.client.world import get_block_texture
-from and_beyond.packet import AddVelocityPacket, ChunkUpdatePacket
+from and_beyond.packet import ChunkUpdatePacket, SimplePlayerPositionPacket
+from and_beyond.physics import PlayerPhysics
 from and_beyond.utils import autoslots
 from and_beyond.world import BlockTypes
 from pygame import *
@@ -33,6 +34,8 @@ class ClientPlayer(AbstractPlayer):
     display_name: Optional[str]
     name_render: Optional[pygame.surface.Surface]
     name_offset: Vector2
+    physics: PlayerPhysics
+    time_since_physics: float
 
     def __init__(self, name: Optional[str] = None) -> None:
         self.x = inf
@@ -49,6 +52,8 @@ class ClientPlayer(AbstractPlayer):
         self.frame = 0
         self.display_name = name
         self.name_render = None
+        self.physics = PlayerPhysics(self)
+        self.time_since_physics = 0
 
     def render(self, surf: Surface) -> None:
         if self.x == inf or self.y == inf:
@@ -105,10 +110,26 @@ class ClientPlayer(AbstractPlayer):
         self.selected_block = new
         self.selected_block_texture = pygame.transform.scale(get_block_texture(new), (50, 50))
 
-    def add_velocity(self, x: float = 0, y: float = 0) -> None:
-        packet = AddVelocityPacket(x, y)
+    def send_position(self, x: float = None, y: float = None) -> None:
+        x = self.x if x is None else x
+        y = self.y if y is None else y
+        packet = SimplePlayerPositionPacket(x, y)
         assert globals.game_connection is not None
         globals.game_connection.write_packet_sync(packet)
+
+    def add_velocity(self, x: float = 0, y: float = 0) -> None:
+        self.physics.x_velocity += x
+        self.physics.y_velocity += y
+
+    def safe_physics_tick(self) -> None:
+        self.time_since_physics += globals.delta
+        dirty = False
+        while self.time_since_physics >= 0.02: # 50 physics tick per second
+            self.physics.tick(0.02)
+            dirty = dirty or self.physics.dirty
+            self.time_since_physics -= 0.02
+        if dirty:
+            self.send_position()
 
     def set_block(self, cx: int, cy: int, bx: int, by: int, block: BlockTypes) -> None:
         if (chunk := globals.local_world.loaded_chunks.get((cx, cy))) is not None:
