@@ -13,13 +13,14 @@ from typing import (TYPE_CHECKING, Any, ByteString, Callable, Optional, TypedDic
 
 import aiofiles
 
-from and_beyond.utils import MaxSizedDict, autoslots
+from and_beyond.utils import autoslots
 
 if TYPE_CHECKING:
     from and_beyond.server.world_gen.core import WorldGenerator
 
 ALLOWED_FILE_CHARS = ' ._'
 SECTION_SIZE = 262176
+DATA_VERSION = 1
 
 
 def safe_filename(name: str):
@@ -30,6 +31,10 @@ def safe_filename(name: str):
           [:248]
           .decode('utf-8', errors='ignore')
     )
+
+
+class SectionFormatError(Exception):
+    pass
 
 
 class WorldMeta(TypedDict):
@@ -216,6 +221,7 @@ class WorldSection:
     fp: mmap
     cached_chunks: dict[tuple[int, int], 'WorldChunk']
     load_counter: int
+    _data_version: int
 
     def __init__(self, world: World, x: int, y: int) -> None:
         self.world = world
@@ -223,12 +229,26 @@ class WorldSection:
         self.y = y
         self.path = world.sections_path / f'section_{x}_{y}.dat'
         with open(self.path, 'a+b') as fp:
+            if fp.tell() == 0:
+                fp.write(b'BEYOND')
+                fp.write(DATA_VERSION.to_bytes(4, 'little', signed=False))
             if fp.tell() < SECTION_SIZE:
                 fp.write(bytes(SECTION_SIZE - fp.tell()))
             self.fp = mmap(fp.fileno(), SECTION_SIZE, access=ACCESS_WRITE)
+        self._load_magic()
         world.open_sections[(x, y)] = self
         self.cached_chunks = {}
         self.load_counter = 0
+
+    def _load_magic(self) -> None:
+        magic = self.fp[:6]
+        version = self.fp[6:10]
+        if magic + version == b'\0' * 10:
+            self._data_version = 0
+            return
+        if magic != b'BEYOND':
+            raise SectionFormatError('Magic mismatch')
+        self._data_version = int.from_bytes(version, 'little', signed=False)
 
     def close(self) -> None:
         self._close()
@@ -267,6 +287,16 @@ class WorldSection:
         if self.load_counter <= 0 and cb is not None:
             cb(self)
         return self.load_counter
+
+    @property
+    def data_version(self) -> int:
+        return self._data_version
+
+    @data_version.setter
+    def data_version(self, ver: int) -> None:
+        self._data_version = ver
+        # Add magic to file in case it wasn't there already
+        self.fp[:10] = b'BEYOND' + ver.to_bytes(4, 'little', signed=False)
 
 
 @autoslots
