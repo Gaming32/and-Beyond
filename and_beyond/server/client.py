@@ -317,7 +317,9 @@ class Client:
         if not self.ready:
             return
         assert self.uuid is not None
-        while True:
+        packets_remaining = 20 # Don't receive more than 20 packets in one tick
+        while packets_remaining:
+            packets_remaining -= 1
             try:
                 packet = self.packet_queue.get_nowait()
             except asyncio.QueueEmpty:
@@ -336,8 +338,8 @@ class Client:
                             packet.block = chunk.get_tile_type(packet.bx, packet.by)
                             await write_packet(packet, self.writer)
                 elif isinstance(packet, PlayerPositionPacket):
-                    logging.warn('Player %s used illegal packet: PLAYER_POSITION (this packet is deprecated and a security hole)', self)
-                    await self.disconnect('Used illegal packet: PLAYER_POSITION (this packet is deprecated and a security hole)')
+                    logging.warn('Player %s used illegal packet: PLAYER_POS (this packet is deprecated and a security hole)', self)
+                    await self.disconnect('Used illegal packet: PLAYER_POS (this packet is deprecated and a security hole)')
                     return
                     prev_x = self.player.x
                     prev_y = self.player.y
