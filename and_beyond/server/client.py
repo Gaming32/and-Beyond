@@ -312,13 +312,19 @@ class Client:
                 return
 
     async def packet_tick(self) -> None:
-        while self.server.running:
+        while self.server.running and self.ready:
             try:
                 packet = await read_packet(self.reader)
             except (asyncio.IncompleteReadError, ConnectionError):
                 await self.disconnect(f'{self.player} left the game', False)
                 return
             if isinstance(packet, SimplePlayerPositionPacket):
+                try:
+                    int(packet.x)
+                    int(packet.y)
+                except ValueError as e:
+                    await self.disconnect(str(e))
+                    break
                 self.new_x = packet.x
                 self.new_y = packet.y
             else:
