@@ -133,8 +133,10 @@ async def tp_command(sender: 'AbstractCommandSender', args: str) -> None:
         except ValueError:
             return await sender.reply('Third argument must be number')
         to = (x, y)
+    assert from_.player is not None
     from_ = from_.player
     if isinstance(to, Client):
+        assert to.player is not None
         to = to.player
         from_.x = to.x
         from_.y = to.y

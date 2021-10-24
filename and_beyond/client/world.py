@@ -31,7 +31,7 @@ class ClientWorld:
     def unload(self) -> None:
         self.loaded_chunks.clear()
 
-    def tick(self, surf: Surface) -> None:
+    def tick(self, surf: pygame.surface.Surface) -> None:
         if globals.player.y < -80: # or self._is_under_block_in_2_chunks(): # This just looks wrong
             surf.fill((125, 179, 179)) # Darker blue
         else:
@@ -44,7 +44,7 @@ class ClientWorld:
             rpos += half_size
             rpos.y = surf.get_height() - rpos.y
             surf.blit(chunk_render, chunk_render.get_rect().move(rpos))
-        surf.blit(SELECTED_ITEM_BG[0], (15, surf.get_height() - 85, 70, 70)) # type: ignore
+        surf.blit(SELECTED_ITEM_BG[0], (15, surf.get_height() - 85, 70, 70))
         surf.blit(
             globals.player.selected_block_texture,
             (25, surf.get_height() - 75, 50, 50)
@@ -108,7 +108,7 @@ class ClientWorld:
 class ClientChunk(WorldChunk):
     redraw: set[tuple[int, int]]
     dirty: bool
-    surf: Surface
+    surf: pygame.surface.Surface
 
     def __init__(self, chunk: WorldChunk) -> None:
         # Copy self
@@ -124,9 +124,9 @@ class ClientChunk(WorldChunk):
         # Initialization
         self.redraw = set()
         self.dirty = True
-        self.surf = Surface((CHUNK_RENDER_SIZE, CHUNK_RENDER_SIZE)).convert_alpha() # type: ignore
+        self.surf = Surface((CHUNK_RENDER_SIZE, CHUNK_RENDER_SIZE)).convert_alpha()
 
-    def render(self) -> Surface:
+    def render(self) -> pygame.surface.Surface:
         if self.dirty:
            self.surf.fill((0, 0, 0, 0))
            for x in range(16):
@@ -155,7 +155,7 @@ class ClientChunk(WorldChunk):
         self.redraw.add((x, y))
 
 
-def get_block_texture(block: BlockTypes) -> Surface:
+def get_block_texture(block: BlockTypes) -> pygame.surface.Surface:
     if block > len(BLOCK_SPRITES):
         tex = MISSING_TEXTURE[0]
     else:
@@ -163,4 +163,4 @@ def get_block_texture(block: BlockTypes) -> Surface:
             tex = random.choice(BLOCK_SPRITES[block - 1])
         else:
             tex = BLOCK_SPRITES[block - 1][0]
-    return tex # type: ignore
+    return tex

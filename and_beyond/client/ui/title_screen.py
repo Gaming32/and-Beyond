@@ -27,7 +27,7 @@ class TitleScreen(Ui):
             UiButton('Quit', self.quit),
         ])
 
-    def draw_and_call(self, surf: Surface) -> None:
+    def draw_and_call(self, surf: pygame.surface.Surface) -> None:
         surf.fill((0, 0, 0))
         if globals.ui_override is not None:
             return globals.ui_override.draw_and_call(surf)

@@ -27,7 +27,7 @@ class ClientPlayer(AbstractPlayer):
     render_y: float
     is_local: bool
     selected_block: BlockTypes
-    selected_block_texture: Surface
+    selected_block_texture: pygame.surface.Surface
     dir: bool
     frame: float
     display_name: Optional[str]
@@ -103,7 +103,7 @@ class ClientPlayer(AbstractPlayer):
 
     def change_selected_block(self, new: BlockTypes) -> None:
         self.selected_block = new
-        self.selected_block_texture = pygame.transform.scale(get_block_texture(new), (50, 50)) # type: ignore
+        self.selected_block_texture = pygame.transform.scale(get_block_texture(new), (50, 50))
 
     def add_velocity(self, x: float = 0, y: float = 0) -> None:
         packet = AddVelocityPacket(x, y)

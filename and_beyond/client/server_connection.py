@@ -132,6 +132,7 @@ class ServerConnection:
             await asyncio.sleep(0)
             if isinstance(packet, ChunkPacket):
                 # The chunk is never None when recieved from the network
+                assert packet.chunk is not None
                 chunk = packet.chunk
                 client_chunk = ClientChunk(chunk)
                 globals.local_world.loaded_chunks[(chunk.abs_x, chunk.abs_y)] = client_chunk

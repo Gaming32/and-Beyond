@@ -50,7 +50,7 @@ class AsyncServer:
 
     host: str
     port: int
-    async_server: Server
+    async_server: Optional[Server]
     clients: list[Client]
     clients_by_uuid: dict[UUID, Client]
     clients_by_name: dict[str, Client]
@@ -61,7 +61,7 @@ class AsyncServer:
     command_sender: ConsoleCommandSender
 
     last_spt: float
-    world: World
+    world: Optional[World]
     world_generator: WorldGenerator
 
     pipe_commands_task: Optional[asyncio.Task]
@@ -69,7 +69,6 @@ class AsyncServer:
 
     def __init__(self) -> None:
         self.random_tick_rate = Fraction(RANDOM_TICK_RATE)
-        self.loop = None # type: ignore
         self.singleplayer_pipe_in = None
         self.singleplayer_pipe_out = None
         self.multiplayer = True
@@ -78,8 +77,8 @@ class AsyncServer:
         self.has_been_shutdown = False
         self.gc_task = None
         self.all_loaded_chunks = {}
-        self.async_server = None # type: ignore
-        self.world = None # type: ignore
+        self.async_server = None
+        self.world = None
         self.clients = []
         self.clients_by_uuid = {}
         self.clients_by_name = {}
@@ -126,6 +125,7 @@ class AsyncServer:
     async def receive_singleplayer_commands(self, pipe: BinaryIO):
         while not self.running:
             await asyncio.sleep(0)
+        assert self.async_server is not None
         while self.running:
             command = await self.loop.run_in_executor(None, pipe.read, 2)
             command = PipeCommandsToServer.from_bytes(command, 'little')
@@ -146,6 +146,7 @@ class AsyncServer:
                 await self.send_chat(f'Opened to LAN on port {self.port}')
 
     async def set_block(self, cx: int, cy: int, bx: int, by: int, block: BlockTypes) -> None:
+        assert self.world is not None
         tasks: list[asyncio.Task] = []
         self.world.get_chunk(cx, cy).set_tile_type(bx, by, block)
         chunk_pos = (cx, cy)
@@ -335,6 +336,9 @@ class AsyncServer:
                             await self.set_block_rel_chunk_global(chunk_above, x_off, y_above, block)
 
     async def section_gc(self):
+        while not self.running:
+            await asyncio.sleep(0)
+        assert self.world is not None
         while self.running:
             await asyncio.sleep(GC_TIME_SECONDS)
             logging.debug('Running backup section GC')

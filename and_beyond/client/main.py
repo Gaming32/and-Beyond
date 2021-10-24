@@ -54,7 +54,7 @@ globals.display_info = pygame.display.Info()
 globals.config = config = ConfigManager(globals.display_info)
 
 
-def reset_window() -> Surface:
+def reset_window() -> pygame.surface.Surface:
     pygame.display.init()
     globals.display_info = pygame.display.Info()
     if globals.fullscreen:
@@ -71,8 +71,7 @@ def reset_window() -> Surface:
         pygame.scrap.init()
     except pygame.error:
         logging.warn('pygame.scrap unavailable. Clipboard support is disabled.')
-    # type: ignore is needed to shut type checkers up about https://github.com/pygame/pygame/issues/839#issuecomment-812919220
-    return surf # type: ignore
+    return surf
 
 
 def render_debug() -> None:

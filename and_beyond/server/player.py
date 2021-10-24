@@ -24,6 +24,7 @@ class Player(AbstractPlayer):
     aloop: AbstractEventLoop
 
     def __init__(self, client: 'Client', name: str = None) -> None:
+        assert client.server.world is not None
         world = client.server.world
         self.data_path = world.players_path / f'{client.uuid}.json'
         if client.uuid is not None and client.uuid.int == 0:
@@ -37,6 +38,7 @@ class Player(AbstractPlayer):
         self.loaded_chunks = client.loaded_chunks # Reference to fulfill AbstractPlayer
 
     async def ainit(self) -> None:
+        assert self.client.server.world is not None
         self.aloop = self.client.aloop
         world = self.client.server.world
         spawn_x = world.meta['spawn_x']

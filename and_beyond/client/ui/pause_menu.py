@@ -32,7 +32,7 @@ class PauseMenu(Ui):
             self.disconnect_button,
         ))
 
-    def draw_and_call(self, surf: Surface):
+    def draw_and_call(self, surf: pygame.surface.Surface):
         gray = Surface(surf.get_size()).convert_alpha()
         gray.fill((0, 0, 0, 128))
         surf.blit(gray, gray.get_rect())

@@ -4,7 +4,7 @@ import random
 import sys
 from asyncio.events import AbstractEventLoop
 from typing import (Any, Awaitable, Callable, Generator, Generic, Iterable,
-                    MutableSequence, Optional, Sequence, TypeVar, Union)
+                    MutableSequence, Optional, Sequence, TypeVar, Union, overload)
 
 _T = TypeVar('_T')
 _T_type = TypeVar('_T_type', bound=type)
@@ -25,11 +25,18 @@ DATA_FORMAT = '%H:%M:%S'
 DEBUG = '--debug' in sys.argv
 
 
-def mean(values: Iterable[float]) -> float:
+@overload
+def mean(values: Sequence[float]) -> float: ...
+
+@overload
+def mean(values: Iterable[float]) -> float: ...
+
+def mean(values):
     if hasattr(values, '__len__'):
-        return sum(values) / len(values) # type: ignore
+        return sum(values) / len(values)
     i = 0
     s = 0.0
+    v: float
     for (i, v) in enumerate(values):
         s += v
     return s / (i + 1)
@@ -70,52 +77,6 @@ def autoslots(cls: _T_type) -> _T_type:
 
 def get_opt(opt: str, offset: int = 1) -> str:
     return sys.argv[sys.argv.index(opt) + offset]
-
-
-@autoslots
-class View(Generic[_T]):
-    c: Sequence[_T]
-    start: int
-    end: Optional[int]
-
-    def __init__(self, c: Sequence[_T], start: int, end: Optional[int] = None) -> None:
-        self.c = c
-        self.start = start
-        self.end = end
-
-    def _index_error(self, i: int):
-        raise IndexError(f'{i} out of bounds for View({self.c}, {self.start}, {self.end})')
-
-    def _get_index(self, i: Union[int, slice]) -> Union[int, slice]:
-        if isinstance(i, slice):
-            start = self._get_index(i.start)
-            stop = None if slice.stop is None else self._get_index(i.stop)
-            return slice(start, i.step, stop)
-        end = len(self.c) if self.end is None else self.end
-        if i < 0:
-            index = end + i
-        else:
-            index = self.start + i
-        if index < self.start or index >= end:
-            self._index_error(i)
-        return index
-
-    def __getitem__(self, i: Union[int, slice]) -> Union[_T, Sequence[_T]]:
-        return self.c[self._get_index(i)]
-
-
-@autoslots
-class MutableView(View[_T], Generic[_T]):
-    c: MutableSequence[_T]
-
-    def __init__(self, c: MutableSequence[_T], start: int, end: Optional[int] = None) -> None:
-        self.c = c
-        self.start = start
-        self.end = end
-
-    def __setitem__(self, i: Union[int, slice], v: _T) -> None:
-        # Why does Pyright hate me?
-        self.c[self._get_index(i)] = v # type: ignore
 
 
 @autoslots

@@ -33,7 +33,7 @@ class UiElement(abc.ABC):
         return DEFAULT_ELEMENT_HEIGHT
 
     @abc.abstractmethod
-    def draw_and_call(self, surf: Surface, at: Vector2, preseed: list[bool], released: list[bool]) -> Any:
+    def draw_and_call(self, surf: pygame.surface.Surface, at: Vector2, preseed: list[bool], released: list[bool]) -> Any:
         pass
 
 
@@ -267,7 +267,7 @@ class Ui:
         if globals.ui_override is self:
             globals.ui_override = self.parent
 
-    def draw_and_call(self, surf: Surface) -> None:
+    def draw_and_call(self, surf: pygame.surface.Surface) -> None:
         pressed = list(pygame.mouse.get_pressed(5))
         released = globals.released_mouse_buttons
 

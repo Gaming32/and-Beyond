@@ -2,7 +2,7 @@ import abc
 import asyncio
 import enum
 import struct
-from typing import Optional, TypeVar
+from typing import Optional, TypeVar, cast
 from uuid import UUID
 
 from and_beyond.common import KEY_LENGTH, PROTOCOL_VERSION
@@ -58,7 +58,7 @@ async def write_packet(packet: Packet, writer: WriterMiddleware) -> None:
 
 
 async def _read_ushort(reader: ReaderMiddleware, factory: type[_T_int] = int) -> _T_int:
-    return factory.from_bytes(await reader.readexactly(2), 'little', signed=False) # type: ignore
+    return cast(_T_int, factory.from_bytes(await reader.readexactly(2), 'little', signed=False))
 
 
 async def _read_varint(reader: ReaderMiddleware) -> int:
@@ -248,10 +248,10 @@ class PingPacket(Packet):
 @autoslots
 class ChunkPacket(Packet):
     type = PacketType.CHUNK
-    chunk: WorldChunk # Can be None, but that makes Pyright go crazy in server_connection.py lol
+    chunk: Optional[WorldChunk]
 
     def __init__(self, chunk: Optional[WorldChunk] = None) -> None:
-        self.chunk = chunk # type: ignore
+        self.chunk = chunk
 
     async def read(self, reader: ReaderMiddleware) -> None:
         abs_x = await _read_varint(reader)

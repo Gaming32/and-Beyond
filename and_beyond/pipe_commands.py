@@ -1,5 +1,5 @@
 import enum
-from typing import BinaryIO, TypeVar
+from typing import BinaryIO, TypeVar, cast
 
 _T_int = TypeVar('_T_int', bound=int)
 
@@ -20,4 +20,4 @@ def write_pipe(pipe: BinaryIO, command: int, size: int = 2, signed: bool = False
 
 
 def read_pipe(pipe: BinaryIO, cls: type[_T_int] = int, size: int = 2, signed: bool = False) -> _T_int:
-    return cls.from_bytes(pipe.read(size), 'little', signed=signed) # type: ignore
+    return cast(_T_int, cls.from_bytes(pipe.read(size), 'little', signed=signed))

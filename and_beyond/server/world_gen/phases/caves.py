@@ -59,7 +59,6 @@ def test() -> None:
     for x in range(-256, 256):
         for y in range(-256, 256):
             noise = CavePhase.noise(ns, x / X_SCALE, y / Y_SCALE) + Y_OFFSET # type: ignore
-            # im.putpixel((x + 256, y + 256), int((noise + 1) * 128))
             im.putpixel((x + 256, y + 256), int(noise * 256))
 
     im.save(f'test{X_SCALE}_{Y_SCALE}_{OCTAVES}_1.png')

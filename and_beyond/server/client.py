@@ -57,7 +57,7 @@ class Client:
     load_chunks_task: Optional[asyncio.Task]
     loaded_chunks: dict[tuple[int, int], WorldChunk]
 
-    player: Player
+    player: Optional[Player]
     nickname: Optional[str]
     command_sender: ClientCommandSender
 
@@ -74,7 +74,7 @@ class Client:
         self.send_players_task = None
         self.load_chunks_task = None
         self.loaded_chunks = {}
-        self.player = None # type: ignore (A single ignore is easier than convincing the type checker that this is almost never null)
+        self.player = None
         self.nickname = None
         self.command_sender = ClientCommandSender(self)
 
@@ -222,6 +222,7 @@ class Client:
         return True
 
     async def load_chunk(self, x: int, y: int) -> None:
+        assert self.server.world is not None
         if (x, y) in self.server.all_loaded_chunks:
             chunk = self.server.all_loaded_chunks[(x, y)]
         else:
@@ -250,6 +251,7 @@ class Client:
             await write_packet(packet, self.writer)
 
     async def load_chunks_around_player(self, diameter: int = VIEW_DISTANCE_BOX) -> None:
+        assert self.player is not None
         async def load_chunk_rel(x, y):
             await asyncio.sleep(0)
             x += cx
@@ -280,9 +282,11 @@ class Client:
 
     async def send_player_positions(self):
         assert self.uuid is not None
+        assert self.player is not None
         for client in self.server.clients:
             if client is not self and client.ready:
                 assert client.uuid is not None
+                assert client.player is not None
                 cx = int(client.player.x) >> 4
                 cy = int(client.player.y) >> 4
                 if (cx, cy) in self.loaded_chunks:
@@ -317,6 +321,7 @@ class Client:
         if not self.ready:
             return
         assert self.uuid is not None
+        assert self.player is not None
         packets_remaining = 20 # Don't receive more than 20 packets in one tick
         while packets_remaining:
             packets_remaining -= 1

@@ -75,7 +75,7 @@ BLOCK_SPRITES: list[list[pygame.surface.Surface]] = []
 ROTATABLE_BLOCKS = [False, True, True, False, False, False, True]
 
 
-SELECTED_ITEM_BG = [Surface((70, 70))]
+SELECTED_ITEM_BG = [pygame.surface.Surface((70, 70))]
 ASSET_COUNT += 1
 
 def transform_assets() -> int:
@@ -92,7 +92,7 @@ def transform_assets() -> int:
                 BLOCK_SPRITES[i].append(rot.convert_alpha())
         count += 1
     MISSING_TEXTURE[0] = MISSING_TEXTURE[0].convert()
-    SELECTED_ITEM_BG[0] = SELECTED_ITEM_BG[0].convert_alpha() # type: ignore
+    SELECTED_ITEM_BG[0] = SELECTED_ITEM_BG[0].convert_alpha()
     SELECTED_ITEM_BG[0].fill((0, 0, 0, 192))
     count += 2
     return count
