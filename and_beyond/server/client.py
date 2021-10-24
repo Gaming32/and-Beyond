@@ -1,5 +1,4 @@
 import asyncio
-import binascii
 import logging
 import time
 from asyncio import StreamReader, StreamWriter
@@ -180,7 +179,7 @@ class Client:
                 return False
         else:
             assert auth_client is not None
-            client_token = binascii.b2a_hex(client_token).decode('ascii')
+            client_token = client_token.hex()
             try:
                 session = await auth_client.sessions.retrieve(client_token)
             except Exception as e:

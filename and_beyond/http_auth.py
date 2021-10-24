@@ -1,4 +1,4 @@
-import binascii
+import base64
 import logging
 from datetime import datetime
 from typing import Any, Optional, Union
@@ -183,7 +183,7 @@ class Session:
     @classmethod
     def from_json(cls, json: dict[str, Any]):
         return cls(
-            binascii.a2b_base64(json['public_key']),
+            base64.b64decode(json['public_key']),
             datetime.fromisoformat(json['expiry']),
             User.from_json(json['user']),
         )
@@ -212,7 +212,7 @@ class _SessionClient:
         logging.debug('sessions.create(**, **)')
         async with self.sess.post(self.root / 'new', json={
             'user_token': user_token,
-            'public_key': binascii.b2a_base64(public_key).decode('ascii'),
+            'public_key': base64.b64encode(public_key).decode('ascii')
         }) as resp:
             await _check_error(resp)
             json = await resp.json()

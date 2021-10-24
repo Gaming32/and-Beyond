@@ -1,5 +1,4 @@
 import asyncio
-import binascii
 import logging
 import math
 import threading
@@ -237,7 +236,7 @@ class ServerConnection:
                         self.disconnect_reason = f'Failed to fetch profile: {e}'
                     return False
                 sess_token, session = await auth.sessions.create(profile, key_bytes)
-                packet = BasicAuthPacket(binascii.a2b_hex(sess_token))
+                packet = BasicAuthPacket(bytes.fromhex(sess_token))
             await write_packet(packet, self.writer)
             if is_localhost:
                 logging.debug('localhost connection not encrypted')
