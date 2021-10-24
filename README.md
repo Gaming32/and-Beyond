@@ -33,6 +33,7 @@ Argument                  | Action
 `--auth-server <address>` | Use the specified authentication server instead of the default
 `--insecure-auth`         | Allow the auth server to be insecure (use HTTP instead of HTTPS)
 `--debug`                 | Run in debug mode (shows debug messages)
+`--no-op`                 | Don't actually enter the main loop
 
 ### Servers
 
@@ -40,4 +41,5 @@ Argument                          | Action
 --------------------------------- | -------------------------------------------------------------------------------------
 `--world <name>`                  | Use the world called `<name>`
 `--listen <[host]:[port]>`        | Listen on the specified host and port (default host: `0.0.0.0`, default port: `7932`)
+`--no-optimize`                   | Don't optimize the world on startup
 `--singleplayer <fd_in> <fd_out>` | **Internal use only**

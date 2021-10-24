@@ -231,7 +231,7 @@ class AsyncServer:
         logging.info('Loading world "%s"', world_name)
 
         self.world = World(world_name, auto_optimize=True)
-        await self.world.ainit()
+        await self.world.ainit('--no-optimize' not in sys.argv)
         self.world_generator = WorldGenerator(self.world.meta['seed'])
         logging.info('Locating spawn location for world...')
         start = time.perf_counter()
@@ -247,7 +247,9 @@ class AsyncServer:
             self.singleplayer_pipe_out.flush()
 
         logging.info('Server started')
-        self.running = True
+        self.running = '--no-op' not in sys.argv
+        if not self.running:
+            logging.info('Running in no-op mode')
         logging.debug('Setting up backup section GC')
         self.gc_task = self.loop.create_task(self.section_gc())
         time_since_last_second = 0

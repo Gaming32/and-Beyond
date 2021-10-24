@@ -126,7 +126,9 @@ disconnect_reason: Optional[str] = None
 move_left = False
 move_right = False
 move_up = False
-globals.running = True
+globals.running = '--no-op' not in sys.argv
+if not globals.running:
+    logging.info('Running in no-op mode')
 globals.frame = 0
 clock = pygame.time.Clock()
 pygame.time.set_timer(PERIODIC_TICK_EVENT, 250)

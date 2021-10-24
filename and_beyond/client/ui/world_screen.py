@@ -85,6 +85,7 @@ class WorldScreen(Ui):
             '--singleplayer', str(pipe_out), str(pipe_in),
             '--world', name,
             '--auth-server', globals.auth_server,
+            '--no-optimize',
         ]
         if DEBUG:
             server_args.append('--debug')
