@@ -4,12 +4,13 @@ import json
 import logging
 import random
 import time
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from json.decoder import JSONDecodeError
 from mmap import ACCESS_WRITE, mmap
 from pathlib import Path
-from typing import (TYPE_CHECKING, Any, ByteString, Callable, Optional, TypedDict,
-                    Union)
+from typing import (TYPE_CHECKING, Any, Awaitable, ByteString, Callable,
+                    Optional, TypedDict, Union)
 
 import aiofiles
 
@@ -58,14 +59,16 @@ class World:
     sections_path: Path
 
     open_sections: dict[tuple[int, int], 'WorldSection']
+    auto_optimize: bool
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, auto_optimize: bool = False) -> None:
         self.name = name
         self.safe_name = safe_filename(name)
         self.root = Path('worlds') / self.safe_name
         self.players_path = self.root / 'players'
         self.sections_path = self.root / 'sections'
         self.open_sections = {}
+        self.auto_optimize = auto_optimize
 
     def _default_meta(self) -> None:
         meta = DEFAULT_META.copy()
@@ -73,9 +76,42 @@ class World:
         meta['seed'] = time.time_ns() & (2 ** 64 - 1)
         self.meta = meta
 
-    async def ainit(self):
+    async def ainit(self, optimize: bool = None):
+        if optimize is None:
+            optimize = self.auto_optimize
         self.aloop = asyncio.get_running_loop()
         await self.ensure_exists()
+        if optimize:
+            start = time.perf_counter()
+            with ThreadPoolExecutor(thread_name_prefix='Optimize') as executor:
+                tasks: list[Awaitable] = []
+                for sect_path in self.sections_path.glob('section_*_*.dat'):
+                    try:
+                        x, y = sect_path.name.split('_', 2)[1:]
+                        x = int(x)
+                        y = int(y.split('.', 1)[0])
+                    except Exception:
+                        logging.warn('Invalid section file name: %s', sect_path.name)
+                        continue
+                    sect = WorldSection(self, x, y, optimize=False)
+                    tasks.append(self.aloop.run_in_executor(executor, sect.optimize))
+                logging.info('Attempting to optimize %i sections', len(tasks))
+                results = await asyncio.gather(*tasks)
+                for sect in list(self.open_sections.values()):
+                    sect.close()
+            end = time.perf_counter()
+            success_count = results.count(True)
+            errors_count = sum(isinstance(r, Exception) for r in results)
+            if errors_count:
+                logging.info(
+                    'Optimized %i sections (with %i failures) in %f seconds',
+                    success_count, errors_count, end - start
+                )
+            else:
+                logging.info(
+                    'Successfully optimized %i sections (with no failures) in %f seconds',
+                    success_count, end - start
+                )
 
     async def ensure_exists(self) -> None:
         await self.mkdirs(self.root, self.players_path, self.sections_path)
@@ -223,7 +259,7 @@ class WorldSection:
     load_counter: int
     _data_version: int
 
-    def __init__(self, world: World, x: int, y: int) -> None:
+    def __init__(self, world: World, x: int, y: int, optimize: bool = None) -> None:
         self.world = world
         self.x = x
         self.y = y
@@ -239,6 +275,8 @@ class WorldSection:
         world.open_sections[(x, y)] = self
         self.cached_chunks = {}
         self.load_counter = 0
+        if (optimize is None and world.auto_optimize) or optimize:
+            self.optimize()
 
     def _load_magic(self) -> None:
         magic = self.fp[:6]
@@ -250,7 +288,19 @@ class WorldSection:
             raise SectionFormatError('Magic mismatch')
         self._data_version = int.from_bytes(version, 'little', signed=False)
 
+    def optimize(self) -> bool:
+        if self.data_version > DATA_VERSION:
+            raise SectionFormatError(f'Section version too new! ({self.data_version} > {DATA_VERSION})')
+        if self.data_version == DATA_VERSION:
+            return False
+        start = time.perf_counter()
+        self.data_version = DATA_VERSION
+        end = time.perf_counter()
+        logging.info('Optimized section (%i, %i) in %f seconds', self.x, self.y, end - start)
+        return True
+
     def close(self) -> None:
+        logging.debug('Closing section (%i, %i)', self.x, self.y)
         self._close()
         self.world.open_sections.pop((self.x, self.y), None)
 

@@ -230,7 +230,7 @@ class AsyncServer:
             world_name = 'world'
         logging.info('Loading world "%s"', world_name)
 
-        self.world = World(world_name)
+        self.world = World(world_name, auto_optimize=True)
         await self.world.ainit()
         self.world_generator = WorldGenerator(self.world.meta['seed'])
         logging.info('Locating spawn location for world...')
