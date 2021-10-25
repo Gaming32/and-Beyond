@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import math
 import time
 from asyncio import StreamReader, StreamWriter
 from asyncio.events import AbstractEventLoop
@@ -100,9 +101,6 @@ class Client:
         elif self.nickname in self.server.clients_by_name:
             await self.disconnect('That name is taken.')
             return
-        self.packet_queue = asyncio.Queue()
-        self.ping_task = self.aloop.create_task(self.periodic_ping())
-        self.packet_task = self.aloop.create_task(self.packet_tick())
         self.player = Player(self, self.nickname)
         await self.player.ainit()
         self.new_x = self.player.x
@@ -120,6 +118,9 @@ class Client:
         await write_packet(packet, self.writer)
         self.send_players_task = self.aloop.create_task(self.send_player_positions())
         self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
+        self.packet_queue = asyncio.Queue()
+        self.ping_task = self.aloop.create_task(self.periodic_ping())
+        self.packet_task = self.aloop.create_task(self.packet_tick())
         self.server.clients_by_uuid[self.uuid] = self
         self.server.clients_by_name[self.nickname] = self
         self.ready = True
@@ -323,14 +324,15 @@ class Client:
                 await self.disconnect(f'{self.player} left the game', False)
                 return
             if isinstance(packet, SimplePlayerPositionPacket):
-                try:
-                    int(packet.x ** 2)
-                    int(packet.y ** 2)
-                except (ValueError, OverflowError) as e:
-                    await self.disconnect(str(e))
-                    break
-                self.new_x = packet.x
-                self.new_y = packet.y
+                if packet.x != math.inf and packet.y != math.inf:
+                    try:
+                        int(packet.x ** 2)
+                        int(packet.y ** 2)
+                    except (ValueError, OverflowError) as e:
+                        await self.disconnect(str(e))
+                        break
+                    self.new_x = packet.x
+                    self.new_y = packet.y
             else:
                 await self.packet_queue.put(packet)
 
