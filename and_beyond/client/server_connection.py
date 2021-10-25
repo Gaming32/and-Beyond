@@ -29,7 +29,7 @@ from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket,
                                ChunkUpdatePacket, ClientRequestPacket,
                                DisconnectPacket, Packet, PingPacket,
                                PlayerInfoPacket, PlayerPositionPacket,
-                               RemovePlayerPacket, ServerInfoPacket,
+                               RemovePlayerPacket, ServerInfoPacket, SimplePlayerPositionPacket,
                                UnloadChunkPacket, read_packet,
                                read_packet_timeout, write_packet)
 from and_beyond.utils import DEBUG
@@ -152,6 +152,9 @@ class ServerConnection:
                 if player is not None:
                     player.x = packet.x
                     player.y = packet.y
+            elif isinstance(packet, SimplePlayerPositionPacket):
+                globals.player.x = packet.x
+                globals.player.y = packet.y
             elif isinstance(packet, PlayerInfoPacket):
                 new_player = ClientPlayer(packet.name)
                 globals.all_players[packet.uuid] = new_player

@@ -116,6 +116,8 @@ class Client:
         packet = PlayerInfoPacket(self.uuid, self.nickname)
         await self.server.send_to_all(packet, exclude_player=self)
         await self.load_chunks_around_player(9)
+        packet = SimplePlayerPositionPacket(self.player.x, self.player.y)
+        await write_packet(packet, self.writer)
         self.send_players_task = self.aloop.create_task(self.send_player_positions())
         self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
         self.server.clients_by_uuid[self.uuid] = self
@@ -312,6 +314,8 @@ class Client:
                 return
 
     async def packet_tick(self) -> None:
+        while not self.ready:
+            await asyncio.sleep(0)
         while self.server.running and self.ready:
             try:
                 packet = await read_packet(self.reader)
@@ -320,9 +324,9 @@ class Client:
                 return
             if isinstance(packet, SimplePlayerPositionPacket):
                 try:
-                    int(packet.x)
-                    int(packet.y)
-                except ValueError as e:
+                    int(packet.x ** 2)
+                    int(packet.y ** 2)
+                except (ValueError, OverflowError) as e:
                     await self.disconnect(str(e))
                     break
                 self.new_x = packet.x
@@ -425,7 +429,10 @@ class Client:
             logging.debug('Player %s data saved in %f seconds', self, end - start)
         for (cx, cy) in list(self.loaded_chunks.keys()):
             await self.unload_chunk(cx, cy, True)
-        await self._writer.wait_closed()
+        try:
+            await self._writer.wait_closed()
+        except ConnectionError:
+            pass
         if self.uuid is not None:
             logging.debug('Sending removal packets to remaining players')
             packet = RemovePlayerPacket(self.uuid)

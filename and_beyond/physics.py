@@ -30,6 +30,8 @@ class PlayerPhysics:
     def tick(self, delta: float) -> None:
         old_x = self.player.x
         old_y = self.player.y
+        if old_x == math.inf or old_y == math.inf:
+            return
         self.y_velocity += GRAVITY * delta
         self.x_velocity *= 0.75
         # if self.x_velocity > 0.1 or self.x_velocity < -0.1:
