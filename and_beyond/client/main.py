@@ -305,13 +305,15 @@ while globals.running:
                         disconnect_reason = None
         else:
             globals.mouse_world = screen_to_world(globals.mouse_screen, screen)
-            if globals.game_connection is not None and not globals.paused:
-                if move_left ^ move_right:
-                    globals.player.add_velocity(x=MOVE_SPEED * globals.delta * (move_right - move_left))
-                if move_up and globals.player.physics.air_time < 2:
-                    globals.player.add_velocity(y=JUMP_SPEED)
-                move_up = False
-                globals.player.safe_physics_tick()
+            if globals.game_connection is not None:
+                if not globals.paused:
+                    if move_left ^ move_right:
+                        globals.player.add_velocity(x=MOVE_SPEED * globals.delta * (move_right - move_left))
+                    if move_up and globals.player.physics.air_time < 2:
+                        globals.player.add_velocity(y=JUMP_SPEED)
+                    move_up = False
+                if (globals.singleplayer_pipe_in is None) or not globals.paused:
+                    globals.player.safe_physics_tick()
             globals.local_world.tick(screen)
             # globals.player.render(screen)
             for player in globals.all_players.values():
