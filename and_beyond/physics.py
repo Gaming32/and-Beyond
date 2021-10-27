@@ -1,7 +1,7 @@
 import math
 
 from and_beyond.abstract_player import AbstractPlayer
-from and_beyond.common import GRAVITY
+from and_beyond.common import GRAVITY, TERMINAL_VELOCITY
 from and_beyond.utils import autoslots
 from and_beyond.world import BlockTypes
 
@@ -47,8 +47,8 @@ class PlayerPhysics:
             self.air_time = 0
         else:
             self.air_time += 1
-        if self.y_velocity < -4:
-            self.y_velocity = -4
+        if self.y_velocity < TERMINAL_VELOCITY:
+            self.y_velocity = TERMINAL_VELOCITY
         self.dirty = self.player.y != old_y or self.player.x != old_x
 
     # Thanks to Griffpatch and his amazing Tile Scrolling Platformer series for this code :)
@@ -90,7 +90,15 @@ class PlayerPhysics:
             self.player.x -= EPSILON + mx
         return True
 
-    def _get_tile_type(self, x: int, y: int) -> BlockTypes:
+    def is_grounded(self) -> bool:
+        x = self.player.x
+        iy = math.floor(self.player.y - 2 * EPSILON)
+        return (
+            self.get_tile_type(math.floor(x + 0.2), iy) != BlockTypes.AIR
+            or self.get_tile_type(math.floor(x + 0.8), iy) != BlockTypes.AIR
+        )
+
+    def get_tile_type(self, x: int, y: int) -> BlockTypes:
         cx = x >> 4
         cy = y >> 4
         bx = x - (cx << 4)

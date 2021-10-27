@@ -79,6 +79,7 @@ def render_debug() -> None:
     lines = [
         f'FPS: {clock.get_fps():.2f}',
         f'X/Y: {globals.player.x:.1f}/{globals.player.y:.1f}',
+        f'VX/VY: {globals.player.physics.x_velocity:.1f}/{globals.player.physics.y_velocity:.1f}',
     ]
     if globals.player.x != inf and globals.player.y != inf:
         cx = int(globals.player.x) >> 4

@@ -21,11 +21,20 @@ VIEW_DISTANCE_BOX = 2 * VIEW_DISTANCE + 1
 REACH_DISTANCE = 5
 REACH_DISTANCE_SQ = REACH_DISTANCE * REACH_DISTANCE
 MOVE_SPEED = 2.25
-MOVE_SPEED_CAP = 10
+MOVE_SPEED_CAP = 20
 MOVE_SPEED_CAP_SQ = MOVE_SPEED_CAP * MOVE_SPEED_CAP
 JUMP_SPEED = 0.7
 GRAVITY = -3
 RANDOM_TICK_RATE = 1 / 2 # Numerator = blocks in chunk, denominator = blocks in chunk
+TERMINAL_VELOCITY = -2
+
+# v = vo + a * t
+# a * t = v - vo
+# t = (v - vo) / a
+# Where v is TERMINAL_VELOCITY,
+# vo is JUMP_SPEED
+# and a is GRAVITY
+TERMINAL_VELOCITY_TIME = (TERMINAL_VELOCITY - JUMP_SPEED) / GRAVITY
 
 
 def get_version_name(protocol_version: int) -> str:

@@ -9,18 +9,19 @@ from typing import TYPE_CHECKING, Optional, TypeVar
 from uuid import UUID
 
 from and_beyond.common import (KEY_LENGTH, MOVE_SPEED_CAP_SQ, PROTOCOL_VERSION,
+                               TERMINAL_VELOCITY, TERMINAL_VELOCITY_TIME,
                                USERNAME_REGEX, VERSION_DISPLAY_NAME,
                                VIEW_DISTANCE_BOX, get_version_name)
 from and_beyond.middleware import (BufferedWriterMiddleware,
                                    EncryptedReaderMiddleware,
                                    EncryptedWriterMiddleware, ReaderMiddleware,
                                    WriterMiddleware, create_writer_middlewares)
-from and_beyond.packet import (SimplePlayerPositionPacket, BasicAuthPacket, ChatPacket,
-                               ChunkPacket, ChunkUpdatePacket,
-                               ClientRequestPacket, DisconnectPacket, Packet,
-                               PingPacket, PlayerInfoPacket,
-                               PlayerPositionPacket, RemovePlayerPacket,
-                               ServerInfoPacket, UnloadChunkPacket,
+from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket,
+                               ChunkUpdatePacket, ClientRequestPacket,
+                               DisconnectPacket, Packet, PingPacket,
+                               PlayerInfoPacket, PlayerPositionPacket,
+                               RemovePlayerPacket, ServerInfoPacket,
+                               SimplePlayerPositionPacket, UnloadChunkPacket,
                                read_packet, read_packet_timeout, write_packet)
 from and_beyond.server.command import ClientCommandSender
 from and_beyond.server.player import Player
@@ -62,6 +63,8 @@ class Client:
     command_sender: ClientCommandSender
     new_x: float
     new_y: float
+    grounded_time: float
+    air_time: float
 
     def __init__(self, server: 'AsyncServer', reader: StreamReader, writer: StreamWriter) -> None:
         self.server = server
@@ -79,6 +82,8 @@ class Client:
         self.player = None
         self.nickname = None
         self.command_sender = ClientCommandSender(self)
+        self.grounded_time = 0
+        self.air_time = 0
 
     async def start(self) -> None:
         self.ready = False
@@ -370,8 +375,8 @@ class Client:
                     logging.warn('Client %s sent illegal packet: %s', self, packet.type.name)
                     await self.disconnect(f'Packet type not legal for C->S: {packet.type.name}')
                     return
-        distance_x = self.player.x - self.new_x
-        distance_y = self.player.y - self.new_y
+        distance_x = self.new_x - self.player.x
+        distance_y = self.new_y - self.player.y
         if distance_x ** 2 + distance_y ** 2 > MOVE_SPEED_CAP_SQ:
             self.new_y = self.player.y
             self.new_x = self.player.x
@@ -387,6 +392,18 @@ class Client:
             cy = int(self.player.y) >> 4
             if cx != old_cx or cy != old_cy:
                 self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
+        if self.player.physics.is_grounded():
+            self.grounded_time += 0.05
+            self.air_time = 0
+        else:
+            self.grounded_time = 0
+            self.air_time += 0.05
+        if (
+            self.air_time > TERMINAL_VELOCITY_TIME + 1
+            and self.server.multiplayer
+            and distance_y > TERMINAL_VELOCITY
+        ):
+            await self.disconnect('Fly hacking detected')
 
     async def disconnect(self, reason: str = '', kick: bool = True) -> None:
         # Shield is necessary, as this shutdown method *must* be called.
