@@ -377,17 +377,35 @@ class Client:
                     return
         distance_x = self.new_x - self.player.x
         distance_y = self.new_y - self.player.y
+        distance_sq = distance_x ** 2 + distance_y ** 2
         if distance_x ** 2 + distance_y ** 2 > MOVE_SPEED_CAP_SQ:
             self.new_y = self.player.y
             self.new_x = self.player.x
             logging.warn('Player %s moved too quickly! %f, %f', self, distance_x, distance_y)
-            packet = PlayerPositionPacket(self.uuid, self.player.x, self.player.y)
+            packet = SimplePlayerPositionPacket(self.player.x, self.player.y)
             await write_packet(packet, self.writer)
         else:
             old_cx = int(self.player.x) >> 4
             old_cy = int(self.player.y) >> 4
-            self.player.x = self.new_x
-            self.player.y = self.new_y
+            distance = math.sqrt(distance_sq)
+            collided = False
+            if distance:
+                # Move in steps to detect collisions
+                step_count = math.ceil(distance)
+                step_x = distance_x / step_count
+                step_y = distance_y / step_count
+                for step in range(step_count):
+                    self.player.x += step_x
+                    self.player.y += step_y
+                    if self.player.physics.fix_collision_in_direction(step_x, step_y):
+                        collided = True
+                        break
+            if collided:
+                packet = SimplePlayerPositionPacket(self.player.x, self.player.y)
+                await write_packet(packet, self.writer)
+            else:
+                self.player.x = self.new_x
+                self.player.y = self.new_y
             cx = int(self.player.x) >> 4
             cy = int(self.player.y) >> 4
             if cx != old_cx or cy != old_cy:
