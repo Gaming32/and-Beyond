@@ -389,15 +389,18 @@ class Client:
             old_cy = int(self.player.y) >> 4
             distance = math.sqrt(distance_sq)
             collided = False
-            if distance:
+            step_count = math.ceil(distance)
+            if step_count > 0:
                 # Move in steps to detect collisions
-                step_count = math.ceil(distance)
                 step_x = distance_x / step_count
                 step_y = distance_y / step_count
                 for step in range(step_count):
                     self.player.x += step_x
+                    if self.player.physics.fix_collision_in_direction_smaller_hitbox(step_x, 0):
+                        collided = True
+                        break
                     self.player.y += step_y
-                    if self.player.physics.fix_collision_in_direction(step_x, step_y):
+                    if self.player.physics.fix_collision_in_direction_smaller_hitbox(0, step_y):
                         collided = True
                         break
             if collided:
