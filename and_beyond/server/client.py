@@ -4,7 +4,7 @@ import math
 import time
 from asyncio import StreamReader, StreamWriter
 from asyncio.events import AbstractEventLoop
-from asyncio.tasks import shield
+from asyncio.tasks import Task, shield
 from typing import TYPE_CHECKING, Optional, TypeVar
 from uuid import UUID
 
@@ -119,10 +119,9 @@ class Client:
         packet = PlayerInfoPacket(self.uuid, self.nickname)
         await self.server.send_to_all(packet, exclude_player=self)
         await self.load_chunks_around_player(9)
-        packet = SimplePlayerPositionPacket(self.player.x, self.player.y)
-        await write_packet(packet, self.writer)
+        await self.set_position_safe()
         self.send_players_task = self.aloop.create_task(self.send_player_positions())
-        self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
+        self.load_chunks_around_player_task()
         self.packet_queue = asyncio.Queue()
         self.ping_task = self.aloop.create_task(self.periodic_ping())
         self.packet_task = self.aloop.create_task(self.packet_tick())
@@ -382,8 +381,7 @@ class Client:
             self.new_y = self.player.y
             self.new_x = self.player.x
             logging.warn('Player %s moved too quickly! %f, %f', self, distance_x, distance_y)
-            packet = SimplePlayerPositionPacket(self.player.x, self.player.y)
-            await write_packet(packet, self.writer)
+            await self.set_position_safe()
         else:
             old_cx = int(self.player.x) >> 4
             old_cy = int(self.player.y) >> 4
@@ -404,15 +402,17 @@ class Client:
                         collided = True
                         break
             if collided:
-                packet = SimplePlayerPositionPacket(self.player.x, self.player.y)
-                await write_packet(packet, self.writer)
+                await self.set_position_safe()
             else:
                 self.player.x = self.new_x
                 self.player.y = self.new_y
             cx = int(self.player.x) >> 4
             cy = int(self.player.y) >> 4
             if cx != old_cx or cy != old_cy:
-                self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
+                self.load_chunks_around_player_task()
+            if distance:
+                packet = PlayerPositionPacket(self.uuid, self.player.x, self.player.y)
+                await self.server.send_to_all(packet, (cx, cy), self)
         if self.player.physics.is_grounded():
             self.grounded_time += 0.05
             self.air_time = 0
@@ -425,6 +425,27 @@ class Client:
             and distance_y > TERMINAL_VELOCITY
         ):
             await self.disconnect('Fly hacking detected')
+
+    async def set_position_safe(self, x: float = None, y: float = None, include_others: bool = False) -> None:
+        assert self.player is not None
+        if x is None:
+            x = self.player.x
+        else:
+            self.player.x = x
+        if y is None:
+            y = self.player.y
+        else:
+            self.player.y = y
+        packet = SimplePlayerPositionPacket(x, y)
+        await write_packet(packet, self.writer)
+        if include_others:
+            assert self.uuid is not None
+            packet = PlayerPositionPacket(self.uuid, self.player.x, self.player.y)
+            await self.server.send_to_all(packet, (int(x) >> 4, int(y) >> 4), self)
+
+    def load_chunks_around_player_task(self) -> Task[None]:
+        self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
+        return self.load_chunks_task
 
     async def disconnect(self, reason: str = '', kick: bool = True) -> None:
         # Shield is necessary, as this shutdown method *must* be called.
