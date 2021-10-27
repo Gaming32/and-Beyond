@@ -1,7 +1,7 @@
 import math
 
 from and_beyond.abstract_player import AbstractPlayer
-from and_beyond.common import GRAVITY
+from and_beyond.common import GRAVITY, TERMINAL_VELOCITY
 from and_beyond.utils import autoslots
 from and_beyond.world import BlockTypes
 
@@ -30,11 +30,14 @@ class PlayerPhysics:
     def tick(self, delta: float) -> None:
         old_x = self.player.x
         old_y = self.player.y
+        if old_x == math.inf or old_y == math.inf:
+            return
         self.y_velocity += GRAVITY * delta
-        if self.x_velocity > 0.1 or self.x_velocity < -0.1:
-            self.x_velocity *= 0.7
-        else:
-            self.x_velocity = 0
+        self.x_velocity *= 0.75
+        # if self.x_velocity > 0.1 or self.x_velocity < -0.1:
+        #     pass # self.x_velocity *= 0.7
+        # else:
+        #     self.x_velocity = 0
         self.player.x += self.x_velocity
         if self.fix_collision_in_direction(self.x_velocity, 0):
             self.x_velocity = 0
@@ -44,8 +47,8 @@ class PlayerPhysics:
             self.air_time = 0
         else:
             self.air_time += 1
-        if self.y_velocity < -4:
-            self.y_velocity = -4
+        if self.y_velocity < TERMINAL_VELOCITY:
+            self.y_velocity = TERMINAL_VELOCITY
         self.dirty = self.player.y != old_y or self.player.x != old_x
 
     # Thanks to Griffpatch and his amazing Tile Scrolling Platformer series for this code :)
@@ -61,6 +64,16 @@ class PlayerPhysics:
             self.fix_collision_at_point(self.player.x + 0.8, self.player.y + 0.5),
             self.fix_collision_at_point(self.player.x + 0.8, self.player.y + 1),
             self.fix_collision_at_point(self.player.x + 0.8, self.player.y + 1.5),
+        ))
+
+    def fix_collision_in_direction_smaller_hitbox(self, dx: float, dy: float) -> bool:
+        self.fix_dx = dx
+        self.fix_dy = dy
+        return any((
+            self.fix_collision_at_point(self.player.x + 0.4, self.player.y + 0.5),
+            self.fix_collision_at_point(self.player.x + 0.4, self.player.y + 1.5),
+            self.fix_collision_at_point(self.player.x + 0.6, self.player.y + 0.5),
+            self.fix_collision_at_point(self.player.x + 0.6, self.player.y + 1.5),
         ))
 
     def fix_collision_at_point(self, x: float, y: float) -> bool:
@@ -87,7 +100,15 @@ class PlayerPhysics:
             self.player.x -= EPSILON + mx
         return True
 
-    def _get_tile_type(self, x: int, y: int) -> BlockTypes:
+    def is_grounded(self) -> bool:
+        x = self.player.x
+        iy = math.floor(self.player.y - 2 * EPSILON)
+        return (
+            self.get_tile_type(math.floor(x + 0.2), iy) != BlockTypes.AIR
+            or self.get_tile_type(math.floor(x + 0.8), iy) != BlockTypes.AIR
+        )
+
+    def get_tile_type(self, x: int, y: int) -> BlockTypes:
         cx = x >> 4
         cy = y >> 4
         bx = x - (cx << 4)

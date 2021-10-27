@@ -1,25 +1,27 @@
 import asyncio
 import logging
+import math
 import time
 from asyncio import StreamReader, StreamWriter
 from asyncio.events import AbstractEventLoop
-from asyncio.tasks import shield
+from asyncio.tasks import Task, shield
 from typing import TYPE_CHECKING, Optional, TypeVar
 from uuid import UUID
 
 from and_beyond.common import (KEY_LENGTH, MOVE_SPEED_CAP_SQ, PROTOCOL_VERSION,
+                               TERMINAL_VELOCITY, TERMINAL_VELOCITY_TIME,
                                USERNAME_REGEX, VERSION_DISPLAY_NAME,
                                VIEW_DISTANCE_BOX, get_version_name)
 from and_beyond.middleware import (BufferedWriterMiddleware,
                                    EncryptedReaderMiddleware,
                                    EncryptedWriterMiddleware, ReaderMiddleware,
                                    WriterMiddleware, create_writer_middlewares)
-from and_beyond.packet import (AddVelocityPacket, BasicAuthPacket, ChatPacket,
-                               ChunkPacket, ChunkUpdatePacket,
-                               ClientRequestPacket, DisconnectPacket, Packet,
-                               PingPacket, PlayerInfoPacket,
-                               PlayerPositionPacket, RemovePlayerPacket,
-                               ServerInfoPacket, UnloadChunkPacket,
+from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket,
+                               ChunkUpdatePacket, ClientRequestPacket,
+                               DisconnectPacket, Packet, PingPacket,
+                               PlayerInfoPacket, PlayerPositionPacket,
+                               RemovePlayerPacket, ServerInfoPacket,
+                               SimplePlayerPositionPacket, UnloadChunkPacket,
                                read_packet, read_packet_timeout, write_packet)
 from and_beyond.server.command import ClientCommandSender
 from and_beyond.server.player import Player
@@ -59,6 +61,10 @@ class Client:
     player: Optional[Player]
     nickname: Optional[str]
     command_sender: ClientCommandSender
+    new_x: float
+    new_y: float
+    grounded_time: float
+    air_time: float
 
     def __init__(self, server: 'AsyncServer', reader: StreamReader, writer: StreamWriter) -> None:
         self.server = server
@@ -76,6 +82,8 @@ class Client:
         self.player = None
         self.nickname = None
         self.command_sender = ClientCommandSender(self)
+        self.grounded_time = 0
+        self.air_time = 0
 
     async def start(self) -> None:
         self.ready = False
@@ -98,11 +106,10 @@ class Client:
         elif self.nickname in self.server.clients_by_name:
             await self.disconnect('That name is taken.')
             return
-        self.packet_queue = asyncio.Queue()
-        self.ping_task = self.aloop.create_task(self.periodic_ping())
-        self.packet_task = self.aloop.create_task(self.packet_tick())
         self.player = Player(self, self.nickname)
         await self.player.ainit()
+        self.new_x = self.player.x
+        self.new_y = self.player.y
         for client in self.server.clients:
             if client is not self and client.ready:
                 assert client.uuid is not None
@@ -112,8 +119,12 @@ class Client:
         packet = PlayerInfoPacket(self.uuid, self.nickname)
         await self.server.send_to_all(packet, exclude_player=self)
         await self.load_chunks_around_player(9)
+        await self.set_position_safe()
         self.send_players_task = self.aloop.create_task(self.send_player_positions())
-        self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
+        self.load_chunks_around_player_task()
+        self.packet_queue = asyncio.Queue()
+        self.ping_task = self.aloop.create_task(self.periodic_ping())
+        self.packet_task = self.aloop.create_task(self.packet_tick())
         self.server.clients_by_uuid[self.uuid] = self
         self.server.clients_by_name[self.nickname] = self
         self.ready = True
@@ -308,13 +319,26 @@ class Client:
                 return
 
     async def packet_tick(self) -> None:
-        while self.server.running:
+        while not self.ready:
+            await asyncio.sleep(0)
+        while self.server.running and self.ready:
             try:
                 packet = await read_packet(self.reader)
             except (asyncio.IncompleteReadError, ConnectionError):
                 await self.disconnect(f'{self.player} left the game', False)
                 return
-            await self.packet_queue.put(packet)
+            if isinstance(packet, SimplePlayerPositionPacket):
+                if packet.x != math.inf and packet.y != math.inf:
+                    try:
+                        int(packet.x ** 2)
+                        int(packet.y ** 2)
+                    except (ValueError, OverflowError) as e:
+                        await self.disconnect(str(e))
+                        break
+                    self.new_x = packet.x
+                    self.new_y = packet.y
+            else:
+                await self.packet_queue.put(packet)
 
     async def tick(self) -> None:
         if not self.ready:
@@ -341,43 +365,6 @@ class Client:
                             # logging.warn("Player %s can't reach block %i, %i, yet they tried to update it.", self, abs_x, abs_y)
                             packet.block = chunk.get_tile_type(packet.bx, packet.by)
                             await write_packet(packet, self.writer)
-                elif isinstance(packet, PlayerPositionPacket):
-                    logging.warn('Player %s used illegal packet: PLAYER_POS (this packet is deprecated and a security hole)', self)
-                    await self.disconnect('Used illegal packet: PLAYER_POS (this packet is deprecated and a security hole)')
-                    return
-                    prev_x = self.player.x
-                    prev_y = self.player.y
-                    rel_x = packet.x - prev_x
-                    rel_y = packet.y - prev_y
-                    dist = rel_x * rel_x + rel_y * rel_y
-                    if dist > MOVE_SPEED_CAP_SQ:
-                        packet.x = prev_x
-                        packet.y = prev_y
-                        logging.warn('Player %s moved too quickly! %f, %f', self, rel_x, rel_y)
-                        await write_packet(packet, self.writer)
-                    else:
-                        self.player.x = packet.x
-                        self.player.y = packet.y
-                elif isinstance(packet, AddVelocityPacket):
-                    if packet.y > 0 and self.player.physics.air_time >= 2:
-                        # logging.warn('Player %s tried to mid-air jump. This is not allowed.')
-                        packet.y = 0
-                    prev_x = self.player.physics.x_velocity
-                    prev_y = self.player.physics.y_velocity
-                    new_x = prev_x + packet.x
-                    new_y = prev_y + packet.y
-                    vel = new_x * new_x + new_y * new_y
-                    if vel > MOVE_SPEED_CAP_SQ:
-                        packet.x = prev_x
-                        packet.y = prev_y
-                        logging.warn('Player %s moved too quickly! %f, %f', self, new_x, new_y)
-                        packet = PlayerPositionPacket(self.uuid, self.player.x, self.player.y)
-                        self.player.physics.x_velocity = 0
-                        self.player.physics.y_velocity = 0
-                        await write_packet(packet, self.writer)
-                    else:
-                        self.player.physics.x_velocity = new_x
-                        self.player.physics.y_velocity = new_y
                 elif isinstance(packet, ChatPacket):
                     if packet.message[0] == '/':
                         await self.server.run_command(packet.message[1:], self.command_sender)
@@ -387,16 +374,78 @@ class Client:
                     logging.warn('Client %s sent illegal packet: %s', self, packet.type.name)
                     await self.disconnect(f'Packet type not legal for C->S: {packet.type.name}')
                     return
-        physics = self.player.physics
-        old_cx = int(self.player.x) >> 4
-        old_cy = int(self.player.y) >> 4
-        physics.tick(0.05)
-        if physics.dirty:
-            await self.player.send_position()
+        distance_x = self.new_x - self.player.x
+        distance_y = self.new_y - self.player.y
+        distance_sq = distance_x ** 2 + distance_y ** 2
+        if distance_x ** 2 + distance_y ** 2 > MOVE_SPEED_CAP_SQ:
+            self.new_y = self.player.y
+            self.new_x = self.player.x
+            logging.warn('Player %s moved too quickly! %f, %f', self, distance_x, distance_y)
+            await self.set_position_safe()
+        else:
+            old_cx = int(self.player.x) >> 4
+            old_cy = int(self.player.y) >> 4
+            distance = math.sqrt(distance_sq)
+            collided = False
+            step_count = math.ceil(distance)
+            if step_count > 0:
+                # Move in steps to detect collisions
+                step_x = distance_x / step_count
+                step_y = distance_y / step_count
+                for step in range(step_count):
+                    self.player.x += step_x
+                    if self.player.physics.fix_collision_in_direction_smaller_hitbox(step_x, 0):
+                        collided = True
+                        break
+                    self.player.y += step_y
+                    if self.player.physics.fix_collision_in_direction_smaller_hitbox(0, step_y):
+                        collided = True
+                        break
+            if collided:
+                await self.set_position_safe()
+            else:
+                self.player.x = self.new_x
+                self.player.y = self.new_y
             cx = int(self.player.x) >> 4
             cy = int(self.player.y) >> 4
             if cx != old_cx or cy != old_cy:
-                self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
+                self.load_chunks_around_player_task()
+            if distance:
+                packet = PlayerPositionPacket(self.uuid, self.player.x, self.player.y)
+                await self.server.send_to_all(packet, (cx, cy), self)
+        if self.player.physics.is_grounded():
+            self.grounded_time += 0.05
+            self.air_time = 0
+        else:
+            self.grounded_time = 0
+            self.air_time += 0.05
+        if (
+            self.air_time > TERMINAL_VELOCITY_TIME + 1
+            and self.server.multiplayer
+            and distance_y > TERMINAL_VELOCITY
+        ):
+            await self.disconnect('Fly hacking detected')
+
+    async def set_position_safe(self, x: float = None, y: float = None, include_others: bool = False) -> None:
+        assert self.player is not None
+        if x is None:
+            x = self.player.x
+        else:
+            self.player.x = x
+        if y is None:
+            y = self.player.y
+        else:
+            self.player.y = y
+        packet = SimplePlayerPositionPacket(x, y)
+        await write_packet(packet, self.writer)
+        if include_others:
+            assert self.uuid is not None
+            packet = PlayerPositionPacket(self.uuid, self.player.x, self.player.y)
+            await self.server.send_to_all(packet, (int(x) >> 4, int(y) >> 4), self)
+
+    def load_chunks_around_player_task(self) -> Task[None]:
+        self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
+        return self.load_chunks_task
 
     async def disconnect(self, reason: str = '', kick: bool = True) -> None:
         # Shield is necessary, as this shutdown method *must* be called.
@@ -441,7 +490,10 @@ class Client:
             logging.debug('Player %s data saved in %f seconds', self, end - start)
         for (cx, cy) in list(self.loaded_chunks.keys()):
             await self.unload_chunk(cx, cy, True)
-        await self._writer.wait_closed()
+        try:
+            await self._writer.wait_closed()
+        except ConnectionError:
+            pass
         if self.uuid is not None:
             logging.debug('Sending removal packets to remaining players')
             packet = RemovePlayerPacket(self.uuid)

@@ -79,6 +79,7 @@ def render_debug() -> None:
     lines = [
         f'FPS: {clock.get_fps():.2f}',
         f'X/Y: {globals.player.x:.1f}/{globals.player.y:.1f}',
+        f'VX/VY: {globals.player.physics.x_velocity:.1f}/{globals.player.physics.y_velocity:.1f}',
     ]
     if globals.player.x != inf and globals.player.y != inf:
         cx = int(globals.player.x) >> 4
@@ -305,12 +306,15 @@ while globals.running:
                         disconnect_reason = None
         else:
             globals.mouse_world = screen_to_world(globals.mouse_screen, screen)
-            if globals.game_connection is not None and not globals.paused:
-                if move_left ^ move_right:
-                    globals.player.add_velocity(x=MOVE_SPEED * globals.delta * (move_right - move_left))
-                if move_up:
-                    globals.player.add_velocity(y=JUMP_SPEED)
+            if globals.game_connection is not None:
+                if not globals.paused:
+                    if move_left ^ move_right:
+                        globals.player.add_velocity(x=MOVE_SPEED * globals.delta * (move_right - move_left))
+                    if move_up and globals.player.physics.air_time < 2:
+                        globals.player.add_velocity(y=JUMP_SPEED)
                     move_up = False
+                if (globals.singleplayer_pipe_in is None) or not globals.paused:
+                    globals.player.safe_physics_tick()
             globals.local_world.tick(screen)
             # globals.player.render(screen)
             for player in globals.all_players.values():

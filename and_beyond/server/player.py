@@ -60,7 +60,6 @@ class Player(AbstractPlayer):
         else:
             self.x = spawn_x
             self.y = spawn_y
-        await self.send_position(force=True)
 
     async def save(self) -> None:
         data = {

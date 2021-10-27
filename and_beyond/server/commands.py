@@ -133,17 +133,15 @@ async def tp_command(sender: 'AbstractCommandSender', args: str) -> None:
         except ValueError:
             return await sender.reply('Third argument must be number')
         to = (x, y)
-    assert from_.player is not None
-    from_ = from_.player
     if isinstance(to, Client):
         assert to.player is not None
         to = to.player
-        from_.x = to.x
-        from_.y = to.y
+        await from_.set_position_safe(to.x, to.y, True)
     else:
-        from_.x, from_.y = to
-    await from_.send_position()
-    await sender.reply_broadcast(f'Teleported {from_} to {to}')
+        await from_.set_position_safe(*to, True)
+    from_.load_chunks_around_player_task()
+    assert from_.player is not None
+    await sender.reply_broadcast(f'Teleported {from_.player} to {to}')
 
 
 async def stop_command(sender: 'AbstractCommandSender', args: str) -> None:
