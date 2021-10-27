@@ -5,9 +5,9 @@ from pathlib import Path
 
 from and_beyond.common import VERSION_DISPLAY_NAME
 
-PYZ_DIR = Path('pyz')
-PYZ_DIR.mkdir(exist_ok=True)
-DEST_FILE = PYZ_DIR / f'and-Beyond-{VERSION_DISPLAY_NAME}-server.pyz'
+OUTPUT_DIR = Path('dist')
+OUTPUT_DIR.mkdir(exist_ok=True)
+DEST_FILE = OUTPUT_DIR / f'and-Beyond-{VERSION_DISPLAY_NAME}-server.pyz'
 
 AND_BEYOND_DIR = Path('and_beyond')
 
