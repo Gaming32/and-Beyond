@@ -66,14 +66,14 @@ class PlayerPhysics:
             self.fix_collision_at_point(self.player.x + 0.8, self.player.y + 1.5),
         ))
 
-    def fix_collision_in_direction_smaller_hitbox(self, dx: float, dy: float) -> bool:
+    def fix_collision_in_direction_reduced_hitbox(self, dx: float, dy: float) -> bool:
         self.fix_dx = dx
         self.fix_dy = dy
         return any((
-            self.fix_collision_at_point(self.player.x + 0.4, self.player.y + 0.5),
-            self.fix_collision_at_point(self.player.x + 0.4, self.player.y + 1.5),
-            self.fix_collision_at_point(self.player.x + 0.6, self.player.y + 0.5),
-            self.fix_collision_at_point(self.player.x + 0.6, self.player.y + 1.5),
+            self.fix_collision_at_point(self.player.x + 0.4, self.player.y + 0.2),
+            self.fix_collision_at_point(self.player.x + 0.4, self.player.y + 1.3),
+            self.fix_collision_at_point(self.player.x + 0.6, self.player.y + 0.2),
+            self.fix_collision_at_point(self.player.x + 0.6, self.player.y + 1.3),
         ))
 
     def fix_collision_at_point(self, x: float, y: float) -> bool:

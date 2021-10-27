@@ -394,11 +394,11 @@ class Client:
                 step_y = distance_y / step_count
                 for step in range(step_count):
                     self.player.x += step_x
-                    if self.player.physics.fix_collision_in_direction_smaller_hitbox(step_x, 0):
+                    if self.player.physics.fix_collision_in_direction_reduced_hitbox(step_x, 0):
                         collided = True
                         break
                     self.player.y += step_y
-                    if self.player.physics.fix_collision_in_direction_smaller_hitbox(0, step_y):
+                    if self.player.physics.fix_collision_in_direction_reduced_hitbox(0, step_y):
                         collided = True
                         break
             if collided:
