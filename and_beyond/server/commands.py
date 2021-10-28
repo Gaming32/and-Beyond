@@ -29,7 +29,11 @@ async def help_command(sender: 'AbstractCommandSender', args: str) -> None:
         help_lines.extend([
             " + /tp    -- Teleport a player",
         ])
-    if sender.operator >= 3:
+    if sender.operator >= 2:
+        help_lines.extend([
+            " + /kick  -- Forcefully disconnect a player",
+        ])
+    if sender.operator >= 4:
         help_lines.extend([
             " + /stop  -- Stop the server",
         ])
@@ -144,9 +148,27 @@ async def tp_command(sender: 'AbstractCommandSender', args: str) -> None:
     await sender.reply_broadcast(f'Teleported {from_.player} to {to}')
 
 
+async def kick_command(sender: 'AbstractCommandSender', args: str) -> None:
+    if sender.operator < 2:
+        await sender.no_permissions(2)
+        return
+    argv = args.split(None, 1)
+    if len(argv) == 0:
+        await sender.reply('Usage:')
+        await sender.reply('  /kick <player> [reason]')
+        return
+    client = evaluate_client(argv[0], sender)
+    if client is None:
+        await sender.reply('First argument must be player')
+        return
+    reason = (len(argv) > 1 and argv[1]) or 'Kicked by operator'
+    await client.disconnect(reason)
+    await sender.reply_broadcast(f'Kicked {client.player} for reason "{reason}"')
+
+
 async def stop_command(sender: 'AbstractCommandSender', args: str) -> None:
-    if sender.operator < 3:
-        await sender.no_permissions(3)
+    if sender.operator < 4:
+        await sender.no_permissions(4)
         return
     await sender.reply_broadcast('Stopping server...')
     sender.server.running = False
@@ -160,5 +182,6 @@ COMMANDS: dict[str, Command] = {
     'mspt': mspt_command,
     'stats': stats_command,
     'tp': tp_command,
+    'kick': kick_command,
     'stop': stop_command,
 }

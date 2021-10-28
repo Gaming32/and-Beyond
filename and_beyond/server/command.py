@@ -46,7 +46,7 @@ class AbstractCommandSender(abc.ABC):
 
 class ConsoleCommandSender(AbstractCommandSender):
     name = 'CONSOLE'
-    operator = 3
+    operator = 4
 
     def __init__(self, server: 'AsyncServer') -> None:
         self.server = server
