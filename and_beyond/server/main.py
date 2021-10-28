@@ -14,6 +14,7 @@ from fractions import Fraction
 from typing import Any, BinaryIO, Optional
 from uuid import UUID
 
+import and_beyond.server.builtin_commands
 import colorama
 from and_beyond.common import AUTH_SERVER, PORT, RANDOM_TICK_RATE
 from and_beyond.http_auth import AuthClient
@@ -21,9 +22,8 @@ from and_beyond.http_errors import InsecureAuth
 from and_beyond.packet import ChunkUpdatePacket, Packet, write_packet
 from and_beyond.pipe_commands import PipeCommandsToServer, read_pipe
 from and_beyond.server.client import Client
-from and_beyond.server.command import (AbstractCommandSender,
-                                       ConsoleCommandSender)
-from and_beyond.server.commands import COMMANDS
+from and_beyond.server.commands import (COMMANDS, AbstractCommandSender,
+                                        ConsoleCommandSender)
 from and_beyond.server.consts import GC_TIME_SECONDS
 from and_beyond.server.world_gen.core import WorldGenerator
 from and_beyond.utils import (ainput, autoslots, get_opt, init_logger, mean,
@@ -449,7 +449,7 @@ class AsyncServer:
         name, *rest = cmd.split(' ', 1)
         if name in COMMANDS:
             command = COMMANDS[name]
-            await command(sender, rest[0] if rest else '')
+            await command.call(sender, rest[0] if rest else '')
         else:
             if not isinstance(sender, ConsoleCommandSender):
                 logging.info('<%s> No command named "%s"', sender, name)

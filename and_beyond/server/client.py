@@ -23,7 +23,7 @@ from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket,
                                RemovePlayerPacket, ServerInfoPacket,
                                SimplePlayerPositionPacket, UnloadChunkPacket,
                                read_packet, read_packet_timeout, write_packet)
-from and_beyond.server.command import ClientCommandSender
+from and_beyond.server.commands import ClientCommandSender
 from and_beyond.server.player import Player
 from and_beyond.utils import spiral_loop_gen
 from and_beyond.world import BlockTypes, WorldChunk
