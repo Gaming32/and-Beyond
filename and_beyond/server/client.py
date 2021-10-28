@@ -108,6 +108,9 @@ class Client:
             return
         self.player = Player(self, self.nickname)
         await self.player.ainit()
+        if self.server.multiplayer and self.player.banned is not None:
+            await self.disconnect(self.player.banned)
+            return
         self.new_x = self.player.x
         self.new_y = self.player.y
         for client in self.server.clients:

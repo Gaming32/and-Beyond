@@ -2,7 +2,7 @@ import json
 import logging
 from asyncio.events import AbstractEventLoop
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 import aiofiles
 from and_beyond.abstract_player import AbstractPlayer
@@ -20,6 +20,9 @@ class Player(AbstractPlayer):
     client: 'Client'
     name: str
     physics: PlayerPhysics
+
+    banned: Optional[str]
+    operator_level: int
 
     aloop: AbstractEventLoop
 
@@ -45,6 +48,8 @@ class Player(AbstractPlayer):
         spawn_x = 0 if spawn_x is None else spawn_x
         spawn_y = world.meta['spawn_y']
         spawn_y = 0 if spawn_y is None else spawn_y
+        banned = None
+        operator_level = 0
         if self.data_path.exists():
             async with aiofiles.open(self.data_path) as fp:
                 raw_data = await fp.read()
@@ -57,9 +62,13 @@ class Player(AbstractPlayer):
                 self.y = data.get('y', spawn_y)
                 self.physics.x_velocity = data.get('x_velocity', 0)
                 self.physics.y_velocity = data.get('y_velocity', 0)
+                banned = data.get('banned', None)
+                operator_level = data.get('operator', 0)
         else:
             self.x = spawn_x
             self.y = spawn_y
+        self.banned = banned
+        self.operator_level = operator_level
 
     async def save(self) -> None:
         data = {
@@ -67,6 +76,8 @@ class Player(AbstractPlayer):
             'y': self.y,
             'x_velocity': self.physics.x_velocity,
             'y_velocity': self.physics.y_velocity,
+            'banned': self.banned,
+            'operator': self.operator_level,
         }
         raw_data = await self.aloop.run_in_executor(None, json.dumps, data)
         async with aiofiles.open(self.data_path, 'w') as fp:

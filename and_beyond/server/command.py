@@ -57,7 +57,6 @@ class ConsoleCommandSender(AbstractCommandSender):
 
 class ClientCommandSender(AbstractCommandSender):
     client: 'Client'
-    operator = 0
 
     def __init__(self, client: 'Client') -> None:
         self.server = client.server
@@ -69,6 +68,12 @@ class ClientCommandSender(AbstractCommandSender):
             # Use client's IP address instead
             return self.client._writer.get_extra_info('peername')[0]
         return self.client.nickname
+
+    @property
+    def operator(self) -> int:
+        if self.client.player is None:
+            return 0
+        return self.client.player.operator_level
 
     async def reply(self, message: str) -> None:
         return await self.client.send_chat(message)
