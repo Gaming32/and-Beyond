@@ -174,14 +174,10 @@ async def stop_command(sender: 'AbstractCommandSender', args: str) -> None:
     sender.server.running = False
 
 
-COMMANDS: dict[str, Command] = {
-    'help': help_command,
-    'say': say_command,
-    'list': list_command,
-    'tps': tps_command,
-    'mspt': mspt_command,
-    'stats': stats_command,
-    'tp': tp_command,
-    'kick': kick_command,
-    'stop': stop_command,
-}
+COMMANDS: dict[str, Command] = {}
+
+_fname = None
+_func = None
+for (_fname, _func) in globals().items():
+    if _fname.endswith('_command') and callable(_func):
+        COMMANDS[_fname.removesuffix('_command')] = _func
