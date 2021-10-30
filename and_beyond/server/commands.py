@@ -2,8 +2,11 @@ import abc
 import asyncio
 import logging
 import time
+from json.decoder import JSONDecodeError
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional
 from uuid import UUID
+
+from and_beyond.world import OfflinePlayer
 
 if TYPE_CHECKING:
     from and_beyond.server.client import Client
@@ -138,6 +141,37 @@ def evaluate_client(arg: str, sender: AbstractCommandSender) -> Optional['Client
     if uuid in server.clients_by_uuid:
         return server.clients_by_uuid[uuid]
     return None
+
+
+async def evaluate_offline_player(arg: str, sender: AbstractCommandSender) -> Optional[OfflinePlayer]:
+    server = sender.server
+    if arg in server.clients_by_name:
+        return server.clients_by_name[arg].player
+    world = server.world
+    assert world is not None
+    try:
+        uuid = UUID(arg)
+    except ValueError:
+        pass
+    else:
+        if uuid in server.clients_by_uuid:
+            return server.clients_by_uuid[uuid].player
+        player = world.get_player_by_uuid(uuid)
+        try:
+            await player.ainit()
+        except (FileNotFoundError, JSONDecodeError):
+            pass
+        else:
+            return player
+    try:
+        player = world.get_player_by_name(arg)
+    except KeyError:
+        return None
+    try:
+        await player.ainit()
+    except (FileNotFoundError, JSONDecodeError):
+        return None
+    return player
 
 
 COMMANDS: dict[str, Command] = {}

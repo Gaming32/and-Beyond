@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from asyncio.events import AbstractEventLoop
@@ -5,83 +6,28 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
 import aiofiles
-from and_beyond.abstract_player import AbstractPlayer
 from and_beyond.packet import PlayerPositionPacket
 from and_beyond.physics import PlayerPhysics
 from and_beyond.utils import autoslots
+from and_beyond.world import OfflinePlayer
 
 if TYPE_CHECKING:
     from and_beyond.server.client import Client
 
 
 @autoslots
-class Player(AbstractPlayer):
-    data_path: Path
-    client: 'Client'
+class Player(OfflinePlayer):
     name: str
+    client: 'Client'
     physics: PlayerPhysics
 
-    banned: Optional[str]
-    operator_level: int
-
-    aloop: AbstractEventLoop
-
     def __init__(self, client: 'Client', name: str = None) -> None:
+        assert client.uuid is not None
         assert client.server.world is not None
-        world = client.server.world
-        self.data_path = world.players_path / f'{client.uuid}.json'
-        if client.uuid is not None and client.uuid.int == 0:
-            old_path = world.players_path / '00000000-0000-0000-0000-000000005db0.json'
-            if old_path.exists():
-                logging.info('Player used old save filename, renaming...')
-                old_path.rename(self.data_path) # Rename singleplayer saves
+        super().__init__(name or str(client.uuid), client.uuid, client.server.world)
         self.client = client
-        self.name = name or str(self.client.uuid)
         self.physics = PlayerPhysics(self)
         self.loaded_chunks = client.loaded_chunks # Reference to fulfill AbstractPlayer
-
-    async def ainit(self) -> None:
-        assert self.client.server.world is not None
-        self.aloop = self.client.aloop
-        world = self.client.server.world
-        spawn_x = world.meta['spawn_x']
-        spawn_x = 0 if spawn_x is None else spawn_x
-        spawn_y = world.meta['spawn_y']
-        spawn_y = 0 if spawn_y is None else spawn_y
-        banned = None
-        operator_level = 0
-        if self.data_path.exists():
-            async with aiofiles.open(self.data_path) as fp:
-                raw_data = await fp.read()
-            try:
-                data: dict[str, Any] = await self.aloop.run_in_executor(None, json.loads, raw_data)
-            except json.JSONDecodeError:
-                pass
-            else:
-                self.x = data.get('x', spawn_x)
-                self.y = data.get('y', spawn_y)
-                self.physics.x_velocity = data.get('x_velocity', 0)
-                self.physics.y_velocity = data.get('y_velocity', 0)
-                banned = data.get('banned', None)
-                operator_level = data.get('operator', 0)
-        else:
-            self.x = spawn_x
-            self.y = spawn_y
-        self.banned = banned
-        self.operator_level = operator_level
-
-    async def save(self) -> None:
-        data = {
-            'x': self.x,
-            'y': self.y,
-            'x_velocity': self.physics.x_velocity,
-            'y_velocity': self.physics.y_velocity,
-            'banned': self.banned,
-            'operator': self.operator_level,
-        }
-        raw_data = await self.aloop.run_in_executor(None, json.dumps, data)
-        async with aiofiles.open(self.data_path, 'w') as fp:
-            await fp.write(raw_data)
 
     async def move(self, x: float, y: float) -> None:
         self.x += x

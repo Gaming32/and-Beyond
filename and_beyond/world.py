@@ -4,6 +4,7 @@ import json
 import logging
 import random
 import time
+from asyncio.events import AbstractEventLoop
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from json.decoder import JSONDecodeError
@@ -11,9 +12,11 @@ from mmap import ACCESS_WRITE, mmap
 from pathlib import Path
 from typing import (TYPE_CHECKING, Any, Awaitable, ByteString, Callable,
                     Optional, TypedDict, Union)
+from uuid import UUID
 
 import aiofiles
 
+from and_beyond.abstract_player import AbstractPlayer
 from and_beyond.utils import autoslots
 
 if TYPE_CHECKING:
@@ -43,6 +46,7 @@ class WorldMeta(TypedDict):
     seed: int
     spawn_x: Optional[int]
     spawn_y: Optional[int]
+    player_cache: dict[str, int]
 
 
 @autoslots
@@ -57,6 +61,8 @@ class World:
     meta: WorldMeta
     players_path: Path
     sections_path: Path
+    _players_by_name: dict[str, UUID]
+    _players_by_uuid: dict[UUID, str]
 
     open_sections: dict[tuple[int, int], 'WorldSection']
     auto_optimize: bool
@@ -67,6 +73,8 @@ class World:
         self.root = Path('worlds') / self.safe_name
         self.players_path = self.root / 'players'
         self.sections_path = self.root / 'sections'
+        self._players_by_name = {}
+        self._players_by_uuid = {}
         self.open_sections = {}
         self.auto_optimize = auto_optimize
 
@@ -81,6 +89,10 @@ class World:
             optimize = self.auto_optimize
         self.aloop = asyncio.get_running_loop()
         await self.ensure_exists()
+        for (player_name, player_uuid_int) in self.meta['player_cache'].items():
+            player_uuid = UUID(int=player_uuid_int)
+            self._players_by_name[player_name] = player_uuid
+            self._players_by_uuid[player_uuid] = player_name
         if optimize:
             start = time.perf_counter()
             with ThreadPoolExecutor(thread_name_prefix='Optimize') as executor:
@@ -126,6 +138,7 @@ class World:
             self._default_meta()
             await self.save_meta()
             meta = True
+        self.meta.setdefault('player_cache', {})
 
     async def mkdirs(self, *paths: Path) -> None:
         await asyncio.gather(
@@ -230,6 +243,15 @@ class World:
         for s in self.open_sections.values():
             s._close()
         self.open_sections.clear()
+
+    def get_player_by_name(self, name: str) -> 'OfflinePlayer':
+        return OfflinePlayer(name, self._players_by_name[name], self)
+
+    def get_player_by_uuid(self, uuid: UUID) -> 'OfflinePlayer':
+        try:
+            return OfflinePlayer(self._players_by_uuid[uuid], uuid, self)
+        except KeyError:
+            return OfflinePlayer(None, uuid, self)
 
     def __str__(self) -> str:
         return self.name
@@ -463,11 +485,74 @@ class WorldChunk:
         return self.version > 0
 
 
+class OfflinePlayer(AbstractPlayer):
+    name: Optional[str]
+    uuid: UUID
+    data_path: Path
+    world: World
+    banned: Optional[str]
+    operator_level: int
+    aloop: AbstractEventLoop
+
+    def __init__(self, name: Optional[str], uuid: UUID, world: 'World') -> None:
+        self.name = name
+        self.uuid = uuid
+        self.world = world
+        self.data_path = world.players_path / f'{uuid}.json'
+        if uuid is not None and uuid.int == 0:
+            old_path = world.players_path / '00000000-0000-0000-0000-000000005db0.json'
+            if old_path.exists():
+                logging.info('Player used old save filename, renaming...')
+                old_path.rename(self.data_path) # Rename singleplayer saves
+        self.loaded_chunks = {}
+
+    async def ainit(self) -> None:
+        self.aloop = asyncio.get_running_loop()
+        if self.name is not None:
+            self.world._players_by_name[self.name] = self.uuid
+            self.world._players_by_uuid[self.uuid] = self.name
+        spawn_x = self.world.meta['spawn_x']
+        spawn_x = 0 if spawn_x is None else spawn_x
+        spawn_y = self.world.meta['spawn_y']
+        spawn_y = 0 if spawn_y is None else spawn_y
+        banned = None
+        operator_level = 0
+        if self.data_path.exists():
+            async with aiofiles.open(self.data_path) as fp:
+                raw_data = await fp.read()
+            try:
+                data: dict[str, Any] = await self.aloop.run_in_executor(None, json.loads, raw_data)
+            except json.JSONDecodeError:
+                pass
+            else:
+                self.x = data.get('x', spawn_x)
+                self.y = data.get('y', spawn_y)
+                banned = data.get('banned', None)
+                operator_level = data.get('operator', 0)
+        else:
+            self.x = spawn_x
+            self.y = spawn_y
+        self.banned = banned
+        self.operator_level = operator_level
+
+    async def save(self) -> None:
+        data = {
+            'x': self.x,
+            'y': self.y,
+            'banned': self.banned,
+            'operator': self.operator_level,
+        }
+        raw_data = await self.aloop.run_in_executor(None, json.dumps, data)
+        async with aiofiles.open(self.data_path, 'w') as fp:
+            await fp.write(raw_data)
+
+
 DEFAULT_META: WorldMeta = {
     'name': '',
     'seed': 0,
     'spawn_x': None,
     'spawn_y': None,
+    'player_cache': {},
 }
 
 

@@ -4,7 +4,7 @@ import humanize
 from and_beyond.server.client import Client
 from and_beyond.server.commands import (COMMANDS, AbstractCommandSender,
                                         ClientCommandSender,
-                                        ConsoleCommandSender, evaluate_client,
+                                        ConsoleCommandSender, evaluate_client, evaluate_offline_player,
                                         function_command)
 
 if sys.platform != 'win32':
@@ -165,6 +165,17 @@ async def ban_command(sender: AbstractCommandSender, args: str) -> None:
         client.player.banned = reason
     await client.disconnect(reason)
     await sender.reply_broadcast(f'Banned {client.player} for reason "{reason}"')
+
+
+@function_command('unban', 'Removes a ban from a player', 2)
+async def unban_command(sender: AbstractCommandSender, args: str) -> None:
+    player = await evaluate_offline_player(args, sender)
+    if player is None:
+        await sender.reply('First argument must be player')
+        return None
+    player.banned = None
+    await player.save()
+    await sender.reply_broadcast(f'{player} unbanned')
 
 
 @function_command('stop', 'Stop the server', 4)
