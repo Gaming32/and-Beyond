@@ -46,9 +46,3 @@ class Player(OfflinePlayer):
             await self.client.server.send_to_all(packet)
         else:
             await self.client.server.send_to_all(packet, (int(packet.x) >> 4, int(packet.y) >> 4))
-
-    def __str__(self) -> str:
-        return self.name
-
-    def __repr__(self) -> str:
-        return f'<Player uuid={self.client.uuid!r} name={self.name!r} x={self.x} y={self.y}>'

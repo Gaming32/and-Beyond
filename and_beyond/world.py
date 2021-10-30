@@ -546,6 +546,12 @@ class OfflinePlayer(AbstractPlayer):
         async with aiofiles.open(self.data_path, 'w') as fp:
             await fp.write(raw_data)
 
+    def __str__(self) -> str:
+        return self.name or repr(self)
+
+    def __repr__(self) -> str:
+        return f'<Player uuid={self.uuid!r} name={self.name!r} x={self.x} y={self.y}>'
+
 
 DEFAULT_META: WorldMeta = {
     'name': '',
