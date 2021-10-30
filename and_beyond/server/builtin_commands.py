@@ -181,6 +181,49 @@ async def unban_command(sender: AbstractCommandSender, args: str) -> None:
     await sender.reply_broadcast(f'{player} unbanned')
 
 
+@function_command('op', 'Sets a players operator level', 3)
+async def op_command(sender: AbstractCommandSender, args: str) -> None:
+    argv = args.split(None, 1)
+    if len(argv) == 0:
+        await sender.reply('Usage:')
+        await sender.reply(f'  /op <player> [level]')
+        return None
+    if len(argv) > 1:
+        try:
+            level = int(argv[1])
+        except ValueError:
+            await sender.reply('Second argument must be integer')
+            return
+    else:
+        level = min(sender.operator, 2)
+    if level > sender.operator:
+        await sender.reply("Can't set a player's operator level to be greater than your own.")
+        return
+    client = evaluate_client(argv[0], sender)
+    if client is None:
+        player = await evaluate_offline_player(argv[0], sender)
+        if player is None:
+            await sender.reply('First argument must be player')
+            return
+        player.operator_level = level
+        await player.save()
+    else:
+        player = client.player
+        if player is not None:
+            player.operator_level = level
+    await sender.reply_broadcast(f"Set {player}'s operator level to {level}")
+
+
+@function_command('deop', 'Sets a players operator level to 0', 3)
+async def deop_command(sender: AbstractCommandSender, args: str) -> None:
+    argv = args.split(None, 1)
+    if len(argv) == 0:
+        await sender.reply('Usage:')
+        await sender.reply(f'  /deop <player>')
+        return None
+    await op_command.call(sender, f'{argv[0]} 0')
+
+
 @function_command('stop', 'Stop the server', 4)
 async def stop_command(sender: AbstractCommandSender, args: str) -> None:
     await sender.reply_broadcast('Stopping server...')
