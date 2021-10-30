@@ -34,7 +34,9 @@ class AbstractCommandSender(abc.ABC):
             self.server.loop.create_task(client.send_chat(logging_message, at))
             for client in self.server.clients
             if (client.ready
-                and client is not check)
+                and client is not check
+                and client.player is not None
+                and client.player.operator_level > 0)
         ))
 
     async def no_permissions(self, min_level: int) -> None:
