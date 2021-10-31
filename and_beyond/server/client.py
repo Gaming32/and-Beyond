@@ -5,6 +5,7 @@ import time
 from asyncio import StreamReader, StreamWriter
 from asyncio.events import AbstractEventLoop
 from asyncio.tasks import Task, shield
+from collections import deque
 from typing import TYPE_CHECKING, Optional, TypeVar
 from uuid import UUID
 
@@ -25,7 +26,7 @@ from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket,
                                read_packet, read_packet_timeout, write_packet)
 from and_beyond.server.commands import ClientCommandSender
 from and_beyond.server.player import Player
-from and_beyond.utils import spiral_loop_gen
+from and_beyond.utils import mean, spiral_loop_gen
 from and_beyond.world import BlockTypes, WorldChunk
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -65,6 +66,7 @@ class Client:
     new_y: float
     grounded_time: float
     air_time: float
+    last_y_velocities: deque[float]
 
     def __init__(self, server: 'AsyncServer', reader: StreamReader, writer: StreamWriter) -> None:
         self.server = server
@@ -84,6 +86,7 @@ class Client:
         self.command_sender = ClientCommandSender(self)
         self.grounded_time = 0
         self.air_time = 0
+        self.last_y_velocities = deque((), 4)
 
     async def start(self) -> None:
         self.ready = False
@@ -422,10 +425,12 @@ class Client:
         else:
             self.grounded_time = 0
             self.air_time += 0.05
+        self.last_y_velocities.append(distance_y)
+        avg_y_vel = mean(self.last_y_velocities)
         if (
-            self.air_time > TERMINAL_VELOCITY_TIME + 1
+            self.air_time > TERMINAL_VELOCITY_TIME + 2
             and self.server.multiplayer
-            and distance_y > TERMINAL_VELOCITY
+            and avg_y_vel > TERMINAL_VELOCITY
         ):
             await self.disconnect('Fly hacking detected')
 
