@@ -1,16 +1,19 @@
 import abc
 import math
+from typing import TYPE_CHECKING
 
 from and_beyond.common import REACH_DISTANCE_SQ
 from and_beyond.utils import autoslots
-from and_beyond.world import WorldChunk
+
+if TYPE_CHECKING:
+    from and_beyond.world import WorldChunk
 
 
 @autoslots
 class AbstractPlayer(abc.ABC):
     x: float
     y: float
-    loaded_chunks: dict[tuple[int, int], WorldChunk]
+    loaded_chunks: dict[tuple[int, int], 'WorldChunk']
 
     def can_reach(self, x: float, y: float, check_at_self: bool = True) -> bool:
         rel_x = x - self.x

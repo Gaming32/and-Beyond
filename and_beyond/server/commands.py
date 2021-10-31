@@ -1,183 +1,179 @@
-import sys
-from typing import TYPE_CHECKING, Any, Awaitable, Callable
+import abc
+import asyncio
+import logging
+import time
+from json.decoder import JSONDecodeError
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional
+from uuid import UUID
 
-import humanize
-from and_beyond.server.client import Client
-from and_beyond.server.command import (ClientCommandSender,
-                                       ConsoleCommandSender, evaluate_client)
+from and_beyond.world import OfflinePlayer
 
 if TYPE_CHECKING:
-    from and_beyond.server.command import AbstractCommandSender
+    from and_beyond.server.client import Client
+    from and_beyond.server.main import AsyncServer
 
-if sys.platform != 'win32':
-    import resource
-
-Command = Callable[['AbstractCommandSender', str], Awaitable[Any]]
+CommandCallable = Callable[['AbstractCommandSender', str], Awaitable[Any]]
 
 
-async def help_command(sender: 'AbstractCommandSender', args: str) -> None:
-    help_lines = [
-        "Here's a list of the commands you can use:",
-        " + /help  -- Show this help",
-        " + /say   -- Send a message",
-        " + /list  -- List the players online",
-        " + /tps   -- Show the server's average TPS",
-        " + /mspt  -- Show the server's average MSPT",
-        " + /stats -- Show the some server stats",
-    ]
-    if sender.operator >= 1:
-        help_lines.extend([
-            " + /tp    -- Teleport a player",
-        ])
-    if sender.operator >= 2:
-        help_lines.extend([
-            " + /kick  -- Forcefully disconnect a player",
-        ])
-    if sender.operator >= 4:
-        help_lines.extend([
-            " + /stop  -- Stop the server",
-        ])
-    for help_line in help_lines:
-        await sender.reply(help_line)
+class AbstractCommandSender(abc.ABC):
+    name: str
+    server: 'AsyncServer'
+    operator: int
+
+    @abc.abstractmethod
+    async def reply(self, message: str) -> None:
+        pass
+
+    async def reply_broadcast(self, message: str) -> None:
+        await self.reply(message)
+        logging_message = f'[{self}: {message}]'
+        logging.info(logging_message)
+        at = time.time()
+        check = self.client if isinstance(self, ClientCommandSender) else None
+        await asyncio.gather(*(
+            self.server.loop.create_task(client.send_chat(logging_message, at))
+            for client in self.server.clients
+            if (client.ready
+                and client is not check
+                and client.player is not None
+                and client.player.operator_level > 0)
+        ))
+
+    async def no_permissions(self, min_level: int) -> None:
+        await self.reply('You do not have the permissions for that command.')
+        await self.reply(f'It requires a minimum permission level of {min_level},')
+        await self.reply(f'but you only have a permission level of {self.operator}.')
+
+    def __str__(self) -> str:
+        return self.name
+
+    def __repr__(self) -> str:
+        return f'<CommandSender name={self.name!r}>'
 
 
-async def say_command(sender: 'AbstractCommandSender', args: str) -> None:
-    await sender.server.send_chat(f'<{sender.name}> {args}', log=True)
+class ConsoleCommandSender(AbstractCommandSender):
+    name = 'CONSOLE'
+    operator = 4
+
+    def __init__(self, server: 'AsyncServer') -> None:
+        self.server = server
+
+    async def reply(self, message: str) -> None:
+        print(message) # Wow so complicated
 
 
-async def list_command(sender: 'AbstractCommandSender', args: str) -> None:
-    players = [
-        c.player
-        for c in sender.server.clients
-        if c.player is not None
-    ]
-    player_text = ', '.join(str(p) for p in players)
-    await sender.reply(f'There are {len(players)} player(s) online: {player_text}')
+class ClientCommandSender(AbstractCommandSender):
+    client: 'Client'
+
+    def __init__(self, client: 'Client') -> None:
+        self.server = client.server
+        self.client = client
+
+    @property
+    def name(self) -> str:
+        if self.client.nickname is None:
+            # Use client's IP address instead
+            return self.client._writer.get_extra_info('peername')[0]
+        return self.client.nickname
+
+    @property
+    def operator(self) -> int:
+        if self.client.player is None:
+            return 0
+        return self.client.player.operator_level
+
+    async def reply(self, message: str) -> None:
+        return await self.client.send_chat(message)
 
 
-async def tps_command(sender: 'AbstractCommandSender', args: str) -> None:
-    tps = sender.server.get_multi_tps_str()
-    await sender.reply(tps)
+class Command(abc.ABC):
+    name: str
+    description: Optional[str]
+    permission: int
+
+    def __init__(self, name: str, description: Optional[str] = None, permission: int = 0) -> None:
+        self.name = name
+        self.description = description
+        self.permission = permission
+
+    @abc.abstractmethod
+    async def call(self, sender: AbstractCommandSender, args: str) -> Any:
+        raise NotImplementedError
+
+    async def validate_permission(self, sender: AbstractCommandSender) -> bool:
+        if sender.operator < self.permission:
+            await sender.no_permissions(self.permission)
+            return False
+        return True
 
 
-async def mspt_command(sender: 'AbstractCommandSender', args: str) -> None:
-    mspt = sender.server.get_multi_mspt_str()
-    await sender.reply(mspt)
+class WrapperCommand(Command):
+    func: CommandCallable
 
+    def __init__(self, func: CommandCallable, name: str, description: Optional[str] = None, permission: int = 0) -> None:
+        super().__init__(name, description=description, permission=permission)
+        self.func = func
 
-async def stats_command(sender: 'AbstractCommandSender', args: str) -> None:
-    await tps_command(sender, args)
-    await mspt_command(sender, args)
-    if sys.platform != 'win32':
-        memory_usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-        await sender.reply(
-            f'Memory usage: '
-            f'{humanize.naturalsize(memory_usage * 1024, gnu=True)} '
-            f'({memory_usage}K)'
-        )
-
-
-async def tp_command(sender: 'AbstractCommandSender', args: str) -> None:
-    if sender.operator < 1:
-        await sender.no_permissions(1)
-        return
-    argv = args.split()
-    if len(argv) == 0:
-        await sender.reply('Usage:')
-        if isinstance(sender, ConsoleCommandSender):
-            await sender.reply('  /tp <from> <to>')
-            await sender.reply('  /tp <from> <x> <y>')
-        else:
-            await sender.reply('  /tp [from] <to>')
-            await sender.reply('  /tp [from] <x> <y>')
-        return
-    elif len(argv) == 1:
-        if not isinstance(sender, ClientCommandSender):
-            await sender.reply('Usage:')
-            await sender.reply('  /tp <from> <to>')
-            await sender.reply('  /tp <from> <x> <y>')
+    async def call(self, sender: AbstractCommandSender, args: str) -> Any:
+        if not await self.validate_permission(sender):
             return
-        from_ = sender.client
-        to = evaluate_client(argv[0], sender)
-        if to is None:
-            return await sender.reply('First argument must be player')
-    elif len(argv) == 2:
-        from_ = evaluate_client(argv[0], sender)
-        if from_ is None:
-            if isinstance(sender, ClientCommandSender):
-                try:
-                    from_ = float(argv[0])
-                except ValueError:
-                    return await sender.reply('First argument must be player or number')
-            else:
-                return await sender.reply('First argument must be player')
-        if isinstance(from_, float):
-            assert isinstance(sender, ClientCommandSender)
-            x = from_
-            try:
-                y = float(argv[1])
-            except ValueError:
-                return await sender.reply('Second argument must be number')
-            from_ = sender.client
-            to = (x, y)
+        return await self.func(sender, args)
+
+
+def function_command(
+        name: str,
+        description: Optional[str] = None,
+        permission: int = 0
+    ) -> Callable[[CommandCallable], Command]:
+    def decorator(fn: CommandCallable) -> Command:
+        command = WrapperCommand(fn, name, description, permission)
+        COMMANDS[name] = command
+        return command
+    return decorator
+
+
+def evaluate_client(arg: str, sender: AbstractCommandSender) -> Optional['Client']:
+    server = sender.server
+    if arg in server.clients_by_name:
+        return server.clients_by_name[arg]
+    try:
+        uuid = UUID(arg)
+    except ValueError:
+        return None
+    if uuid in server.clients_by_uuid:
+        return server.clients_by_uuid[uuid]
+    return None
+
+
+async def evaluate_offline_player(arg: str, sender: AbstractCommandSender) -> Optional[OfflinePlayer]:
+    server = sender.server
+    if arg in server.clients_by_name:
+        return server.clients_by_name[arg].player
+    world = server.world
+    assert world is not None
+    try:
+        uuid = UUID(arg)
+    except ValueError:
+        pass
+    else:
+        if uuid in server.clients_by_uuid:
+            return server.clients_by_uuid[uuid].player
+        player = world.get_player_by_uuid(uuid)
+        try:
+            await player.ainit()
+        except (FileNotFoundError, JSONDecodeError):
+            pass
         else:
-            to = evaluate_client(argv[1], sender)
-            if to is None:
-                return await sender.reply('Second argument must be player')
-    else:
-        from_ = evaluate_client(argv[0], sender)
-        if from_ is None:
-            return await sender.reply('First argument must be player')
-        try:
-            x = float(argv[1])
-        except ValueError:
-            return await sender.reply('Second argument must be number')
-        try:
-            y = float(argv[2])
-        except ValueError:
-            return await sender.reply('Third argument must be number')
-        to = (x, y)
-    if isinstance(to, Client):
-        assert to.player is not None
-        to = to.player
-        await from_.set_position_safe(to.x, to.y, True)
-    else:
-        await from_.set_position_safe(*to, True)
-    from_.load_chunks_around_player_task()
-    assert from_.player is not None
-    await sender.reply_broadcast(f'Teleported {from_.player} to {to}')
-
-
-async def kick_command(sender: 'AbstractCommandSender', args: str) -> None:
-    if sender.operator < 2:
-        await sender.no_permissions(2)
-        return
-    argv = args.split(None, 1)
-    if len(argv) == 0:
-        await sender.reply('Usage:')
-        await sender.reply('  /kick <player> [reason]')
-        return
-    client = evaluate_client(argv[0], sender)
-    if client is None:
-        await sender.reply('First argument must be player')
-        return
-    reason = (len(argv) > 1 and argv[1]) or 'Kicked by operator'
-    await client.disconnect(reason)
-    await sender.reply_broadcast(f'Kicked {client.player} for reason "{reason}"')
-
-
-async def stop_command(sender: 'AbstractCommandSender', args: str) -> None:
-    if sender.operator < 4:
-        await sender.no_permissions(4)
-        return
-    await sender.reply_broadcast('Stopping server...')
-    sender.server.running = False
+            return player
+    try:
+        player = world.get_player_by_name(arg)
+    except KeyError:
+        return None
+    try:
+        await player.ainit()
+    except (FileNotFoundError, JSONDecodeError):
+        return None
+    return player
 
 
 COMMANDS: dict[str, Command] = {}
-
-_fname = None
-_func = None
-for (_fname, _func) in globals().items():
-    if _fname.endswith('_command') and callable(_func):
-        COMMANDS[_fname.removesuffix('_command')] = _func

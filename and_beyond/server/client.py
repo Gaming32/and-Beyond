@@ -23,7 +23,7 @@ from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket,
                                RemovePlayerPacket, ServerInfoPacket,
                                SimplePlayerPositionPacket, UnloadChunkPacket,
                                read_packet, read_packet_timeout, write_packet)
-from and_beyond.server.command import ClientCommandSender
+from and_beyond.server.commands import ClientCommandSender
 from and_beyond.server.player import Player
 from and_beyond.utils import spiral_loop_gen
 from and_beyond.world import BlockTypes, WorldChunk
@@ -108,6 +108,9 @@ class Client:
             return
         self.player = Player(self, self.nickname)
         await self.player.ainit()
+        if self.server.multiplayer and self.player.banned is not None:
+            await self.disconnect(self.player.banned)
+            return
         self.new_x = self.player.x
         self.new_y = self.player.y
         for client in self.server.clients:
