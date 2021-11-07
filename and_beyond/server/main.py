@@ -139,6 +139,7 @@ class AsyncServer:
             elif command == PipeCommandsToServer.OPEN_TO_LAN:
                 self.async_server.close()
                 port = read_pipe(pipe)
+                assert port is not None
                 await self.async_server.wait_closed()
                 await self.listen('0.0.0.0', port)
                 self.multiplayer = True

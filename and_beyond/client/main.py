@@ -282,11 +282,8 @@ while globals.running:
             screen.blit(text_render, area)
             if globals.game_status == GameStatus.CONNECTING:
                 if globals.singleplayer_pipe_in is not None and globals.connecting_status.lower() == 'starting singleplayer server':
-                    try:
-                        port = read_pipe(globals.singleplayer_pipe_in)
-                    except OSError:
-                        pass
-                    else:
+                    port = read_pipe(globals.singleplayer_pipe_in)
+                    if port is not None:
                         TitleScreen.load_multiplayer('localhost', port)
             elif globals.game_status == GameStatus.STOPPING:
                 if globals.singleplayer_popen is not None:
