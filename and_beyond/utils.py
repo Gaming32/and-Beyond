@@ -4,7 +4,7 @@ import random
 import sys
 from asyncio.events import AbstractEventLoop
 from typing import (Any, Awaitable, Callable, Generator, Generic, Iterable,
-                    MutableSequence, Optional, Sequence, TypeVar, Union, overload)
+                    Optional, Sequence, TypeVar, Union, overload)
 
 _T = TypeVar('_T')
 _T_type = TypeVar('_T_type', bound=type)
@@ -69,9 +69,9 @@ class ColoredFormatter(logging.Formatter):
 
 
 def autoslots(cls: _T_type) -> _T_type:
-    slots = set(cls.__slots__) if hasattr(cls, '__slots__') else set()
+    slots = set(cls.__slots__) if hasattr(cls, '__slots__') else set() # type: ignore
     slots.update(cls.__annotations__.keys())
-    cls.__slots__ = slots
+    cls.__slots__ = slots # type: ignore
     return cls
 
 
@@ -143,7 +143,7 @@ def copy_obj_to_class(obj: Any, to: Union[type[_T], _T]) -> _T:
     else:
         copy_attrs = set(obj.__dict__)
     if hasattr(to, '__slots__'):
-        copy_attrs.intersection_update(to.__slots__)
+        copy_attrs.intersection_update(to.__slots__) # type: ignore
     if isinstance(to, type):
         to = to.__new__(to) # type: ignore
     for attr in copy_attrs:

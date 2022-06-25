@@ -1,5 +1,3 @@
-# pyright: reportWildcardImportFromLibrary=false
-
 import ipaddress
 
 import pygame

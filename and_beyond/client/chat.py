@@ -1,4 +1,5 @@
 import time
+from typing import Optional
 
 from and_beyond.chat import ChatMessage
 from and_beyond.client import globals
@@ -12,7 +13,7 @@ class ClientChatMessage(ChatMessage):
     message_render: Surface
     dirty: bool
 
-    def __init__(self, message: str, at: float = None) -> None:
+    def __init__(self, message: str, at: Optional[float] = None) -> None:
         super().__init__(message, at)
         self.dirty = True
 

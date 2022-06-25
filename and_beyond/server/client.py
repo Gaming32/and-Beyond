@@ -434,7 +434,7 @@ class Client:
         ):
             await self.disconnect('Fly hacking detected')
 
-    async def set_position_safe(self, x: float = None, y: float = None, include_others: bool = False) -> None:
+    async def set_position_safe(self, x: Optional[float] = None, y: Optional[float] = None, include_others: bool = False) -> None:
         assert self.player is not None
         if x is None:
             x = self.player.x
@@ -517,7 +517,7 @@ class Client:
         peername = self._writer.get_extra_info('peername')
         return f'<Client host={peername[0]}:{peername[1]} player={self.player!r} server={self.server!r}>'
 
-    async def send_chat(self, message: str, at: float = None) -> None:
+    async def send_chat(self, message: str, at: Optional[float] = None) -> None:
         if at is None:
             at = time.time()
         packet = ChatPacket(message, at)

@@ -1,4 +1,3 @@
-# pyright: reportWildcardImportFromLibrary=false
 import math as pymath
 import random
 

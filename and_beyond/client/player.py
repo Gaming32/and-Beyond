@@ -1,4 +1,3 @@
-# pyright: reportWildcardImportFromLibrary=false
 import math as pymath
 from math import inf
 from typing import Optional
@@ -110,7 +109,7 @@ class ClientPlayer(AbstractPlayer):
         self.selected_block = new
         self.selected_block_texture = pygame.transform.scale(get_block_texture(new), (50, 50))
 
-    def send_position(self, x: float = None, y: float = None) -> None:
+    def send_position(self, x: Optional[float] = None, y: Optional[float] = None) -> None:
         x = self.x if x is None else x
         y = self.y if y is None else y
         packet = SimplePlayerPositionPacket(x, y)

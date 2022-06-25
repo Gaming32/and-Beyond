@@ -1,11 +1,5 @@
-import asyncio
-import json
-import logging
-from asyncio.events import AbstractEventLoop
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 
-import aiofiles
 from and_beyond.packet import PlayerPositionPacket
 from and_beyond.physics import PlayerPhysics
 from and_beyond.utils import autoslots
@@ -21,7 +15,7 @@ class Player(OfflinePlayer):
     client: 'Client'
     physics: PlayerPhysics
 
-    def __init__(self, client: 'Client', name: str = None) -> None:
+    def __init__(self, client: 'Client', name: Optional[str] = None) -> None:
         assert client.uuid is not None
         assert client.server.world is not None
         super().__init__(name or str(client.uuid), client.uuid, client.server.world)

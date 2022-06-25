@@ -20,7 +20,10 @@ def write_pipe(pipe: BinaryIO, command: int, size: int = 2, signed: bool = False
 
 
 def read_pipe(pipe: BinaryIO, cls: type[_T_int] = int, size: int = 2, signed: bool = False) -> Optional[_T_int]:
-    data = pipe.read(size)
+    try:
+        data = pipe.read(size)
+    except OSError:
+        return None
     if data is None:
         return None
     return cast(_T_int, cls.from_bytes(data, 'little', signed=signed))

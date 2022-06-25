@@ -1,4 +1,3 @@
-# pyright: reportWildcardImportFromLibrary=false
 import logging
 
 import pygame

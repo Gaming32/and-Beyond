@@ -1,4 +1,3 @@
-# pyright: reportWildcardImportFromLibrary=false
 import logging
 
 import pygame
@@ -12,7 +11,7 @@ from pygame.locals import *
 
 ASSET_COUNT = 0
 
-import and_beyond.client.mixer # Load music files now
+import and_beyond.client.mixer # pyright: ignore [reportUnusedImport] # Load music files now
 ASSET_COUNT += 3
 
 _missing_texture_cache: dict[str, pygame.surface.Surface] = {}

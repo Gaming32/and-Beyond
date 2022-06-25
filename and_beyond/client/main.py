@@ -1,4 +1,3 @@
-# pyright: reportWildcardImportFromLibrary=false
 import asyncio
 import logging
 import sys
@@ -34,7 +33,6 @@ from and_beyond.client.consts import (PERIODIC_TICK_EVENT,
 from and_beyond.client.globals import ConfigManager, GameStatus
 from and_beyond.client.mixer import Mixer
 from and_beyond.client.player import ClientPlayer
-from and_beyond.client.ui.accounts import AccountsMenu
 from and_beyond.client.ui.label_screen import LabelScreen
 from and_beyond.client.ui.pause_menu import PauseMenu
 from and_beyond.client.ui.title_screen import TitleScreen
@@ -284,6 +282,7 @@ while globals.running:
                 if globals.singleplayer_pipe_in is not None and globals.connecting_status.lower() == 'starting singleplayer server':
                     port = read_pipe(globals.singleplayer_pipe_in)
                     if port is not None:
+                        globals.connecting_status = 'Connecting to singleplayer server'
                         TitleScreen.load_multiplayer('localhost', port)
             elif globals.game_status == GameStatus.STOPPING:
                 if globals.singleplayer_popen is not None:

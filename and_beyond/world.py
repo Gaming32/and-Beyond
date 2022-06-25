@@ -84,7 +84,7 @@ class World:
         meta['seed'] = time.time_ns() & (2 ** 64 - 1)
         self.meta = meta
 
-    async def ainit(self, optimize: bool = None):
+    async def ainit(self, optimize: Optional[bool] = None):
         if optimize is None:
             optimize = self.auto_optimize
         self.aloop = asyncio.get_running_loop()
@@ -281,7 +281,7 @@ class WorldSection:
     load_counter: int
     _data_version: int
 
-    def __init__(self, world: World, x: int, y: int, optimize: bool = None) -> None:
+    def __init__(self, world: World, x: int, y: int, optimize: Optional[bool] = None) -> None:
         self.world = world
         self.x = x
         self.y = y
@@ -354,7 +354,7 @@ class WorldSection:
         self.load_counter += 1
         return self.load_counter
 
-    def mark_unloaded(self, cb: Callable[['WorldSection'], Any] = None) -> int:
+    def mark_unloaded(self, cb: Optional[Callable[['WorldSection'], Any]] = None) -> int:
         self.load_counter -= 1
         if self.load_counter <= 0 and cb is not None:
             cb(self)
@@ -431,7 +431,7 @@ class WorldChunk:
         self.load_counter += 1
         return self.load_counter
 
-    def mark_unloaded(self, cb: Callable[['WorldChunk'], Any] = None) -> int:
+    def mark_unloaded(self, cb: Optional[Callable[['WorldChunk'], Any]] = None) -> int:
         self.load_counter -= 1
         if self.load_counter <= 0 and cb is not None:
             cb(self)

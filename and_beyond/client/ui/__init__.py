@@ -1,4 +1,3 @@
-# pyright: reportWildcardImportFromLibrary=false
 import abc
 from typing import Any, Callable, Optional
 
@@ -209,7 +208,7 @@ class UiSlider(UiElement):
     value: int
     callback: SliderCallback
 
-    def __init__(self, label: str, callback: SliderCallback, min: int, max: int, value: int = None) -> None:
+    def __init__(self, label: str, callback: SliderCallback, min: int, max: int, value: Optional[int] = None) -> None:
         if value is None:
             value = min
         self.label = label
@@ -253,7 +252,7 @@ class Ui:
     parent: Optional['Ui']
     elements: list[UiElement]
 
-    def __init__(self, elements: list[UiElement] = None) -> None:
+    def __init__(self, elements: Optional[list[UiElement]] = None) -> None:
         if elements is None:
             elements = []
         self.parent = None

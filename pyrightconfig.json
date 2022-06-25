@@ -1,0 +1,4 @@
+{
+    "reportWildcardImportFromLibrary": false,
+    "reportUnusedImport": "warning"
+}

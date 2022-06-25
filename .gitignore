@@ -4,5 +4,6 @@ config.json
 worlds
 test.py
 dist
+.venv
 # Noise tests
 test*.png

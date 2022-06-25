@@ -21,7 +21,7 @@ async def _check_error(resp: ClientResponse) -> None:
             resp.request_info,
             resp.history,
             status=resp.status,
-            message=resp.reason,
+            message=resp.reason or '',
             headers=resp.headers,
         ) from None
     if resp.status < 400:

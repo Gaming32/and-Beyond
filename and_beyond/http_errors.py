@@ -14,7 +14,7 @@ class AuthServerError(AuthClientError):
     info: Any
     status: int = 400
 
-    def __init__(self, human: Optional[str], args: Any, status: int = None) -> None:
+    def __init__(self, human: Optional[str], args: Any, status: Optional[int] = None) -> None:
         self.human = human
         self.info = args
         if status is not None:

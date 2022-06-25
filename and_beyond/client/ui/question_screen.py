@@ -21,7 +21,7 @@ class QuestionScreen(Ui):
             ok_text: str = 'Ok',
             allow_cancel: bool = True,
             cancel_text: str = 'Cancel',
-            ok_callback: TextInputCallback = None,
+            ok_callback: Optional[TextInputCallback] = None,
             default_text: str = ''
         ) -> None:
         self.text_input = UiTextInput(NO_OP, default_text)

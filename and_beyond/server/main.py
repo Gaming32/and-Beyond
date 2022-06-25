@@ -14,7 +14,6 @@ from fractions import Fraction
 from typing import Any, BinaryIO, Optional
 from uuid import UUID
 
-import and_beyond.server.builtin_commands
 import colorama
 from and_beyond.common import AUTH_SERVER, PORT, RANDOM_TICK_RATE
 from and_beyond.http_auth import AuthClient
@@ -431,13 +430,13 @@ class AsyncServer:
         await self.set_tile_type_global(chunk, x, y, block)
         return True
 
-    async def set_tile_type_global(self, chunk: WorldChunk, x: int, y: int, type: BlockTypes, exclude_player: Client = None):
+    async def set_tile_type_global(self, chunk: WorldChunk, x: int, y: int, type: BlockTypes, exclude_player: Optional[Client] = None):
         chunk.set_tile_type(x, y, type)
         cpos = (chunk.abs_x, chunk.abs_y)
         packet = ChunkUpdatePacket(chunk.abs_x, chunk.abs_y, x, y, type)
         await self.send_to_all(packet, cpos, exclude_player)
 
-    async def send_to_all(self, packet: Packet, cpos_only: Optional[tuple[int, int]] = None, exclude_player: Client = None) -> tuple[None, ...]:
+    async def send_to_all(self, packet: Packet, cpos_only: Optional[tuple[int, int]] = None, exclude_player: Optional[Client] = None) -> tuple[None, ...]:
         tasks: list[asyncio.Task] = []
         for client in self.clients:
             if client is exclude_player:
@@ -485,7 +484,7 @@ class AsyncServer:
     def __repr__(self) -> str:
         return f'<AsyncServer{" SINGLEPLAYER" * (not self.multiplayer)} bind={self.host}:{self.port} world={str(self.world)!r} tps={self.get_tps_str()}>'
 
-    async def send_chat(self, message: str, at: float = None, log: bool = False) -> None:
+    async def send_chat(self, message: str, at: Optional[float] = None, log: bool = False) -> None:
         if log:
             logging.info('CHAT: %s', message)
         if at is None:

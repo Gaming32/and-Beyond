@@ -1,4 +1,3 @@
-# pyright: reportWildcardImportFromLibrary=false
 from typing import Any
 
 from and_beyond.client import globals

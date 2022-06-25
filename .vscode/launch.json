@@ -30,7 +30,8 @@
                 // Uncomment if you need to test with a local auth server
                 // "--auth-server", "http://localhost:8932",
                 // "--insecure-auth"
-            ]
+            ],
+            "justMyCode": false
         },
         {
             "name": "PW32: Server",

@@ -1,4 +1,3 @@
-# pyright: reportWildcardImportFromLibrary=false
 import logging
 import random
 from typing import Optional
@@ -51,7 +50,7 @@ class Mixer:
         if self.music_channel is not None:
             self.music_channel.set_volume(volume)
 
-    def play_song(self, song: pygame.mixer.Sound = None) -> None:
+    def play_song(self, song: Optional[pygame.mixer.Sound] = None) -> None:
         logging.debug('Playing new song')
         if self.music_channel is None:
             logging.debug('No music channel')

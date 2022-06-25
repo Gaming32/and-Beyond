@@ -25,7 +25,7 @@ class CavePhase(AbstractPhase):
         self.simplex = OpenSimplex(generator.seed)
 
     def noise(self, x: float, y: float) -> float:
-        return sum(self.simplex.noise2d(2 ** i * x, 2 ** i * y) ** 2 for i in range(OCTAVES))
+        return sum(self.simplex.noise2(2 ** i * x, 2 ** i * y) ** 2 for i in range(OCTAVES))
 
     def generate_chunk(self, chunk: 'WorldChunk') -> None:
         if chunk.abs_y > -5:
