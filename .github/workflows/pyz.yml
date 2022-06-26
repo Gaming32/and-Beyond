@@ -2,16 +2,24 @@ name: PYZ
 on: [push, pull_request, workflow_dispatch]
 
 jobs:
-  build_pyz:
+  build_pyz_and_typecheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - name: Setup Python 3.9
+        uses: actions/setup-python@v2
         with:
           python-version: '3.9'
-      - run: python to_pyz.py
-      - run: python to_pyz_server.py
-      - uses: actions/upload-artifact@v2
+      - name: Install dependencies
+        run: python -m pip install -Ur requirements.txt pyright
+      - name: Perform typecheck
+        run: pyright and_beyond *.py
+      - name: Build client
+        run: python to_pyz.py
+      - name: Build Server
+        run: python to_pyz_server.py
+      - name: Upload PYZs
+        uses: actions/upload-artifact@v2
         with:
           name: pyz-executable
           path: pyz/*.pyz

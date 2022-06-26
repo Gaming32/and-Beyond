@@ -38,7 +38,7 @@ class Mixer:
     def __init__(self) -> None:
         if pygame.mixer.get_num_channels():
             self.music_channel = pygame.mixer.Channel(0)
-            pygame.mixer.set_reserved(0) # type: ignore (the stubs are incorrect)
+            pygame.mixer.set_reserved(0)
         else:
             logging.warn('No music channels available')
             self.music_channel = None

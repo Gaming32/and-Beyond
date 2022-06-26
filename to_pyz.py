@@ -2,6 +2,7 @@ import py_compile
 import time
 import zipfile
 from pathlib import Path
+from typing import Optional
 
 from and_beyond.common import VERSION_DISPLAY_NAME
 
@@ -13,7 +14,7 @@ AND_BEYOND_DIR = Path('and_beyond')
 ASSETS_DIR = Path('assets')
 
 
-def copy_to_zip(zfp: zipfile.ZipFile, file: Path, arcname: str = None):
+def copy_to_zip(zfp: zipfile.ZipFile, file: Path, arcname: Optional[str] = None):
     global counter
     if arcname is None:
         arcname = file.relative_to('.').as_posix()
