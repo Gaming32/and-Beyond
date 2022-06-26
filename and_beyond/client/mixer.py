@@ -73,7 +73,6 @@ class Mixer:
                 return
         logging.info('Playing song -- %s', SONG_NAMES.get(song, str(song)))
         self.current_song = song
-        song.set_volume(self.volume)
         self.music_channel.play(song, fade_ms=500)
 
     def stop_all_music(self) -> None:

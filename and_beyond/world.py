@@ -153,8 +153,12 @@ class World:
             self.meta = await self.aloop.run_in_executor(None, json.loads, await fp.read())
 
     async def save_meta(self) -> None:
+        self.meta['player_cache'].clear()
+        for (player_name, player_uuid) in self._players_by_name.items():
+            if player_uuid.int != 0:
+                self.meta['player_cache'][player_name] = player_uuid.int
         async with aiofiles.open(self.meta_path, 'w') as fp:
-            await fp.write(await self.aloop.run_in_executor(None, json.dumps, self.meta))
+            await fp.write(await self.aloop.run_in_executor(None, partial(json.dumps, self.meta, indent=2)))
 
     def find_spawn(self, gen: 'WorldGenerator') -> tuple[int, int]:
         if self.meta['spawn_x'] is not None:
@@ -509,6 +513,10 @@ class OfflinePlayer(AbstractPlayer):
     async def ainit(self) -> None:
         self.aloop = asyncio.get_running_loop()
         if self.name is not None:
+            if (old_name := self.world._players_by_uuid.pop(self.uuid, None)) is not None:
+                self.world._players_by_name.pop(old_name, None)
+            if (old_uuid := self.world._players_by_name.pop(self.name, None)) is not None:
+                self.world._players_by_uuid.pop(old_uuid, None)
             self.world._players_by_name[self.name] = self.uuid
             self.world._players_by_uuid[self.uuid] = self.name
         spawn_x = self.world.meta['spawn_x']
@@ -542,7 +550,7 @@ class OfflinePlayer(AbstractPlayer):
             'banned': self.banned,
             'operator': self.operator_level,
         }
-        raw_data = await self.aloop.run_in_executor(None, json.dumps, data)
+        raw_data = await self.aloop.run_in_executor(None, partial(json.dumps, data, indent=2))
         async with aiofiles.open(self.data_path, 'w') as fp:
             await fp.write(raw_data)
 

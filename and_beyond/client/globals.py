@@ -59,7 +59,7 @@ class ConfigManager:
             'max_framerate': 75,
             'always_show_fps': False,
             'volume': 1.0,
-            'last_server': 'mc.jemnetworks.com',
+            'last_server': '',
             'auth_token': None,
             'uuid': None,
             'username': 'Player',
@@ -71,7 +71,7 @@ class ConfigManager:
             self.config['fullscreen'] = fullscreen
         try:
             with open('config.json', 'w', encoding='utf-8') as fp:
-                json.dump(self.config, fp)
+                json.dump(self.config, fp, indent=2)
         except (OSError, TypeError):
             logging.warn('Unable to save config', exc_info=True)
         else:

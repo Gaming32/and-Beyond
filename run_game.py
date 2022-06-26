@@ -1,3 +1,4 @@
+# pyright: reportUnusedImport=false
 # The launching script needs to be Python 2.X compatible so that it can tell people to upgrade ;)
 from __future__ import print_function
 

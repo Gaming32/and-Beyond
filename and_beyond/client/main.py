@@ -91,7 +91,7 @@ def render_debug() -> None:
     ])
     for line in lines:
         text_render = DEBUG_FONT.render(line, False, (0, 0, 0))
-        screen.blit(text_render, text_render.get_rect().move(0, y))
+        screen.blit(text_render, text_render.get_rect().move(2, y))
         y += text_render.get_height()
 
 
