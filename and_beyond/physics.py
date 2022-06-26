@@ -1,11 +1,29 @@
 import math
 
+from pygame import Vector2
+
 from and_beyond.abstract_player import AbstractPlayer
 from and_beyond.common import GRAVITY, TERMINAL_VELOCITY
 from and_beyond.utils import autoslots
 from and_beyond.world import BlockTypes
 
 EPSILON = 0.001
+
+
+class AABB:
+    x1: float
+    y1: float
+    x2: float
+    y2: float
+
+    def __init__(self, x1: float, y1: float, x2: float, y2: float) -> None:
+        self.x1 = x1
+        self.y1 = y1
+        self.x2 = x2
+        self.y2 = y2
+
+    def __add__(self, vec: Vector2) -> 'AABB':
+        return AABB(self.x1 + vec.x, self.y1 + vec.y, self.x2 + vec.x, self.y2 + vec.y)
 
 
 @autoslots

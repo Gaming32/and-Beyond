@@ -4,9 +4,10 @@ import random
 import pygame
 import pygame.draw
 import pygame.mouse
+from and_beyond.block import BLOCKS
 from and_beyond.client import globals
 from and_beyond.client.assets import (BLOCK_SPRITES, MISSING_TEXTURE,
-                                      ROTATABLE_BLOCKS, SELECTED_ITEM_BG)
+                                      SELECTED_ITEM_BG)
 from and_beyond.client.consts import BLOCK_RENDER_SIZE
 from and_beyond.client.utils import world_to_screen
 from and_beyond.utils import autoslots
@@ -154,12 +155,15 @@ class ClientChunk(WorldChunk):
         self.redraw.add((x, y))
 
 
-def get_block_texture(block: BlockTypes) -> pygame.surface.Surface:
-    if block > len(BLOCK_SPRITES):
+def get_block_texture(block_old: BlockTypes) -> pygame.surface.Surface:
+    block = BLOCKS[block_old]
+    if block is None:
         tex = MISSING_TEXTURE[0]
     else:
-        if ROTATABLE_BLOCKS[block]:
-            tex = random.choice(BLOCK_SPRITES[block - 1])
+        sprites = BLOCK_SPRITES[block.id]
+        assert sprites is not None
+        if block.turnable_texture:
+            tex = random.choice(sprites)
         else:
-            tex = BLOCK_SPRITES[block - 1][0]
+            tex = sprites[0]
     return tex
