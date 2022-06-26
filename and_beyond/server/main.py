@@ -14,6 +14,7 @@ from fractions import Fraction
 from typing import Any, BinaryIO, Optional
 from uuid import UUID
 
+import and_beyond.server.builtin_commands # pyright: ignore [reportUnusedImport]
 import colorama
 from and_beyond.common import AUTH_SERVER, PORT, RANDOM_TICK_RATE
 from and_beyond.http_auth import AuthClient
