@@ -1,6 +1,9 @@
 import ipaddress
 
 import pygame
+from pygame import *
+from pygame.locals import *
+
 from and_beyond.client import globals
 from and_beyond.client.globals import GameStatus
 from and_beyond.client.server_connection import ServerConnection
@@ -10,8 +13,6 @@ from and_beyond.client.ui.label_screen import LabelScreen
 from and_beyond.client.ui.options_menu import OptionsMenu
 from and_beyond.client.ui.question_screen import QuestionScreen
 from and_beyond.common import PORT
-from pygame import *
-from pygame.locals import *
 
 
 class TitleScreen(Ui):

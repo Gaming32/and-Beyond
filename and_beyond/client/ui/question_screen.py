@@ -2,12 +2,12 @@ import textwrap
 from typing import Optional
 
 import pygame
-from and_beyond.client import globals
-from and_beyond.client.ui import (TextInputCallback, Ui, UiButton, UiLabel,
-                                  UiTextInput)
-from and_beyond.utils import NO_OP
 from pygame import Surface
 from pygame.constants import KEYUP
+
+from and_beyond.client import globals
+from and_beyond.client.ui import TextInputCallback, Ui, UiButton, UiLabel, UiTextInput
+from and_beyond.utils import NO_OP
 
 
 class QuestionScreen(Ui):

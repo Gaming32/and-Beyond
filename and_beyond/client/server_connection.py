@@ -11,34 +11,28 @@ from uuid import UUID
 import janus
 import pygame
 import pygame.event
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+from cryptography.hazmat.primitives.serialization.base import load_der_public_key
+
 from and_beyond.client import globals
 from and_beyond.client.chat import ClientChatMessage
-from and_beyond.client.consts import (SERVER_CONNECT_EVENT,
-                                      SERVER_DISCONNECT_EVENT)
+from and_beyond.client.consts import SERVER_CONNECT_EVENT, SERVER_DISCONNECT_EVENT
 from and_beyond.client.globals import GameStatus
 from and_beyond.client.player import ClientPlayer
 from and_beyond.client.world import ClientChunk
 from and_beyond.common import KEY_LENGTH, PORT, PROTOCOL_VERSION
 from and_beyond.http_auth import AuthClient
 from and_beyond.http_errors import Unauthorized
-from and_beyond.middleware import (BufferedWriterMiddleware,
-                                   EncryptedReaderMiddleware,
-                                   EncryptedWriterMiddleware, ReaderMiddleware,
-                                   WriterMiddleware, create_writer_middlewares)
-from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket,
-                               ChunkUpdatePacket, ClientRequestPacket,
-                               DisconnectPacket, Packet, PingPacket,
-                               PlayerInfoPacket, PlayerPositionPacket,
-                               RemovePlayerPacket, ServerInfoPacket, SimplePlayerPositionPacket,
-                               UnloadChunkPacket, read_packet,
-                               read_packet_timeout, write_packet)
+from and_beyond.middleware import (BufferedWriterMiddleware, EncryptedReaderMiddleware, EncryptedWriterMiddleware,
+                                   ReaderMiddleware, WriterMiddleware, create_writer_middlewares)
+from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket, ChunkUpdatePacket, ClientRequestPacket,
+                               DisconnectPacket, Packet, PingPacket, PlayerInfoPacket, PlayerPositionPacket,
+                               RemovePlayerPacket, ServerInfoPacket, SimplePlayerPositionPacket, UnloadChunkPacket,
+                               read_packet, read_packet_timeout, write_packet)
 from and_beyond.utils import DEBUG
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-from cryptography.hazmat.primitives.serialization.base import \
-    load_der_public_key
 
 _T_Packet = TypeVar('_T_Packet', bound=Packet)
 
@@ -53,7 +47,7 @@ class ServerConnection:
 
     running: bool
     outgoing_queue: Optional[janus.Queue[Packet]]
-    send_packets_task: Optional[asyncio.Task]
+    send_packets_task: Optional[asyncio.Task[None]]
     uuid: UUID
 
     disconnect_reason: Optional[str]

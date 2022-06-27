@@ -6,21 +6,23 @@ import sys
 from typing import TYPE_CHECKING, BinaryIO, Optional, TypedDict
 from uuid import UUID
 
+from pygame import Vector2
+
 from and_beyond.common import AUTH_SERVER
 from and_beyond.http_auth import AuthClient
 from and_beyond.pipe_commands import PipeCommandsToServer, write_pipe
 from and_beyond.utils import get_opt
-from pygame import Vector2
 
 if TYPE_CHECKING:
+    from pygame.display import _VidInfo
+    from pygame.event import Event
+
     from and_beyond.client.chat import ChatClient
     from and_beyond.client.mixer import Mixer
     from and_beyond.client.player import ClientPlayer
     from and_beyond.client.server_connection import ServerConnection
     from and_beyond.client.ui import Ui
     from and_beyond.client.world import ClientWorld
-    from pygame.display import _VidInfo
-    from pygame.event import Event
 
 
 class _Config(TypedDict):

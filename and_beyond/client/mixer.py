@@ -4,9 +4,10 @@ from typing import Optional
 
 import pygame
 import pygame.mixer
-from and_beyond.client import globals
 from pygame import *
 from pygame.locals import *
+
+from and_beyond.client import globals
 
 TITLE_TRACKS = [
     pygame.mixer.Sound('assets/music/Evening Fall - Harp.ogg'),

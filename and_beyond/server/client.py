@@ -263,7 +263,7 @@ class Client:
 
     async def load_chunks_around_player(self, diameter: int = VIEW_DISTANCE_BOX) -> None:
         assert self.player is not None
-        async def load_chunk_rel(x, y):
+        async def load_chunk_rel(x: int, y: int) -> None:
             await asyncio.sleep(0)
             x += cx
             y += cy

@@ -1,6 +1,5 @@
 import math
-
-from pygame import Vector2
+from typing import Sequence, Union
 
 from and_beyond import blocks
 from and_beyond.abstract_player import AbstractPlayer
@@ -22,8 +21,8 @@ class AABB:
         self.x2 = x2
         self.y2 = y2
 
-    def __add__(self, vec: Vector2) -> 'AABB':
-        return AABB(self.x1 + vec.x, self.y1 + vec.y, self.x2 + vec.x, self.y2 + vec.y)
+    def __add__(self, vec: Union[tuple[float, float], Sequence[float]]) -> 'AABB':
+        return AABB(self.x1 + vec[0], self.y1 + vec[1], self.x2 + vec[0], self.y2 + vec[1])
 
 
 @autoslots

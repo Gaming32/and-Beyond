@@ -1,8 +1,8 @@
 import random
 import sys
 from typing import TYPE_CHECKING
-from and_beyond import blocks
 
+from and_beyond import blocks
 from and_beyond.server.world_gen.perlin import PerlinNoise
 from and_beyond.server.world_gen.phase import HeightmappedPhase
 from and_beyond.utils import autoslots

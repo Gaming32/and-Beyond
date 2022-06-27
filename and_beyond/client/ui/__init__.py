@@ -5,11 +5,12 @@ import pygame
 import pygame.draw
 import pygame.font
 import pygame.mouse
+from pygame import *
+from pygame.locals import *
+
 from and_beyond.client import globals
 from and_beyond.client.assets import GAME_FONT
 from and_beyond.client.consts import UI_BG, UI_FG
-from pygame import *
-from pygame.locals import *
 
 DEFAULT_ELEMENT_WIDTH = 350
 DEFAULT_ELEMENT_HEIGHT = 50

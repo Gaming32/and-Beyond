@@ -4,8 +4,8 @@ import enum
 import struct
 from typing import Optional, TypeVar, cast
 from uuid import UUID
-from and_beyond import blocks
 
+from and_beyond import blocks
 from and_beyond.blocks import Block, get_block_by_id
 from and_beyond.common import KEY_LENGTH, PROTOCOL_VERSION
 from and_beyond.middleware import ReaderMiddleware, WriterMiddleware

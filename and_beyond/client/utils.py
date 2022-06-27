@@ -1,7 +1,8 @@
-from and_beyond.client import globals
-from and_beyond.client.consts import BLOCK_RENDER_SIZE
 from pygame.math import Vector2
 from pygame.surface import Surface
+
+from and_beyond.client import globals
+from and_beyond.client.consts import BLOCK_RENDER_SIZE
 
 
 def world_to_screen(x: float, y: float, surf: Surface) -> Vector2:

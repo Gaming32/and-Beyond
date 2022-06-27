@@ -1,10 +1,10 @@
 from typing import Any
 
-from and_beyond.client import globals
-from and_beyond.client.ui import (SliderCallback, Ui, UiButton, UiLabel,
-                                  UiSlider, UiToggleButton)
 from pygame import *
 from pygame.locals import *
+
+from and_beyond.client import globals
+from and_beyond.client.ui import SliderCallback, Ui, UiButton, UiLabel, UiSlider, UiToggleButton
 
 
 class FramerateSlider(UiSlider):
