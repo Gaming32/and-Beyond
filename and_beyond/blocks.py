@@ -2,8 +2,6 @@ from typing import Optional
 
 from typing_extensions import Self
 
-from and_beyond.physics import AABB
-
 BLOCKS: list[Optional['Block']] = [None] * 256
 
 
@@ -17,7 +15,7 @@ def get_block_by_id(id: int) -> 'Block':
 class Block:
     id: int
     name: str
-    bounding_box: Optional[AABB]
+    bounding_box: Optional['AABB']
     turnable_texture: bool = False
     texture_path: Optional[str]
 
@@ -28,7 +26,7 @@ class Block:
         self.texture_path = f'blocks/{name}.png'
         BLOCKS[id] = self
 
-    def set_bounding_box(self, bb: Optional[AABB]) -> Self:
+    def set_bounding_box(self, bb: Optional['AABB']) -> Self:
         self.bounding_box = bb
         return self
 
@@ -40,6 +38,7 @@ class Block:
         self.texture_path = path
         return self
 
+from and_beyond.physics import AABB
 
 AIR    = Block(0, 'air').set_bounding_box(None).set_texture_path(None)
 STONE  = Block(1, 'stone').set_turnable_texture(True)

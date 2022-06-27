@@ -304,7 +304,10 @@ while globals.running:
             globals.mouse_world = screen_to_world(globals.mouse_screen, screen)
             if globals.game_connection is not None:
                 if not globals.paused:
-                    move_up = key.get_pressed()[K_SPACE]
+                    if not chat_open:
+                        move_up = key.get_pressed()[K_SPACE]
+                    else:
+                        move_up = False
                     if move_up:
                         current_time = time.get_ticks()
                         if current_time - last_jump_time < JUMP_DELAY_MS:

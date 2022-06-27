@@ -16,9 +16,8 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from cryptography.hazmat.primitives.serialization.base import load_der_public_key
 
 from and_beyond import blocks
-from and_beyond.common import (KEY_LENGTH, MOVE_SPEED_CAP_SQ, PROTOCOL_VERSION, TERMINAL_VELOCITY,
-                               TERMINAL_VELOCITY_TIME, USERNAME_REGEX, VERSION_DISPLAY_NAME, VIEW_DISTANCE_BOX,
-                               get_version_name)
+from and_beyond.common import (KEY_LENGTH, MOVE_SPEED_CAP_SQ, PROTOCOL_VERSION, USERNAME_REGEX, VERSION_DISPLAY_NAME,
+                               VIEW_DISTANCE_BOX, get_version_name)
 from and_beyond.middleware import (BufferedWriterMiddleware, EncryptedReaderMiddleware, EncryptedWriterMiddleware,
                                    ReaderMiddleware, WriterMiddleware, create_writer_middlewares)
 from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket, ChunkUpdatePacket, ClientRequestPacket,
@@ -423,9 +422,9 @@ class Client:
         self.last_y_velocities.append(distance_y)
         avg_y_vel = mean(self.last_y_velocities)
         if (
-            self.air_time > TERMINAL_VELOCITY_TIME + 2
-            and self.server.multiplayer
-            and avg_y_vel > TERMINAL_VELOCITY
+            self.air_time > 5
+            and avg_y_vel > -0.25
+            and not self.player.physics.offset_bb.collides_with_world(self.player.world)
         ):
             await self.disconnect('Fly hacking detected')
 

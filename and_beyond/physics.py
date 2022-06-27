@@ -5,6 +5,7 @@ from and_beyond import blocks
 from and_beyond.abstract_player import AbstractPlayer
 from and_beyond.common import GRAVITY, TERMINAL_VELOCITY
 from and_beyond.utils import autoslots
+from and_beyond.world import World
 
 EPSILON = 0.001
 
@@ -24,6 +25,21 @@ class AABB:
     def __add__(self, vec: Union[tuple[float, float], Sequence[float]]) -> 'AABB':
         return AABB(self.x1 + vec[0], self.y1 + vec[1], self.x2 + vec[0], self.y2 + vec[1])
 
+    def intersect(self, other: 'AABB') -> bool:
+        return not (self.x2 < other.x1 or other.x2 < self.x1 or self.y2 < other.y1 or other.y2 < self.y1)
+
+    def collides_with_world(self, world: World) -> bool:
+        for x_off in range(-2, 3):
+            for y_off in range(-2, 3):
+                x = int(self.x1) + x_off
+                y = int(self.y1) + y_off
+                block = world.get_tile_type(x, y)
+                if block.bounding_box is None:
+                    continue
+                if self.intersect(block.bounding_box + (x, y)):
+                    return True
+        return False
+
 
 @autoslots
 class PlayerPhysics:
@@ -35,6 +51,7 @@ class PlayerPhysics:
     fix_dx: float
     fix_dy: float
     air_time: int
+    bounding_box: AABB
 
     def __init__(self, player: AbstractPlayer) -> None:
         self.x_velocity = 0
@@ -43,6 +60,7 @@ class PlayerPhysics:
         self.dirty = True
         self.sequential_fixes = 0
         self.air_time = 0
+        self.bounding_box = AABB(0, 0, 0.8, 1.5)
 
     def tick(self, delta: float) -> None:
         old_x = self.player.x
@@ -67,6 +85,10 @@ class PlayerPhysics:
         if self.y_velocity < TERMINAL_VELOCITY:
             self.y_velocity = TERMINAL_VELOCITY
         self.dirty = self.player.y != old_y or self.player.x != old_x
+
+    @property
+    def offset_bb(self) -> AABB:
+        return self.bounding_box + (self.player.x, self.player.y)
 
     # Thanks to Griffpatch and his amazing Tile Scrolling Platformer series for this code :)
     def fix_collision_in_direction(self, dx: float, dy: float) -> bool:
@@ -133,4 +155,4 @@ class PlayerPhysics:
         cpos = (cx, cy)
         if cpos in self.player.loaded_chunks:
             return self.player.loaded_chunks[cpos].get_tile_type(bx, by)
-        return blocks.STONE # If we get in an unloaded chunk (assume solid)
+        return blocks.AIR # If we get in an unloaded chunk (assume non-solid)
