@@ -46,7 +46,7 @@ class AsyncServer:
     running: bool
     paused: bool
     has_been_shutdown: bool
-    gc_task: Optional[asyncio.Task]
+    gc_task: Optional[asyncio.Task[None]]
     all_loaded_chunks: dict[tuple[int, int], 'WorldChunk']
 
     host: str
@@ -65,8 +65,8 @@ class AsyncServer:
     world: Optional[World]
     world_generator: WorldGenerator
 
-    pipe_commands_task: Optional[asyncio.Task]
-    console_commands_task: Optional[asyncio.Task]
+    pipe_commands_task: Optional[asyncio.Task[None]]
+    console_commands_task: Optional[asyncio.Task[None]]
 
     def __init__(self) -> None:
         self.random_tick_rate = Fraction(RANDOM_TICK_RATE)
@@ -112,7 +112,7 @@ class AsyncServer:
     def quit(self) -> None:
         self.running = False
 
-    async def read_console_commands(self):
+    async def read_console_commands(self) -> None:
         while not self.running:
             await asyncio.sleep(0)
         while self.running:
@@ -123,7 +123,7 @@ class AsyncServer:
                 command = command[1:]
             await self.run_command(command, self.command_sender)
 
-    async def receive_singleplayer_commands(self, pipe: BinaryIO):
+    async def receive_singleplayer_commands(self, pipe: BinaryIO) -> None:
         while not self.running:
             await asyncio.sleep(0)
         assert self.async_server is not None
@@ -158,7 +158,7 @@ class AsyncServer:
                 tasks.append(self.loop.create_task(write_packet(packet, client.writer)))
         await asyncio.gather(*tasks)
 
-    async def main(self):
+    async def main(self) -> None:
         try:
             singleplayer_pos = sys.argv.index('--singleplayer')
             singleplayer_fd_in = int(sys.argv[singleplayer_pos + 1])
@@ -471,7 +471,7 @@ class AsyncServer:
                 logging.info('<%s> No command named "%s"', sender, name)
             await sender.reply(f'No command named "{name}"')
 
-    def get_tps(self, time: int = 60):
+    def get_tps(self, time: int = 60) -> float:
         return mean(itertools.islice(self.last_tps_values, max(len(self.last_tps_values) - time, 0), None))
 
     def get_tps_str(self, time: int = 60) -> str:
@@ -484,7 +484,7 @@ class AsyncServer:
             results.append(self.get_tps_str(time))
         return f'TPS from last 1m, 5m, 10m: ' + ', '.join(results)
 
-    def get_mspt(self, time: int = 60):
+    def get_mspt(self, time: int = 60) -> float:
         return mean(itertools.islice(self.last_mspt_values, max(len(self.last_mspt_values) - time, 0), None))
 
     def get_mspt_str(self, time: int = 60) -> str:
@@ -512,7 +512,7 @@ class AsyncServer:
         ))
 
 
-def main():
+def main() -> None:
     threading.current_thread().name = 'ServerThread'
     init_logger('server.log')
     AsyncServer().start()

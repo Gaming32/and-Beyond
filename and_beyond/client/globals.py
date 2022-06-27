@@ -96,7 +96,7 @@ class ConfigManager:
             self.config['uuid'] = str(new)
 
 
-def close_singleplayer_server(wait: bool = True):
+def close_singleplayer_server(wait: bool = True) -> None:
     global singleplayer_pipe_out, singleplayer_pipe_in, singleplayer_popen
     logging.debug('Checking if singleplayer server needs shutdown...')
     if singleplayer_pipe_out is not None:

@@ -30,7 +30,7 @@ def mean(values: Sequence[float]) -> float: ...
 @overload
 def mean(values: Iterable[float]) -> float: ...
 
-def mean(values):
+def mean(values) -> float:
     if hasattr(values, '__len__'):
         return sum(values) / len(values)
     i = 0
@@ -55,11 +55,11 @@ NO_OP = no_op(None)
 class ColoredFormatter(logging.Formatter):
     use_color: bool
 
-    def __init__(self, use_color: bool = True):
+    def __init__(self, use_color: bool = True) -> None:
         super().__init__(FORMAT, DATA_FORMAT)
         self.use_color = use_color
 
-    def format(self, record: logging.LogRecord):
+    def format(self, record: logging.LogRecord) -> str:
         levelname = record.levelname
         message = super().format(record)
         if self.use_color and levelname in COLORS:
@@ -116,7 +116,7 @@ def spiral_loop_gen(w: int, h: int, cb: Callable[[int, int], _T]) -> Generator[_
         x, y = x+dx, y+dy
 
 
-async def spiral_loop_async(w: int, h: int, cb: Callable[[int, int], Awaitable[Any]]):
+async def spiral_loop_async(w: int, h: int, cb: Callable[[int, int], Awaitable[Any]]) -> None:
     x = y = 0
     dx = 0
     dy = -1
@@ -128,7 +128,7 @@ async def spiral_loop_async(w: int, h: int, cb: Callable[[int, int], Awaitable[A
         x, y = x+dx, y+dy
 
 
-async def ainput(prompt: str = '', loop: Optional[AbstractEventLoop] = None):
+async def ainput(prompt: str = '', loop: Optional[AbstractEventLoop] = None) -> str:
     if loop is None:
         loop = asyncio.get_running_loop()
     if prompt:

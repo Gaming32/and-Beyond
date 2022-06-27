@@ -47,7 +47,7 @@ class WorldScreen(Ui):
     def new_world(self, n: int) -> None:
         self.load_world(f'world{n}')
 
-    def load_world(self, name: str):
+    def load_world(self, name: str) -> None:
         self.close()
         globals.game_status = GameStatus.CONNECTING
         logging.info('Starting singleplayer server')

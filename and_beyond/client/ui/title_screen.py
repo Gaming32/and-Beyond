@@ -77,7 +77,7 @@ class TitleScreen(Ui):
         AccountsMenu().show()
 
     @staticmethod
-    def load_multiplayer(server: str, port: int = PORT):
+    def load_multiplayer(server: str, port: int = PORT) -> None:
         conn = ServerConnection()
         globals.game_connection = conn
         conn.start(server, port)

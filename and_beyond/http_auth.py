@@ -8,6 +8,7 @@ from aiohttp.client import ClientSession
 from aiohttp.client_exceptions import ClientResponseError
 from aiohttp.client_reqrep import ClientResponse
 from aiohttp.typedefs import StrOrURL
+from typing_extensions import Never, Self
 from yarl import URL
 
 from and_beyond.common import AUTH_SERVER
@@ -15,7 +16,7 @@ from and_beyond.http_errors import SERVER_ERRORS, InsecureAuth
 
 
 async def _check_error(resp: ClientResponse) -> None:
-    def raise_for_status_none():
+    def raise_for_status_none() -> Never:
         '"from None" version of raise_for_status'
         raise ClientResponseError(
             resp.request_info,
@@ -49,7 +50,7 @@ class User:
         self.join_date = join_date
 
     @classmethod
-    def from_json(cls, json: dict[str, Any]):
+    def from_json(cls, json: dict[str, Any]) -> Self:
         return cls(
             UUID(json['uuid']),
             json['username'],
@@ -70,7 +71,7 @@ class AuthenticatedUser(User):
         self.token = token
 
     @classmethod
-    def from_json(cls, client: '_AuthClient', json: dict[str, Any]):
+    def from_json(cls, client: '_AuthClient', json: dict[str, Any]) -> Self:
         return cls(
             client,
             json['token'],
@@ -89,7 +90,7 @@ class AuthenticatedUser(User):
         ) -> int:
         return await self.client.update_profile(self.token, username, old_password, password)
 
-    async def delete_user(self):
+    async def delete_user(self) -> User:
         return await self.client.delete_user(self.token)
 
 
@@ -181,7 +182,7 @@ class Session:
         self.user = user
 
     @classmethod
-    def from_json(cls, json: dict[str, Any]):
+    def from_json(cls, json: dict[str, Any]) -> Self:
         return cls(
             base64.b64decode(json['public_key']),
             datetime.fromisoformat(json['expiry']),
@@ -240,7 +241,7 @@ class AuthClient:
         self.sessions = _SessionClient(self)
         self.allow_insecure = allow_insecure
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(self, *args) -> None:

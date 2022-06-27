@@ -53,6 +53,7 @@ class AABB:
 
     def draw_debug(self, surf: 'pygame.surface.Surface') -> None:
         import pygame
+
         from and_beyond.client.utils import world_to_screen
         pygame.draw.lines(surf, (255, 0, 0), True, [
             world_to_screen(self.x1, self.y1, surf),

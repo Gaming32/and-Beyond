@@ -33,7 +33,7 @@ class ReaderMiddlewareABC(abc.ABC):
     async def readline(self) -> bytes:
         return await self.next.readline()
 
-    async def readuntil(self, separator: bytes = b'\n'):
+    async def readuntil(self, separator: bytes = b'\n') -> bytes:
         return await self.next.readuntil(separator)
 
     async def read(self, n: int = -1) -> bytes:
@@ -109,7 +109,7 @@ class _EncryptedReaderMiddleware(ReaderMiddlewareABC):
     async def readline(self) -> bytes:
         return self._decrypt(await self.next.readline())
 
-    async def readuntil(self, separator: bytes = b'\n'):
+    async def readuntil(self, separator: bytes = b'\n') -> bytes:
         return self._decrypt(await self.next.readuntil(separator))
 
     async def read(self, n: int = -1) -> bytes:

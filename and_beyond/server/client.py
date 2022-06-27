@@ -290,7 +290,7 @@ class Client:
         if tasks:
             await asyncio.gather(*tasks)
 
-    async def send_player_positions(self):
+    async def send_player_positions(self) -> None:
         assert self.uuid is not None
         assert self.player is not None
         for client in self.server.clients:

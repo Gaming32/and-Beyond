@@ -37,7 +37,7 @@ class SkyIslandsPhase(HeightmappedPhase):
         return int(self.perlin.noise_1d(x / X_SCALE_SURFACE) * Y_SCALE_SURFACE + Y_OFFSET_SURFACE)
 
     def generate_chunk(self, chunk: 'WorldChunk') -> None:
-        if chunk.abs_y < 24:
+        if chunk.abs_y < 24 or chunk.abs_y > 36:
             return
         cx = chunk.abs_x << 4
         cy = chunk.abs_y << 4

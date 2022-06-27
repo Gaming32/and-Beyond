@@ -29,7 +29,7 @@ SECTION_SIZE = 262176
 DATA_VERSION = 1
 
 
-def safe_filename(name: str):
+def safe_filename(name: str) -> str:
     return (
         ''.join(c for c in name if c.isalnum() or c in ALLOWED_FILE_CHARS)
           .strip()
@@ -127,7 +127,7 @@ class World(AbstractWorld):
         meta['seed'] = time.time_ns() & (2 ** 64 - 1)
         self.meta = meta
 
-    async def ainit(self, optimize: Optional[bool] = None):
+    async def ainit(self, optimize: Optional[bool] = None) -> None:
         if optimize is None:
             optimize = self.auto_optimize
         self.aloop = asyncio.get_running_loop()
@@ -151,7 +151,7 @@ class World(AbstractWorld):
                     sect = WorldSection(self, x, y, optimize=False)
                     tasks.append(self.aloop.run_in_executor(executor, sect.optimize))
                 logging.info('Attempting to optimize %i sections', len(tasks))
-                results = await asyncio.gather(*tasks)
+                results = await asyncio.gather(*tasks, return_exceptions=True)
                 for sect in list(self.open_sections.values()):
                     sect.close()
             end = time.perf_counter()

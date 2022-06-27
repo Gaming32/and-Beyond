@@ -36,7 +36,7 @@ class OptionsMenu(Ui):
             UiButton('Back', self.close_option_menu),
         ])
 
-    def draw_and_call(self, surf: Surface):
+    def draw_and_call(self, surf: Surface) -> None:
         self.fullscreen_toggle.toggled = globals.fullscreen
         framerate = globals.config.config['max_framerate']
         self.framerate_slider.value = 121 if framerate == 0 else framerate
