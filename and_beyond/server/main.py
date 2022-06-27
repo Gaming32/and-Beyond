@@ -149,7 +149,7 @@ class AsyncServer:
 
     async def set_block(self, cx: int, cy: int, bx: int, by: int, block: Block) -> None:
         assert self.world is not None
-        tasks: list[asyncio.Task] = []
+        tasks: list[asyncio.Task[None]] = []
         self.world.get_chunk(cx, cy).set_tile_type(bx, by, block)
         chunk_pos = (cx, cy)
         packet = ChunkUpdatePacket(cx, cy, bx, by, block)
@@ -208,23 +208,29 @@ class AsyncServer:
                         logging.critical('Port not integer: %s', port_arg)
                         return
 
-        try:
-            auth_server = get_opt('--auth-server')
-        except (ValueError, IndexError):
-            auth_server = AUTH_SERVER
-        if '://' not in auth_server:
-            auth_server = 'http://' + auth_server
-        allow_insecure_auth = '--insecure-auth' in sys.argv
-        self.auth_client = AuthClient(auth_server, allow_insecure_auth)
-        try:
-            await self.auth_client.ping()
-        except Exception as e:
-            if isinstance(e, InsecureAuth):
-                logging.critical('Requested auth server is insecure (uses HTTP '
-                                 'instead of HTTPS). You can bypass this with '
-                                 'the --insecure-auth command-line switch.')
-                return
-            logging.warn('Failed to ping the auth server', exc_info=True)
+        if '--offline-mode' in sys.argv:
+            self.auth_client = None
+            logging.warning(
+                '**WARNING** Offline mode is enabled. Hackers will be able to log in as anybody they choose.'
+            )
+        else:
+            try:
+                auth_server = get_opt('--auth-server')
+            except (ValueError, IndexError):
+                auth_server = AUTH_SERVER
+            if '://' not in auth_server:
+                auth_server = 'http://' + auth_server
+            allow_insecure_auth = '--insecure-auth' in sys.argv
+            self.auth_client = AuthClient(auth_server, allow_insecure_auth)
+            try:
+                await self.auth_client.ping()
+            except Exception as e:
+                if isinstance(e, InsecureAuth):
+                    logging.critical('Requested auth server is insecure (uses HTTP '
+                                    'instead of HTTPS). You can bypass this with '
+                                    'the --insecure-auth command-line switch.')
+                    return
+                logging.warn('Failed to ping the auth server', exc_info=True)
 
         try:
             world_name = get_opt('--world')
@@ -453,7 +459,7 @@ class AsyncServer:
         cpos_only: Optional[tuple[int, int]] = None,
         exclude_player: Optional[Client] = None
     ) -> tuple[None, ...]:
-        tasks: list[asyncio.Task] = []
+        tasks: list[asyncio.Task[None]] = []
         for client in self.clients:
             if client is exclude_player:
                 continue

@@ -7,6 +7,8 @@ from typing import Any, Awaitable, Callable, Generator, Generic, Iterable, Optio
 
 _T = TypeVar('_T')
 _T_type = TypeVar('_T_type', bound=type)
+_KT = TypeVar('_KT')
+_KV = TypeVar('_KV')
 
 RESET_SEQ = '\033[0m'
 COLOR_SEQ = '\033[%sm'
@@ -79,14 +81,14 @@ def get_opt(opt: str, offset: int = 1) -> str:
 
 
 @autoslots
-class MaxSizedDict(dict):
+class MaxSizedDict(dict[_KT, _KV], Generic[_KT, _KV]):
     max_size: int
 
     def __init__(self, *args, max_size: int = 0, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.max_size = max_size
 
-    def __setitem__(self, k, v) -> None:
+    def __setitem__(self, k: _KT, v: _KV) -> None:
         super().__setitem__(k, v)
         if self.max_size > 0 and len(self) > self.max_size:
             del self[next(iter(self))]

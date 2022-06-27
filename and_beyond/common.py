@@ -1,13 +1,15 @@
 import re
+from uuid import UUID
 
 PORT = 7932
-PROTOCOL_VERSION = 4
+PROTOCOL_VERSION = 5
 PROTOCOL_VERSION_MAP = [
     'a1.2.2', # 0
     'a1.2.3', # 1
     'a1.2.4', # 2
     'a1.3.0', # 3
     'a1.3.3', # 4
+    'a1.3.4', # 5
 ]
 VERSION_DISPLAY_NAME = 'a1.3.4.1'
 
@@ -28,6 +30,7 @@ GRAVITY = -3
 RANDOM_TICK_RATE = 1 / 2 # Numerator = blocks in chunk, denominator = blocks in chunk
 TERMINAL_VELOCITY = -2
 JUMP_DELAY_MS = 60
+NAMESPACE_AND_BEYOND = UUID('90a415d9-4d93-4bd9-a47b-f077d58baf52') # Totally not just some call to uuid4()
 
 # v = vo + a * t
 # a * t = v - vo

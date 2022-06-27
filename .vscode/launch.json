@@ -40,6 +40,7 @@
             "args": [
                 "--debug",
                 "--world", "server_world",
+                "--offline-mode",
                 // Uncomment if you need to test with a local auth server
                 // "--auth-server", "http://localhost:8932",
                 // "--insecure-auth"

@@ -8,6 +8,7 @@ from asyncio.tasks import Task, shield
 from collections import deque
 from typing import TYPE_CHECKING, Optional, TypeVar
 from uuid import UUID
+import uuid
 
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -16,7 +17,7 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from cryptography.hazmat.primitives.serialization.base import load_der_public_key
 
 from and_beyond import blocks
-from and_beyond.common import (KEY_LENGTH, MOVE_SPEED_CAP_SQ, PROTOCOL_VERSION, USERNAME_REGEX, VERSION_DISPLAY_NAME,
+from and_beyond.common import (KEY_LENGTH, MOVE_SPEED_CAP_SQ, NAMESPACE_AND_BEYOND, PROTOCOL_VERSION, USERNAME_REGEX, VERSION_DISPLAY_NAME,
                                VIEW_DISTANCE_BOX, get_version_name)
 from and_beyond.middleware import (BufferedWriterMiddleware, EncryptedReaderMiddleware, EncryptedWriterMiddleware,
                                    ReaderMiddleware, WriterMiddleware, create_writer_middlewares)
@@ -47,10 +48,10 @@ class Client:
     disconnecting: bool
 
     uuid: Optional[UUID]
-    ping_task: Optional[asyncio.Task]
-    packet_task: Optional[asyncio.Task]
-    send_players_task: Optional[asyncio.Task]
-    load_chunks_task: Optional[asyncio.Task]
+    ping_task: Optional[asyncio.Task[None]]
+    packet_task: Optional[asyncio.Task[None]]
+    send_players_task: Optional[asyncio.Task[None]]
+    load_chunks_task: Optional[asyncio.Task[None]]
     loaded_chunks: dict[tuple[int, int], WorldChunk]
 
     player: Optional[Player]
@@ -154,17 +155,22 @@ class Client:
         is_localhost = self._writer.get_extra_info('peername')[0] in ('localhost', '127.0.0.1', '::1')
         auth_client = self.server.auth_client
         offline = auth_client is None
+        enforce_hybrid = False
+        is_singleplayer = False
         if not offline:
             assert auth_client is not None
-            if not self.server.multiplayer and is_localhost and len(self.server.clients) == 1:
+            if is_singleplayer := (not self.server.multiplayer and is_localhost and len(self.server.clients) == 1):
                 logging.debug('Singleplayer server running in offline mode')
                 offline = True
             else:
                 try:
                     await auth_client.ping()
                 except Exception:
-                    logging.warn('Failed to ping the auth server, will use offline mode for this connection.', exc_info=True)
+                    logging.warn(
+                        'Failed to ping the auth server, will use hybrid mode for this connection.', exc_info=True
+                    )
                     offline = True
+                    enforce_hybrid = True
         server_key = ec.generate_private_key(ec.SECP384R1())
         packet = ServerInfoPacket(offline, server_key.public_key().public_bytes(
             Encoding.DER,
@@ -184,6 +190,24 @@ class Client:
                 return False
             self.uuid = packet.uuid
             self.nickname = packet.name
+            assert self.server.world is not None
+            if (new_uuid := self.server.world._players_by_name.get(self.nickname)) is not None:
+                if packet.uuid.int != 0 and new_uuid != packet.uuid:
+                    await self.disconnect('Failed to validate UUID against cache.')
+                    return False
+                self.uuid = new_uuid
+            elif packet.uuid.int == 0:
+                if not is_singleplayer:
+                    self.uuid = uuid.uuid3(NAMESPACE_AND_BEYOND, self.nickname)
+            else:
+                self.uuid = packet.uuid
+            if enforce_hybrid:
+                if new_uuid is None:
+                    await self.disconnect('Must load UUID from cached when unable to authenticate.')
+                    return False
+            if self.nickname in self.server.clients_by_name or self.uuid in self.server.clients_by_uuid:
+                await self.disconnect('That name is taken.')
+                return False
             # Prevent people with illegal nicknames from joining
             if not USERNAME_REGEX.fullmatch(packet.name):
                 await self.disconnect('Your username is invalid.')
@@ -204,8 +228,8 @@ class Client:
                     return False
             self.uuid = session.user.uuid
             self.nickname = session.user.username
-            packet = PlayerInfoPacket(self.uuid, self.nickname)
-            await write_packet(packet, self.writer)
+        packet = PlayerInfoPacket(self.uuid, self.nickname)
+        await write_packet(packet, self.writer)
         return True
 
     async def encrypt_connection(self,

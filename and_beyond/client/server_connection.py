@@ -239,9 +239,9 @@ class ServerConnection:
                 logging.debug('localhost connection not encrypted')
             else:
                 self.encrypt_connection(client_key, server_public_key)
-            if (packet := await read_and_verify(PlayerInfoPacket)) is None:
-                return False
-            self.uuid = packet.uuid
+        if (packet := await read_and_verify(PlayerInfoPacket)) is None:
+            return False
+        self.uuid = packet.uuid
         return True
 
     def encrypt_connection(self,

@@ -146,7 +146,7 @@ frame: int
 
 game_status: GameStatus
 game_connection: Optional['ServerConnection'] = None
-singleplayer_popen: Optional[subprocess.Popen] = None
+singleplayer_popen: Optional[subprocess.Popen[bytes]] = None
 singleplayer_pipe_in: Optional[BinaryIO] = None
 singleplayer_pipe_out: Optional[BinaryIO] = None
 if sys.platform == 'win32':

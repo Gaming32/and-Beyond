@@ -1,4 +1,5 @@
 {
     "reportWildcardImportFromLibrary": false,
-    "reportUnusedImport": "warning"
+    "reportUnusedImport": "warning",
+    "reportMissingTypeArgument": "warning"
 }

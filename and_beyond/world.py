@@ -139,7 +139,7 @@ class World(AbstractWorld):
         if optimize:
             start = time.perf_counter()
             with ThreadPoolExecutor(thread_name_prefix='Optimize') as executor:
-                tasks: list[Awaitable] = []
+                tasks: list[Awaitable[bool]] = []
                 for sect_path in self.sections_path.glob('section_*_*.dat'):
                     try:
                         x, y = sect_path.name.split('_', 2)[1:]
@@ -151,7 +151,7 @@ class World(AbstractWorld):
                     sect = WorldSection(self, x, y, optimize=False)
                     tasks.append(self.aloop.run_in_executor(executor, sect.optimize))
                 logging.info('Attempting to optimize %i sections', len(tasks))
-                results = await asyncio.gather(*tasks, return_exceptions=True)
+                results: list[Union[bool, BaseException]] = await asyncio.gather(*tasks, return_exceptions=True)
                 for sect in list(self.open_sections.values()):
                     sect.close()
             end = time.perf_counter()

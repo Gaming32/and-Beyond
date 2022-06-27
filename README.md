@@ -42,4 +42,5 @@ Argument                          | Action
 `--world <name>`                  | Use the world called `<name>`
 `--listen <[host]:[port]>`        | Listen on the specified host and port (default host: `0.0.0.0`, default port: `7932`)
 `--no-optimize`                   | Don't optimize the world on startup
+`--offline-mode`                  | Disable authentication. **WARNING: Allows players to log in as anybody they choose**
 `--singleplayer <fd_in> <fd_out>` | **Internal use only**
