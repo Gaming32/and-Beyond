@@ -2,7 +2,7 @@ import asyncio
 import logging
 import math
 import time
-from asyncio import StreamReader, StreamWriter
+from asyncio import IncompleteReadError, StreamReader, StreamWriter
 from asyncio.events import AbstractEventLoop
 from asyncio.tasks import Task, shield
 from collections import deque
@@ -140,6 +140,9 @@ class Client:
                 packet = await read_packet_timeout(self.reader, 7)
             except TimeoutError:
                 await self.disconnect('Client handshake timeout')
+                return None
+            except IncompleteReadError:
+                await self.disconnect('Client disconnected during login', kick=False)
                 return None
             if not isinstance(packet, should_be):
                 await self.disconnect(f'Client packet of type {packet.type!s} should be of type {should_be.type!s}')
