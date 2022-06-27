@@ -1,3 +1,4 @@
+import abc
 import asyncio
 import enum
 import json
@@ -50,8 +51,49 @@ class WorldMeta(TypedDict):
     player_cache: dict[str, int]
 
 
+class AbstractWorld(abc.ABC):
+    def get_chunk(self, x: int, y: int) -> 'WorldChunk':
+        chunk = self.get_chunk_or_none(x, y)
+        if chunk is None:
+            raise KeyError(f'No chunk at {x}/{y}')
+        return chunk
+
+    def get_chunk_or_none(self, x: int, y: int) -> Optional['WorldChunk']:
+        return self.get_chunk(x, y)
+
+    def _get_chunk_for_block(self, x: int, y: int) -> tuple[int, int, int, int]:
+        cx = x >> 4
+        cy = y >> 4
+        bx = x - (cx << 4)
+        by = y - (cy << 4)
+        return cx, cy, bx, by
+
+    def get_tile_type(self, x: int, y: int) -> Block:
+        cx, cy, bx, by = self._get_chunk_for_block(x, y)
+        return self.get_chunk(cx, cy).get_tile_type(bx, by)
+
+    def get_tile_type_or_none(self, x: int, y: int) -> Optional[Block]:
+        cx, cy, bx, by = self._get_chunk_for_block(x, y)
+        chunk = self.get_chunk_or_none(cx, cy)
+        if chunk is None:
+            return None
+        return chunk.get_tile_type(bx, by)
+
+    def set_tile_type(self, x: int, y: int, type: Block) -> None:
+        cx, cy, bx, by = self._get_chunk_for_block(x, y)
+        self.get_chunk(cx, cy).set_tile_type(bx, by, type)
+
+    def set_tile_type_if_loaded(self, x: int, y: int, type: Block) -> bool:
+        cx, cy, bx, by = self._get_chunk_for_block(x, y)
+        chunk = self.get_chunk_or_none(cx, cy)
+        if chunk is None:
+            return False
+        chunk.set_tile_type(bx, by, type)
+        return True
+
+
 @autoslots
-class World:
+class World(AbstractWorld):
     name: str
     safe_name: str
     root: Path
@@ -214,20 +256,6 @@ class World:
         cx = x - (sx << 4)
         cy = y - (sy << 4)
         return self.get_section(sx, sy).get_chunk(cx, cy)
-
-    def get_tile_type(self, x: int, y: int) -> Block:
-        cx = x >> 4
-        cy = y >> 4
-        bx = x - (cx << 4)
-        by = y - (cy << 4)
-        return self.get_chunk(cx, cy).get_tile_type(bx, by)
-
-    def set_tile_type(self, x: int, y: int, type: Block) -> None:
-        cx = x >> 4
-        cy = y >> 4
-        bx = x - (cx << 4)
-        by = y - (cy << 4)
-        self.get_chunk(cx, cy).set_tile_type(bx, by, type)
 
     def get_generated_chunk(self, x: int, y: int, gen: 'WorldGenerator') -> 'WorldChunk':
         c = self.get_chunk(x, y)

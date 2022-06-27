@@ -413,7 +413,7 @@ class Client:
             if distance:
                 packet = PlayerPositionPacket(self.uuid, self.player.x, self.player.y)
                 await self.server.send_to_all(packet, (cx, cy), self)
-        if self.player.physics.is_grounded():
+        if self.player.physics.offset_bb.expand(1).collides_with_world(self.player.world):
             self.grounded_time += 0.05
             self.air_time = 0
         else:
@@ -421,11 +421,7 @@ class Client:
             self.air_time += 0.05
         self.last_y_velocities.append(distance_y)
         avg_y_vel = mean(self.last_y_velocities)
-        if (
-            self.air_time > 5
-            and avg_y_vel > -0.25
-            and not self.player.physics.offset_bb.collides_with_world(self.player.world)
-        ):
+        if self.air_time > 5 and avg_y_vel > -0.25:
             await self.disconnect('Fly hacking detected')
 
     async def set_position_safe(self, x: Optional[float] = None, y: Optional[float] = None, include_others: bool = False) -> None:

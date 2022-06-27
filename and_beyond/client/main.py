@@ -92,6 +92,7 @@ def render_debug() -> None:
         text_render = DEBUG_FONT.render(line, False, (0, 0, 0))
         screen.blit(text_render, text_render.get_rect().move(2, y))
         y += text_render.get_height()
+    (globals.player.physics.offset_bb - (0, 1)).draw_debug(screen)
 
 
 globals.fullscreen = config.config['fullscreen']

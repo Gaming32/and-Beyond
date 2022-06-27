@@ -1,11 +1,14 @@
 import math
-from typing import Sequence, Union
+from typing import TYPE_CHECKING, Optional, Sequence, Union
 
 from and_beyond import blocks
 from and_beyond.abstract_player import AbstractPlayer
 from and_beyond.common import GRAVITY, TERMINAL_VELOCITY
 from and_beyond.utils import autoslots
-from and_beyond.world import World
+from and_beyond.world import AbstractWorld
+
+if TYPE_CHECKING:
+    import pygame
 
 EPSILON = 0.001
 
@@ -25,20 +28,38 @@ class AABB:
     def __add__(self, vec: Union[tuple[float, float], Sequence[float]]) -> 'AABB':
         return AABB(self.x1 + vec[0], self.y1 + vec[1], self.x2 + vec[0], self.y2 + vec[1])
 
+    def __sub__(self, vec: Union[tuple[float, float], Sequence[float]]) -> 'AABB':
+        return AABB(self.x1 - vec[0], self.y1 - vec[1], self.x2 - vec[0], self.y2 - vec[1])
+
+    def expand(self, x: float, y: Optional[float] = None) -> 'AABB':
+        if y is None:
+            y = x
+        return AABB(self.x1 - x, self.y1 - y, self.x2 + x, self.y2 + y)
+
     def intersect(self, other: 'AABB') -> bool:
         return not (self.x2 < other.x1 or other.x2 < self.x1 or self.y2 < other.y1 or other.y2 < self.y1)
 
-    def collides_with_world(self, world: World) -> bool:
+    def collides_with_world(self, world: AbstractWorld) -> bool:
         for x_off in range(-2, 3):
             for y_off in range(-2, 3):
                 x = int(self.x1) + x_off
                 y = int(self.y1) + y_off
-                block = world.get_tile_type(x, y)
-                if block.bounding_box is None:
+                block = world.get_tile_type_or_none(x, y)
+                if block is None or block.bounding_box is None:
                     continue
                 if self.intersect(block.bounding_box + (x, y)):
                     return True
         return False
+
+    def draw_debug(self, surf: 'pygame.surface.Surface') -> None:
+        import pygame
+        from and_beyond.client.utils import world_to_screen
+        pygame.draw.lines(surf, (255, 0, 0), True, [
+            world_to_screen(self.x1, self.y1, surf),
+            world_to_screen(self.x1, self.y2, surf),
+            world_to_screen(self.x2, self.y2, surf),
+            world_to_screen(self.x2, self.y1, surf),
+        ])
 
 
 @autoslots
@@ -60,7 +81,7 @@ class PlayerPhysics:
         self.dirty = True
         self.sequential_fixes = 0
         self.air_time = 0
-        self.bounding_box = AABB(0, 0, 0.8, 1.5)
+        self.bounding_box = AABB(0.2, 0, 0.8, 1.5)
 
     def tick(self, delta: float) -> None:
         old_x = self.player.x
@@ -74,10 +95,12 @@ class PlayerPhysics:
         # else:
         #     self.x_velocity = 0
         self.player.x += self.x_velocity
-        if self.fix_collision_in_direction(self.x_velocity, 0):
+        if self.offset_bb.collides_with_world(self.player.world):
+            self.player.x -= self.x_velocity
             self.x_velocity = 0
         self.player.y += self.y_velocity
-        if self.fix_collision_in_direction(0, self.y_velocity):
+        if self.offset_bb.collides_with_world(self.player.world):
+            self.player.y -= self.y_velocity
             self.y_velocity = 0
             self.air_time = 0
         else:
@@ -138,14 +161,6 @@ class PlayerPhysics:
         if self.fix_dx > 0:
             self.player.x -= EPSILON + mx
         return True
-
-    def is_grounded(self) -> bool:
-        x = self.player.x
-        iy = math.floor(self.player.y - 2 * EPSILON)
-        return (
-            self.get_tile_type(math.floor(x + 0.2), iy).bounding_box is not None
-            or self.get_tile_type(math.floor(x + 0.8), iy).bounding_box is not None
-        )
 
     def get_tile_type(self, x: int, y: int) -> 'blocks.Block':
         cx = x >> 4

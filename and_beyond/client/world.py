@@ -1,5 +1,6 @@
 import math as pymath
 import random
+from typing import Optional
 
 import pygame
 import pygame.draw
@@ -14,13 +15,13 @@ from and_beyond.client.assets import BLOCK_SPRITES, EMPTY_TEXTURE, MISSING_TEXTU
 from and_beyond.client.consts import BLOCK_RENDER_SIZE
 from and_beyond.client.utils import world_to_screen
 from and_beyond.utils import autoslots
-from and_beyond.world import WorldChunk
+from and_beyond.world import AbstractWorld, WorldChunk
 
 CHUNK_RENDER_SIZE = BLOCK_RENDER_SIZE * 16
 
 
 @autoslots
-class ClientWorld:
+class ClientWorld(AbstractWorld):
     loaded_chunks: dict[tuple[int, int], 'ClientChunk']
 
     def __init__(self) -> None:
@@ -103,6 +104,12 @@ class ClientWorld:
             if block != blocks.AIR:
                 return True
         return False
+
+    def get_chunk_or_none(self, x: int, y: int) -> Optional['ClientChunk']:
+        return self.loaded_chunks.get((x, y))
+
+    def get_chunk(self, x: int, y: int) -> 'ClientChunk':
+        return self.loaded_chunks[(x, y)]
 
 
 @autoslots

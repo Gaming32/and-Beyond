@@ -15,7 +15,7 @@ from and_beyond.client import globals
 from and_beyond.client.assets import CHAT_FONT, PERSON_SPRITES
 from and_beyond.client.consts import BLOCK_RENDER_SIZE
 from and_beyond.client.utils import lerp, world_to_screen
-from and_beyond.client.world import get_block_texture
+from and_beyond.client.world import ClientWorld, get_block_texture
 from and_beyond.packet import ChunkUpdatePacket, SimplePlayerPositionPacket
 from and_beyond.physics import PlayerPhysics
 from and_beyond.utils import autoslots
@@ -55,6 +55,10 @@ class ClientPlayer(AbstractPlayer):
         self.name_render = None
         self.physics = PlayerPhysics(self)
         self.time_since_physics = 0
+
+    @property
+    def world(self) -> ClientWorld:
+        return globals.local_world
 
     def render(self, surf: Surface) -> None:
         if self.x == inf or self.y == inf:
