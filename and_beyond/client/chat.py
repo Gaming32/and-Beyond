@@ -1,12 +1,13 @@
 import time
 from typing import Optional
 
+from pygame.rect import Rect
+from pygame.surface import Surface
+
 from and_beyond.chat import ChatMessage
 from and_beyond.client import globals
 from and_beyond.client.assets import CHAT_FONT
 from and_beyond.client.consts import CHAT_DISPLAY_TIME
-from pygame.rect import Rect
-from pygame.surface import Surface
 
 
 class ClientChatMessage(ChatMessage):

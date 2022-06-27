@@ -2,10 +2,11 @@ import random
 import sys
 from typing import TYPE_CHECKING
 
+from and_beyond import blocks
 from and_beyond.server.world_gen.perlin import PerlinNoise
 from and_beyond.server.world_gen.phase import HeightmappedPhase
 from and_beyond.utils import autoslots
-from and_beyond.world import BlockTypes, WorldChunk
+from and_beyond.world import WorldChunk
 
 if TYPE_CHECKING:
     from and_beyond.server.world_gen.core import WorldGenerator
@@ -50,11 +51,11 @@ class SkyIslandsPhase(HeightmappedPhase):
             for y in range(16):
                 abs_y = cy + y
                 if abs_y > surface_height or abs_y < island_height:
-                    type = BlockTypes.AIR
+                    type = blocks.AIR
                 elif abs_y == surface_height:
-                    type = BlockTypes.GRASS
+                    type = blocks.GRASS
                 elif surface_height - abs_y < 4:
-                    type = BlockTypes.DIRT
+                    type = blocks.DIRT
                 else:
-                    type = BlockTypes.STONE
+                    type = blocks.STONE
                 chunk.set_tile_type(x, y, type)

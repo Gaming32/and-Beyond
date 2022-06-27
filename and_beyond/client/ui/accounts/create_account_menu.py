@@ -2,11 +2,12 @@ import logging
 from asyncio.events import AbstractEventLoop
 from typing import TYPE_CHECKING
 
+from zxcvbn import zxcvbn
+
 from and_beyond.client import globals
 from and_beyond.client.ui import Ui, UiButton, UiLabel, UiTextInput
 from and_beyond.client.ui.label_screen import LabelScreen
 from and_beyond.common import USERNAME_REGEX
-from zxcvbn import zxcvbn
 
 if TYPE_CHECKING:
     from and_beyond.client.ui.accounts import AccountsMenu

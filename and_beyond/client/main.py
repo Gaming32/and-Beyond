@@ -11,6 +11,7 @@ import pygame.draw
 import pygame.event
 import pygame.mouse
 import pygame.time
+
 from and_beyond.utils import DEBUG, init_logger
 
 init_logger('client.log')
@@ -19,17 +20,18 @@ pygame.init()
 logging.info('Pygame loaded')
 logging.info('Loading assets...')
 start = pytime.perf_counter()
-from and_beyond.client.assets import (ASSET_COUNT, CHAT_FONT, DEBUG_FONT,
-                                      GAME_FONT, transform_assets)
+from and_beyond.client.assets import ASSET_COUNT, CHAT_FONT, DEBUG_FONT, GAME_FONT, transform_assets
 
 end = pytime.perf_counter()
 logging.info('Loaded %i assets in %f seconds', ASSET_COUNT, end - start)
 
+from pygame import *
+from pygame.locals import *
+
+from and_beyond import blocks
 from and_beyond.client import globals
 from and_beyond.client.chat import ChatClient
-from and_beyond.client.consts import (PERIODIC_TICK_EVENT,
-                                      SERVER_CONNECT_EVENT,
-                                      SERVER_DISCONNECT_EVENT, UI_FG)
+from and_beyond.client.consts import PERIODIC_TICK_EVENT, SERVER_CONNECT_EVENT, SERVER_DISCONNECT_EVENT, UI_FG
 from and_beyond.client.globals import ConfigManager, GameStatus
 from and_beyond.client.mixer import Mixer
 from and_beyond.client.player import ClientPlayer
@@ -38,12 +40,9 @@ from and_beyond.client.ui.pause_menu import PauseMenu
 from and_beyond.client.ui.title_screen import TitleScreen
 from and_beyond.client.utils import screen_to_world
 from and_beyond.client.world import ClientWorld
-from and_beyond.common import JUMP_SPEED, MOVE_SPEED, VERSION_DISPLAY_NAME
+from and_beyond.common import JUMP_DELAY_MS, JUMP_SPEED, MOVE_SPEED, VERSION_DISPLAY_NAME
 from and_beyond.packet import ChatPacket
 from and_beyond.pipe_commands import read_pipe
-from and_beyond.world import BlockTypes
-from pygame import *
-from pygame.locals import *
 
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -93,6 +92,7 @@ def render_debug() -> None:
         text_render = DEBUG_FONT.render(line, False, (0, 0, 0))
         screen.blit(text_render, text_render.get_rect().move(2, y))
         y += text_render.get_height()
+    (globals.player.physics.offset_bb - (0, 1)).draw_debug(screen)
 
 
 globals.fullscreen = config.config['fullscreen']
@@ -131,6 +131,7 @@ if not globals.running:
 globals.frame = 0
 clock = pygame.time.Clock()
 pygame.time.set_timer(PERIODIC_TICK_EVENT, 250)
+last_jump_time = 0
 while globals.running:
     try:
         globals.delta = clock.tick(globals.config.config['max_framerate']) / 1000
@@ -176,20 +177,20 @@ while globals.running:
                         move_right = True
                     elif event.key == K_a:
                         move_left = True
-                    elif event.key == K_SPACE:
-                        move_up = True
+                    # elif event.key == K_SPACE:
+                    #     move_up = True
                     elif event.key == K_1:
-                        globals.player.change_selected_block(BlockTypes.STONE)
+                        globals.player.change_selected_block(blocks.STONE)
                     elif event.key == K_2:
-                        globals.player.change_selected_block(BlockTypes.DIRT)
+                        globals.player.change_selected_block(blocks.DIRT)
                     elif event.key == K_3:
-                        globals.player.change_selected_block(BlockTypes.GRASS)
+                        globals.player.change_selected_block(blocks.GRASS)
                     elif event.key == K_4:
-                        globals.player.change_selected_block(BlockTypes.WOOD)
+                        globals.player.change_selected_block(blocks.WOOD)
                     elif event.key == K_5:
-                        globals.player.change_selected_block(BlockTypes.PLANKS)
+                        globals.player.change_selected_block(blocks.PLANKS)
                     elif event.key == K_6:
-                        globals.player.change_selected_block(BlockTypes.LEAVES)
+                        globals.player.change_selected_block(blocks.LEAVES)
                     if event.key == K_t:
                         should_chat_open = True
                     elif event.key == K_SLASH:
@@ -304,12 +305,22 @@ while globals.running:
             globals.mouse_world = screen_to_world(globals.mouse_screen, screen)
             if globals.game_connection is not None:
                 if not globals.paused:
+                    if not chat_open:
+                        move_up = key.get_pressed()[K_SPACE]
+                    else:
+                        move_up = False
+                    if move_up:
+                        current_time = time.get_ticks()
+                        if current_time - last_jump_time < JUMP_DELAY_MS:
+                            move_up = False
+                        else:
+                            last_jump_time = current_time
                     if move_left ^ move_right:
                         globals.player.add_velocity(x=MOVE_SPEED * globals.delta * (move_right - move_left))
                     if move_up and globals.player.physics.air_time < 2:
                         globals.player.add_velocity(y=JUMP_SPEED)
                     move_up = False
-                if (globals.singleplayer_pipe_in is None) or not globals.paused:
+                if globals.singleplayer_pipe_in is None or not globals.paused:
                     globals.player.safe_physics_tick()
             globals.local_world.tick(screen)
             # globals.player.render(screen)

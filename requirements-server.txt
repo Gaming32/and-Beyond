@@ -4,3 +4,4 @@ opensimplex # World generation
 cryptography # Key exchange
 aiohttp # Authentication
 humanize
+typing_extensions>=4.0.1

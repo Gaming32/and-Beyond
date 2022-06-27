@@ -2,6 +2,9 @@ import logging
 
 import pygame
 import pygame.event
+from pygame import *
+from pygame.locals import *
+
 from and_beyond.client import globals
 from and_beyond.client.consts import SERVER_DISCONNECT_EVENT
 from and_beyond.client.ui import Ui, UiButton, UiLabel
@@ -10,8 +13,6 @@ from and_beyond.client.ui.options_menu import OptionsMenu
 from and_beyond.client.ui.question_screen import QuestionScreen
 from and_beyond.common import PORT
 from and_beyond.pipe_commands import PipeCommandsToServer, write_pipe
-from pygame import *
-from pygame.locals import *
 
 
 class PauseMenu(Ui):
@@ -31,7 +32,7 @@ class PauseMenu(Ui):
             self.disconnect_button,
         ))
 
-    def draw_and_call(self, surf: pygame.surface.Surface):
+    def draw_and_call(self, surf: pygame.surface.Surface) -> None:
         gray = Surface(surf.get_size()).convert_alpha()
         gray.fill((0, 0, 0, 128))
         surf.blit(gray, gray.get_rect())
@@ -61,7 +62,7 @@ class PauseMenu(Ui):
         globals.ui_override = OptionsMenu()
 
     def open_to_lan(self) -> None:
-        def internal(port_str: str):
+        def internal(port_str: str) -> None:
             port_str = port_str.strip()
             if not port_str:
                 port = 0

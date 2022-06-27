@@ -27,7 +27,7 @@ class LabelScreen(Ui):
             ok_text: str = 'Back',
             closed_callback: Optional[CloseCallback] = None,
             parent: Optional['Ui'] = None
-        ):
+        ) -> 'LabelScreen':
         screen = LabelScreen(text, ok_text, closed_callback)
         screen.show(parent)
         return screen

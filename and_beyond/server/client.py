@@ -9,31 +9,25 @@ from collections import deque
 from typing import TYPE_CHECKING, Optional, TypeVar
 from uuid import UUID
 
-from and_beyond.common import (KEY_LENGTH, MOVE_SPEED_CAP_SQ, PROTOCOL_VERSION,
-                               TERMINAL_VELOCITY, TERMINAL_VELOCITY_TIME,
-                               USERNAME_REGEX, VERSION_DISPLAY_NAME,
-                               VIEW_DISTANCE_BOX, get_version_name)
-from and_beyond.middleware import (BufferedWriterMiddleware,
-                                   EncryptedReaderMiddleware,
-                                   EncryptedWriterMiddleware, ReaderMiddleware,
-                                   WriterMiddleware, create_writer_middlewares)
-from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket,
-                               ChunkUpdatePacket, ClientRequestPacket,
-                               DisconnectPacket, Packet, PingPacket,
-                               PlayerInfoPacket, PlayerPositionPacket,
-                               RemovePlayerPacket, ServerInfoPacket,
-                               SimplePlayerPositionPacket, UnloadChunkPacket,
-                               read_packet, read_packet_timeout, write_packet)
-from and_beyond.server.commands import ClientCommandSender
-from and_beyond.server.player import Player
-from and_beyond.utils import mean, spiral_loop_gen
-from and_beyond.world import BlockTypes, WorldChunk
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-from cryptography.hazmat.primitives.serialization.base import \
-    load_der_public_key
+from cryptography.hazmat.primitives.serialization.base import load_der_public_key
+
+from and_beyond import blocks
+from and_beyond.common import (KEY_LENGTH, MOVE_SPEED_CAP_SQ, PROTOCOL_VERSION, USERNAME_REGEX, VERSION_DISPLAY_NAME,
+                               VIEW_DISTANCE_BOX, get_version_name)
+from and_beyond.middleware import (BufferedWriterMiddleware, EncryptedReaderMiddleware, EncryptedWriterMiddleware,
+                                   ReaderMiddleware, WriterMiddleware, create_writer_middlewares)
+from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket, ChunkUpdatePacket, ClientRequestPacket,
+                               DisconnectPacket, Packet, PingPacket, PlayerInfoPacket, PlayerPositionPacket,
+                               RemovePlayerPacket, ServerInfoPacket, SimplePlayerPositionPacket, UnloadChunkPacket,
+                               read_packet, read_packet_timeout, write_packet)
+from and_beyond.server.commands import ClientCommandSender
+from and_beyond.server.player import Player
+from and_beyond.utils import mean, spiral_loop_gen
+from and_beyond.world import WorldChunk
 
 if TYPE_CHECKING:
     from and_beyond.server.main import AsyncServer
@@ -268,7 +262,7 @@ class Client:
 
     async def load_chunks_around_player(self, diameter: int = VIEW_DISTANCE_BOX) -> None:
         assert self.player is not None
-        async def load_chunk_rel(x, y):
+        async def load_chunk_rel(x: int, y: int) -> None:
             await asyncio.sleep(0)
             x += cx
             y += cy
@@ -365,7 +359,7 @@ class Client:
                         abs_x = (packet.cx << 4) + packet.bx
                         abs_y = (packet.cy << 4) + packet.by
                         chunk = self.loaded_chunks[chunk_pos]
-                        if self.player.can_reach(abs_x, abs_y, packet.block != BlockTypes.AIR):
+                        if self.player.can_reach(abs_x, abs_y, packet.block != blocks.AIR):
                             await self.server.set_tile_type_global(chunk, packet.bx, packet.by, packet.block, self)
                         else:
                             # logging.warn("Player %s can't reach block %i, %i, yet they tried to update it.", self, abs_x, abs_y)
@@ -419,7 +413,7 @@ class Client:
             if distance:
                 packet = PlayerPositionPacket(self.uuid, self.player.x, self.player.y)
                 await self.server.send_to_all(packet, (cx, cy), self)
-        if self.player.physics.is_grounded():
+        if self.player.physics.offset_bb.expand(1).collides_with_world(self.player.world):
             self.grounded_time += 0.05
             self.air_time = 0
         else:
@@ -427,11 +421,7 @@ class Client:
             self.air_time += 0.05
         self.last_y_velocities.append(distance_y)
         avg_y_vel = mean(self.last_y_velocities)
-        if (
-            self.air_time > TERMINAL_VELOCITY_TIME + 2
-            and self.server.multiplayer
-            and avg_y_vel > TERMINAL_VELOCITY
-        ):
+        if self.air_time > 5 and avg_y_vel > -0.25:
             await self.disconnect('Fly hacking detected')
 
     async def set_position_safe(self, x: Optional[float] = None, y: Optional[float] = None, include_others: bool = False) -> None:

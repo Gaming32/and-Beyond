@@ -1,10 +1,12 @@
 import random
 from typing import TYPE_CHECKING, Union
 
+from and_beyond import blocks
+from and_beyond.blocks import Block
 from and_beyond.server.world_gen.perlin import PerlinNoise
 from and_beyond.server.world_gen.phase import AbstractPhase
 from and_beyond.utils import autoslots
-from and_beyond.world import BlockTypes, WorldChunk
+from and_beyond.world import WorldChunk
 
 if TYPE_CHECKING:
     from and_beyond.server.world_gen.core import WorldGenerator
@@ -14,9 +16,9 @@ FLIP_CONSTANT = 4009383296558120008
 SCALE = 150
 
 _N = None
-_L = BlockTypes.LEAVES
-_W = BlockTypes.WOOD
-TREE: list[list[Union[None, BlockTypes]]] = [
+_L = blocks.LEAVES
+_W = blocks.WOOD
+TREE: list[list[Union[None, Block]]] = [
     [_N, _N, _L, _N, _N],
     [_N, _L, _L, _L, _N],
     [_L, _L, _W, _L, _L],
@@ -57,6 +59,6 @@ class TreeDecorationPhase(AbstractPhase):
                 if val is None:
                     continue
                 abs_x = x + off
-                if chunk.get_tile_type(abs_x, y) == BlockTypes.AIR:
+                if chunk.get_tile_type(abs_x, y) == blocks.AIR:
                     chunk.set_tile_type(abs_x, y, val)
             y += 1

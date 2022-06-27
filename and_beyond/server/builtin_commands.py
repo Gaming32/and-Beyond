@@ -1,11 +1,10 @@
 import sys
 
 import humanize
+
 from and_beyond.server.client import Client
-from and_beyond.server.commands import (COMMANDS, AbstractCommandSender,
-                                        ClientCommandSender,
-                                        ConsoleCommandSender, evaluate_client, evaluate_offline_player,
-                                        function_command)
+from and_beyond.server.commands import (COMMANDS, AbstractCommandSender, ClientCommandSender, ConsoleCommandSender,
+                                        evaluate_client, evaluate_offline_player, function_command)
 
 if sys.platform != 'win32':
     import resource

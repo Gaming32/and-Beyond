@@ -27,6 +27,7 @@ JUMP_SPEED = 0.7
 GRAVITY = -3
 RANDOM_TICK_RATE = 1 / 2 # Numerator = blocks in chunk, denominator = blocks in chunk
 TERMINAL_VELOCITY = -2
+JUMP_DELAY_MS = 60
 
 # v = vo + a * t
 # a * t = v - vo

@@ -14,21 +14,22 @@ from fractions import Fraction
 from typing import Any, BinaryIO, Optional
 from uuid import UUID
 
-import and_beyond.server.builtin_commands # pyright: ignore [reportUnusedImport]
 import colorama
+
+import and_beyond.server.builtin_commands  # pyright: ignore [reportUnusedImport]
+from and_beyond import blocks
+from and_beyond.blocks import Block
 from and_beyond.common import AUTH_SERVER, PORT, RANDOM_TICK_RATE
 from and_beyond.http_auth import AuthClient
 from and_beyond.http_errors import InsecureAuth
 from and_beyond.packet import ChunkUpdatePacket, Packet, write_packet
 from and_beyond.pipe_commands import PipeCommandsToServer, read_pipe
 from and_beyond.server.client import Client
-from and_beyond.server.commands import (COMMANDS, AbstractCommandSender,
-                                        ConsoleCommandSender)
+from and_beyond.server.commands import COMMANDS, AbstractCommandSender, ConsoleCommandSender
 from and_beyond.server.consts import GC_TIME_SECONDS
 from and_beyond.server.world_gen.core import WorldGenerator
-from and_beyond.utils import (ainput, autoslots, get_opt, init_logger, mean,
-                              shuffled)
-from and_beyond.world import BlockTypes, World, WorldChunk
+from and_beyond.utils import ainput, autoslots, get_opt, init_logger, mean, shuffled
+from and_beyond.world import World, WorldChunk
 
 if sys.platform == 'win32':
     import msvcrt
@@ -146,7 +147,7 @@ class AsyncServer:
                 self.paused = False
                 await self.send_chat(f'Opened to LAN on port {self.port}')
 
-    async def set_block(self, cx: int, cy: int, bx: int, by: int, block: BlockTypes) -> None:
+    async def set_block(self, cx: int, cy: int, bx: int, by: int, block: Block) -> None:
         assert self.world is not None
         tasks: list[asyncio.Task] = []
         self.world.get_chunk(cx, cy).set_tile_type(bx, by, block)
@@ -318,13 +319,13 @@ class AsyncServer:
 
     async def random_tick_chunk(self, chunk: WorldChunk, x: int, y: int) -> None:
         block = chunk.get_tile_type(x, y)
-        if block == BlockTypes.GRASS:
+        if block == blocks.GRASS:
             block_above = self.get_block_rel_chunk(chunk, x, y + 1)
             if block_above is None:
                 return
-            if block_above != BlockTypes.AIR:
+            if block_above.bounding_box is not None:
                 # Reset to dirt
-                await self.set_tile_type_global(chunk, x, y, BlockTypes.DIRT)
+                await self.set_tile_type_global(chunk, x, y, blocks.DIRT)
             else:
                 # Spread
                 for dir in (-1, 1):
@@ -332,13 +333,18 @@ class AsyncServer:
                     if chunk_off is not None:
                         chunk_above, _, y_above = self.get_block_rel_pos(chunk_off, x_off, y + 1)
                         block_above = self.get_block_rel_chunk(chunk_above, x_off, y_above)
-                        if (chunk_off.get_tile_type(x_off, y) == BlockTypes.DIRT
-                            and block_above == BlockTypes.AIR):
+                        if (
+                            chunk_off.get_tile_type(x_off, y) == blocks.DIRT
+                            and (block_above is None or block_above.bounding_box is None)
+                        ):
                             await self.set_tile_type_global(chunk_off, x_off, y, block)
-                        elif block_above == BlockTypes.DIRT:
-                            await self.set_block_rel_chunk_global(chunk_above, x_off, y_above, block)
+                        elif block_above == blocks.DIRT:
+                            chunk_above_2, _, y_above_2 = self.get_block_rel_pos(chunk_above, x_off, y_above + 1)
+                            block_above_2 = self.get_block_rel_chunk(chunk_above_2, x_off, y_above_2)
+                            if block_above_2 is None or block_above_2.bounding_box is None:
+                                await self.set_block_rel_chunk_global(chunk_above, x_off, y_above, block)
 
-    async def section_gc(self):
+    async def section_gc(self) -> None:
         while not self.running:
             await asyncio.sleep(0)
         assert self.world is not None
@@ -411,33 +417,42 @@ class AsyncServer:
             chunk = self.all_loaded_chunks.get((chunk.abs_x + x2, chunk.abs_y + y2))
         return chunk, x, y
 
-    def get_block_rel_chunk(self, chunk: Optional[WorldChunk], x: int, y: int) -> Optional[BlockTypes]:
+    def get_block_rel_chunk(self, chunk: Optional[WorldChunk], x: int, y: int) -> Optional[Block]:
         chunk, x, y = self.get_block_rel_pos(chunk, x, y)
         if chunk is None:
             return None
         return chunk.get_tile_type(x, y)
 
-    def set_block_rel_chunk(self, chunk: Optional[WorldChunk], x: int, y: int, block: BlockTypes) -> bool:
+    def set_block_rel_chunk(self, chunk: Optional[WorldChunk], x: int, y: int, block: Block) -> bool:
         chunk, x, y = self.get_block_rel_pos(chunk, x, y)
         if chunk is None:
             return False
         chunk.set_tile_type(x, y, block)
         return True
 
-    async def set_block_rel_chunk_global(self, chunk: Optional[WorldChunk], x: int, y: int, block: BlockTypes) -> bool:
+    async def set_block_rel_chunk_global(self, chunk: Optional[WorldChunk], x: int, y: int, block: Block) -> bool:
         chunk, x, y = self.get_block_rel_pos(chunk, x, y)
         if chunk is None:
             return False
         await self.set_tile_type_global(chunk, x, y, block)
         return True
 
-    async def set_tile_type_global(self, chunk: WorldChunk, x: int, y: int, type: BlockTypes, exclude_player: Optional[Client] = None):
+    async def set_tile_type_global(self,
+        chunk: WorldChunk,
+        x: int, y: int,
+        type: Block,
+        exclude_player: Optional[Client] = None
+    ) -> None:
         chunk.set_tile_type(x, y, type)
         cpos = (chunk.abs_x, chunk.abs_y)
         packet = ChunkUpdatePacket(chunk.abs_x, chunk.abs_y, x, y, type)
         await self.send_to_all(packet, cpos, exclude_player)
 
-    async def send_to_all(self, packet: Packet, cpos_only: Optional[tuple[int, int]] = None, exclude_player: Optional[Client] = None) -> tuple[None, ...]:
+    async def send_to_all(self,
+        packet: Packet,
+        cpos_only: Optional[tuple[int, int]] = None,
+        exclude_player: Optional[Client] = None
+    ) -> tuple[None, ...]:
         tasks: list[asyncio.Task] = []
         for client in self.clients:
             if client is exclude_player:
