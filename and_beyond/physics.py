@@ -2,10 +2,10 @@ import math
 
 from pygame import Vector2
 
+from and_beyond import blocks
 from and_beyond.abstract_player import AbstractPlayer
 from and_beyond.common import GRAVITY, TERMINAL_VELOCITY
 from and_beyond.utils import autoslots
-from and_beyond.world import BlockTypes
 
 EPSILON = 0.001
 
@@ -104,7 +104,7 @@ class PlayerPhysics:
         cpos = (cx, cy)
         if cpos in self.player.loaded_chunks:
             tile = self.player.loaded_chunks[cpos].get_tile_type(bx, by)
-            if tile == BlockTypes.AIR:
+            if tile.bounding_box is None:
                 return False
         mx = x - ix
         my = y - iy
@@ -122,11 +122,11 @@ class PlayerPhysics:
         x = self.player.x
         iy = math.floor(self.player.y - 2 * EPSILON)
         return (
-            self.get_tile_type(math.floor(x + 0.2), iy) != BlockTypes.AIR
-            or self.get_tile_type(math.floor(x + 0.8), iy) != BlockTypes.AIR
+            self.get_tile_type(math.floor(x + 0.2), iy).bounding_box is not None
+            or self.get_tile_type(math.floor(x + 0.8), iy).bounding_box is not None
         )
 
-    def get_tile_type(self, x: int, y: int) -> BlockTypes:
+    def get_tile_type(self, x: int, y: int) -> 'blocks.Block':
         cx = x >> 4
         cy = y >> 4
         bx = x - (cx << 4)
@@ -134,4 +134,4 @@ class PlayerPhysics:
         cpos = (cx, cy)
         if cpos in self.player.loaded_chunks:
             return self.player.loaded_chunks[cpos].get_tile_type(bx, by)
-        return BlockTypes.STONE # If we get in an unloaded chunk (assume solid)
+        return blocks.STONE # If we get in an unloaded chunk (assume solid)

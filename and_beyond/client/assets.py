@@ -6,10 +6,11 @@ import pygame.font
 import pygame.image
 import pygame.surface
 import pygame.transform
-from and_beyond.block import BLOCKS
-from and_beyond.client.consts import BLOCK_RENDER_SIZE
 from pygame import *
 from pygame.locals import *
+
+from and_beyond.blocks import BLOCKS
+from and_beyond.client.consts import BLOCK_RENDER_SIZE
 
 ASSET_COUNT = 0
 
@@ -17,7 +18,7 @@ import and_beyond.client.mixer  # pyright: ignore [reportUnusedImport] # Load mu
 
 ASSET_COUNT += 3
 
-_missing_texture_cache: dict[str, pygame.surface.Surface] = {}
+_missing_texture_cache: dict[tuple[int, int], pygame.surface.Surface] = {}
 _MISSING_MAGENTA = (255, 0, 220)
 def try_load_texture(filename: str, desired_size: tuple[int, int]) -> pygame.surface.Surface:
     try:
@@ -26,9 +27,9 @@ def try_load_texture(filename: str, desired_size: tuple[int, int]) -> pygame.sur
         logging.warn('Unabel to load texture "%s". Using missing texture.', filename, exc_info=True)
         if desired_size == (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE):
             return MISSING_TEXTURE[0]
-        if filename not in _missing_texture_cache:
-            width, height = desired_size
+        if desired_size not in _missing_texture_cache:
             tex = pygame.surface.Surface(desired_size)
+            width, height = desired_size
             tex.fill(_MISSING_MAGENTA, (
                 0, 0,
                 width // 2, (height + 1) // 2
@@ -37,17 +38,17 @@ def try_load_texture(filename: str, desired_size: tuple[int, int]) -> pygame.sur
                 width // 2, (height + 1) // 2,
                 (width + 1) // 2, height // 2
             ))
-            _missing_texture_cache[filename] = tex
-        return _missing_texture_cache[filename]
+            _missing_texture_cache[desired_size] = tex
+        return _missing_texture_cache[desired_size]
 
 
 def load_block_textures(root: str) -> None:
     global ASSET_COUNT
     for block in BLOCKS:
-        if block is None:
+        if block is None or block.texture_path is None:
             BLOCK_SPRITES.append(None)
             continue
-        filename = root + '/' + block.name + '.png'
+        filename = root + block.texture_path
         sprite = try_load_texture(filename, (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE))
         BLOCK_SPRITES.append([sprite])
         ASSET_COUNT += 1
@@ -69,6 +70,8 @@ MISSING_TEXTURE[0].fill(_MISSING_MAGENTA, (
     (BLOCK_RENDER_SIZE + 1) // 2, BLOCK_RENDER_SIZE // 2
 ))
 ASSET_COUNT += 1
+
+EMPTY_TEXTURE = [pygame.surface.Surface((BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE))]
 
 PERSON_SPRITES = [
     try_load_texture('assets/sprites/person1.png', (6, 9)),
@@ -102,5 +105,7 @@ def transform_assets() -> int:
     MISSING_TEXTURE[0] = MISSING_TEXTURE[0].convert()
     SELECTED_ITEM_BG[0] = SELECTED_ITEM_BG[0].convert_alpha()
     SELECTED_ITEM_BG[0].fill((0, 0, 0, 192))
-    count += 2
+    EMPTY_TEXTURE[0] = EMPTY_TEXTURE[0].convert_alpha()
+    EMPTY_TEXTURE[0].fill((0, 0, 0, 0))
+    count += 3
     return count

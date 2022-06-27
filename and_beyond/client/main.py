@@ -28,6 +28,7 @@ logging.info('Loaded %i assets in %f seconds', ASSET_COUNT, end - start)
 from pygame import *
 from pygame.locals import *
 
+from and_beyond import blocks
 from and_beyond.client import globals
 from and_beyond.client.chat import ChatClient
 from and_beyond.client.consts import PERIODIC_TICK_EVENT, SERVER_CONNECT_EVENT, SERVER_DISCONNECT_EVENT, UI_FG
@@ -42,7 +43,6 @@ from and_beyond.client.world import ClientWorld
 from and_beyond.common import JUMP_DELAY_MS, JUMP_SPEED, MOVE_SPEED, VERSION_DISPLAY_NAME
 from and_beyond.packet import ChatPacket
 from and_beyond.pipe_commands import read_pipe
-from and_beyond.world import BlockTypes
 
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -179,17 +179,17 @@ while globals.running:
                     # elif event.key == K_SPACE:
                     #     move_up = True
                     elif event.key == K_1:
-                        globals.player.change_selected_block(BlockTypes.STONE)
+                        globals.player.change_selected_block(blocks.STONE)
                     elif event.key == K_2:
-                        globals.player.change_selected_block(BlockTypes.DIRT)
+                        globals.player.change_selected_block(blocks.DIRT)
                     elif event.key == K_3:
-                        globals.player.change_selected_block(BlockTypes.GRASS)
+                        globals.player.change_selected_block(blocks.GRASS)
                     elif event.key == K_4:
-                        globals.player.change_selected_block(BlockTypes.WOOD)
+                        globals.player.change_selected_block(blocks.WOOD)
                     elif event.key == K_5:
-                        globals.player.change_selected_block(BlockTypes.PLANKS)
+                        globals.player.change_selected_block(blocks.PLANKS)
                     elif event.key == K_6:
-                        globals.player.change_selected_block(BlockTypes.LEAVES)
+                        globals.player.change_selected_block(blocks.LEAVES)
                     if event.key == K_t:
                         should_chat_open = True
                     elif event.key == K_SLASH:
@@ -316,7 +316,7 @@ while globals.running:
                     if move_up and globals.player.physics.air_time < 2:
                         globals.player.add_velocity(y=JUMP_SPEED)
                     move_up = False
-                if (globals.singleplayer_pipe_in is None) or not globals.paused:
+                if globals.singleplayer_pipe_in is None or not globals.paused:
                     globals.player.safe_physics_tick()
             globals.local_world.tick(screen)
             # globals.player.render(screen)

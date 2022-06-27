@@ -4,11 +4,13 @@ import enum
 import struct
 from typing import Optional, TypeVar, cast
 from uuid import UUID
+from and_beyond import blocks
 
+from and_beyond.blocks import Block, get_block_by_id
 from and_beyond.common import KEY_LENGTH, PROTOCOL_VERSION
 from and_beyond.middleware import ReaderMiddleware, WriterMiddleware
 from and_beyond.utils import autoslots
-from and_beyond.world import BlockTypes, WorldChunk
+from and_beyond.world import WorldChunk
 
 _T_int = TypeVar('_T_int', bound=int)
 _D = struct.Struct('<d')
@@ -298,9 +300,9 @@ class ChunkUpdatePacket(Packet):
     cy: int
     bx: int
     by: int
-    block: BlockTypes
+    block: Block
 
-    def __init__(self, cx: int = 0, cy: int = 0, bx: int = 0, by: int = 0, block: BlockTypes = BlockTypes.AIR) -> None:
+    def __init__(self, cx: int = 0, cy: int = 0, bx: int = 0, by: int = 0, block: Block = blocks.AIR) -> None:
         self.cx = cx
         self.cy = cy
         self.bx = bx
@@ -313,12 +315,12 @@ class ChunkUpdatePacket(Packet):
         block_info = await reader.readexactly(3)
         self.bx = block_info[0]
         self.by = block_info[1]
-        self.block = BlockTypes(block_info[2])
+        self.block = get_block_by_id(block_info[2])
 
     def write(self, writer: WriterMiddleware) -> None:
         _write_varint(self.cx, writer)
         _write_varint(self.cy, writer)
-        writer.write(bytes((self.bx, self.by, self.block)))
+        writer.write(bytes((self.bx, self.by, self.block.id)))
 
 
 @autoslots

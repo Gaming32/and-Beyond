@@ -5,7 +5,12 @@ from typing import Optional
 import pygame
 import pygame.time
 import pygame.transform
+from pygame import *
+from pygame.locals import *
+
+from and_beyond import blocks
 from and_beyond.abstract_player import AbstractPlayer
+from and_beyond.blocks import Block
 from and_beyond.client import globals
 from and_beyond.client.assets import CHAT_FONT, PERSON_SPRITES
 from and_beyond.client.consts import BLOCK_RENDER_SIZE
@@ -14,9 +19,6 @@ from and_beyond.client.world import get_block_texture
 from and_beyond.packet import ChunkUpdatePacket, SimplePlayerPositionPacket
 from and_beyond.physics import PlayerPhysics
 from and_beyond.utils import autoslots
-from and_beyond.world import BlockTypes
-from pygame import *
-from pygame.locals import *
 
 
 @autoslots
@@ -26,7 +28,7 @@ class ClientPlayer(AbstractPlayer):
     render_x: float
     render_y: float
     is_local: bool
-    selected_block: BlockTypes
+    selected_block: Block
     selected_block_texture: pygame.surface.Surface
     dir: bool
     frame: float
@@ -46,7 +48,7 @@ class ClientPlayer(AbstractPlayer):
         self.is_local = name is None
         # We know better than https://mypy.readthedocs.io/en/latest/generics.html#variance-of-generic-types here :)
         self.loaded_chunks = globals.local_world.loaded_chunks # type: ignore
-        self.change_selected_block(BlockTypes.STONE)
+        self.change_selected_block(blocks.STONE)
         self.dir = True
         self.frame = 0
         self.display_name = name
@@ -105,7 +107,7 @@ class ClientPlayer(AbstractPlayer):
         self.render_x = self.x
         self.render_y = self.y
 
-    def change_selected_block(self, new: BlockTypes) -> None:
+    def change_selected_block(self, new: Block) -> None:
         self.selected_block = new
         self.selected_block_texture = pygame.transform.scale(get_block_texture(new), (50, 50))
 
@@ -130,7 +132,7 @@ class ClientPlayer(AbstractPlayer):
         if dirty:
             self.send_position()
 
-    def set_block(self, cx: int, cy: int, bx: int, by: int, block: BlockTypes) -> None:
+    def set_block(self, cx: int, cy: int, bx: int, by: int, block: Block) -> None:
         if (chunk := globals.local_world.loaded_chunks.get((cx, cy))) is not None:
             chunk.set_tile_type(bx, by, block)
         packet = ChunkUpdatePacket(cx, cy, bx, by, block)

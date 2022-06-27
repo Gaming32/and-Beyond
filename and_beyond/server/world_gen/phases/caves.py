@@ -1,10 +1,12 @@
 import random
 from typing import TYPE_CHECKING
 
+from opensimplex import OpenSimplex
+
+from and_beyond import blocks
 from and_beyond.server.world_gen.phase import AbstractPhase
 from and_beyond.utils import autoslots
-from and_beyond.world import BlockTypes, WorldChunk
-from opensimplex import OpenSimplex
+from and_beyond.world import WorldChunk
 
 if TYPE_CHECKING:
     from and_beyond.server.world_gen.core import WorldGenerator
@@ -36,16 +38,16 @@ class CavePhase(AbstractPhase):
         for x in range(16):
             for y in range(16):
                 old_block = chunk.get_tile_type(x, y)
-                if old_block == BlockTypes.AIR:
+                if old_block == blocks.AIR:
                     continue
-                if old_block in (BlockTypes.DIRT, BlockTypes.GRASS) and rand.random() < 0.1:
+                if old_block in (blocks.DIRT, blocks.GRASS) and rand.random() < 0.1:
                     continue
                 abs_x = cx + x
                 abs_y = cy + y
                 noise = self.noise(abs_x / X_SCALE, abs_y / Y_SCALE) + Y_OFFSET
                 if noise > BOUND:
                     continue
-                chunk.set_tile_type(x, y, BlockTypes.AIR)
+                chunk.set_tile_type(x, y, blocks.AIR)
 
 
 def test() -> None:

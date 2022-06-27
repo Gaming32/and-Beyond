@@ -10,13 +10,14 @@ from functools import partial
 from json.decoder import JSONDecodeError
 from mmap import ACCESS_WRITE, mmap
 from pathlib import Path
-from typing import (TYPE_CHECKING, Any, Awaitable, ByteString, Callable,
-                    Optional, TypedDict, Union)
+from typing import TYPE_CHECKING, Any, Awaitable, ByteString, Callable, Optional, TypedDict, Union
 from uuid import UUID
 
 import aiofiles
 
+from and_beyond import blocks
 from and_beyond.abstract_player import AbstractPlayer
+from and_beyond.blocks import Block, get_block_by_id
 from and_beyond.utils import autoslots
 
 if TYPE_CHECKING:
@@ -194,11 +195,11 @@ class World:
         return self._compare_valid_spawn(x, y, gen) == 0
 
     def _compare_valid_spawn(self, x: int, y: int, gen: 'WorldGenerator') -> int:
-        if self.get_generated_tile_type(x, y, gen) != BlockTypes.AIR:
+        if self.get_generated_tile_type(x, y, gen) != blocks.AIR:
             return -1
-        if self.get_generated_tile_type(x, y + 1, gen) != BlockTypes.AIR:
+        if self.get_generated_tile_type(x, y + 1, gen) != blocks.AIR:
             return -1
-        if self.get_generated_tile_type(x, y - 1, gen) == BlockTypes.AIR:
+        if self.get_generated_tile_type(x, y - 1, gen) == blocks.AIR:
             return 1
         return 0
 
@@ -214,14 +215,14 @@ class World:
         cy = y - (sy << 4)
         return self.get_section(sx, sy).get_chunk(cx, cy)
 
-    def get_tile_type(self, x: int, y: int) -> 'BlockTypes':
+    def get_tile_type(self, x: int, y: int) -> Block:
         cx = x >> 4
         cy = y >> 4
         bx = x - (cx << 4)
         by = y - (cy << 4)
         return self.get_chunk(cx, cy).get_tile_type(bx, by)
 
-    def set_tile_type(self, x: int, y: int, type: 'BlockTypes') -> None:
+    def set_tile_type(self, x: int, y: int, type: Block) -> None:
         cx = x >> 4
         cy = y >> 4
         bx = x - (cx << 4)
@@ -235,7 +236,7 @@ class World:
             c.version = CHUNK_VERSION
         return c
 
-    def get_generated_tile_type(self, x: int, y: int, gen: 'WorldGenerator') -> 'BlockTypes':
+    def get_generated_tile_type(self, x: int, y: int, gen: 'WorldGenerator') -> Block:
         cx = x >> 4
         cy = y >> 4
         bx = x - (cx << 4)
@@ -444,13 +445,13 @@ class WorldChunk:
     def _get_tile_address(self, x: int, y: int) -> int:
         return self.address + (x * 16 + y) * 2
 
-    def get_tile_type(self, x: int, y: int) -> 'BlockTypes':
+    def get_tile_type(self, x: int, y: int) -> Block:
         addr = self._get_tile_address(x, y)
-        return BlockTypes(self.fp[addr])
+        return get_block_by_id(self.fp[addr])
 
-    def set_tile_type(self, x: int, y: int, type: 'BlockTypes') -> None:
+    def set_tile_type(self, x: int, y: int, type: Block) -> None:
         addr = self._get_tile_address(x, y)
-        self.fp[addr] = type
+        self.fp[addr] = type.id
 
     def _get_biome_address(self, x: int, y: int) -> int:
         return self.address + (x * 16 + y) * 2
@@ -568,16 +569,6 @@ DEFAULT_META: WorldMeta = {
     'spawn_y': None,
     'player_cache': {},
 }
-
-
-class BlockTypes(enum.IntEnum):
-    AIR = 0
-    STONE = 1
-    DIRT = 2
-    GRASS = 3
-    WOOD = 4
-    PLANKS = 5
-    LEAVES = 6
 
 
 class BiomeTypes(enum.IntEnum):

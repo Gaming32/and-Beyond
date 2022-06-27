@@ -4,16 +4,17 @@ import random
 import pygame
 import pygame.draw
 import pygame.mouse
-from and_beyond.block import BLOCKS
+from pygame import *
+from pygame.locals import *
+
+from and_beyond import blocks
+from and_beyond.blocks import Block
 from and_beyond.client import globals
-from and_beyond.client.assets import (BLOCK_SPRITES, MISSING_TEXTURE,
-                                      SELECTED_ITEM_BG)
+from and_beyond.client.assets import BLOCK_SPRITES, EMPTY_TEXTURE, MISSING_TEXTURE, SELECTED_ITEM_BG
 from and_beyond.client.consts import BLOCK_RENDER_SIZE
 from and_beyond.client.utils import world_to_screen
 from and_beyond.utils import autoslots
-from and_beyond.world import BlockTypes, WorldChunk
-from pygame import *
-from pygame.locals import *
+from and_beyond.world import WorldChunk
 
 CHUNK_RENDER_SIZE = BLOCK_RENDER_SIZE * 16
 
@@ -75,7 +76,7 @@ class ClientWorld:
         )
         buttons = pygame.mouse.get_pressed(3)
         if buttons[0]:
-            globals.player.set_block(sel_cx, sel_cy, sel_bx, sel_by, BlockTypes.AIR)
+            globals.player.set_block(sel_cx, sel_cy, sel_bx, sel_by, blocks.AIR)
         elif buttons[2]:
             globals.player.set_block(sel_cx, sel_cy, sel_bx, sel_by, globals.player.selected_block)
 
@@ -92,14 +93,14 @@ class ClientWorld:
         bx = x - (cx << 4)
         for by in range(y - (cy << 4), 16):
             block = chunk.get_tile_type(bx, by)
-            if block != BlockTypes.AIR:
+            if block != blocks.AIR:
                 return True
         if (cx, cy + 1) not in self.loaded_chunks:
             return False
         chunk = self.loaded_chunks[(cx, cy + 1)]
         for by in range(16):
             block = chunk.get_tile_type(bx, by)
-            if block != BlockTypes.AIR:
+            if block != blocks.AIR:
                 return True
         return False
 
@@ -132,7 +133,7 @@ class ClientChunk(WorldChunk):
            for x in range(16):
                 for y in range(16):
                     block = self.get_tile_type(x, y)
-                    if block == BlockTypes.AIR:
+                    if block.texture_path is None:
                         continue
                     tex = get_block_texture(block)
                     rpos = Vector2(x, 15 - y) * BLOCK_RENDER_SIZE
@@ -144,21 +145,22 @@ class ClientChunk(WorldChunk):
                 rpos = Vector2(x, 15 - y) * BLOCK_RENDER_SIZE
                 rect = Rect(rpos, (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE))
                 self.surf.fill((0, 0, 0, 0), rect)
-                if block != BlockTypes.AIR:
+                if block.texture_path is not None:
                     tex = get_block_texture(block)
                     self.surf.blit(tex, Rect(rpos, (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)))
             self.redraw.clear()
         return self.surf
 
-    def set_tile_type(self, x: int, y: int, type: 'BlockTypes') -> None:
+    def set_tile_type(self, x: int, y: int, type: Block) -> None:
         super().set_tile_type(x, y, type)
         self.redraw.add((x, y))
 
 
-def get_block_texture(block_old: BlockTypes) -> pygame.surface.Surface:
-    block = BLOCKS[block_old]
+def get_block_texture(block: Block) -> pygame.surface.Surface:
     if block is None:
         tex = MISSING_TEXTURE[0]
+    elif block.texture_path is None:
+        tex = EMPTY_TEXTURE[0]
     else:
         sprites = BLOCK_SPRITES[block.id]
         assert sprites is not None
