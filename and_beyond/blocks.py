@@ -38,6 +38,9 @@ class Block:
         self.texture_path = path
         return self
 
+    def __repr__(self) -> str:
+        return f'<Block {self.name} id={self.id}>'
+
 from and_beyond.physics import AABB
 
 AIR    = Block(0, 'air').set_bounding_box(None).set_texture_path(None)
