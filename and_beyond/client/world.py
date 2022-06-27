@@ -57,7 +57,7 @@ class ClientWorld(AbstractWorld):
             return
         sel_x = pymath.ceil(globals.mouse_world[0]) - 1
         sel_y = pymath.ceil(globals.mouse_world[1])
-        if not globals.player.can_reach(sel_x, sel_y, False):
+        if not globals.player.can_reach(sel_x, sel_y, None):
             return
         sel_cx = sel_x >> 4
         sel_cy = sel_y >> 4
@@ -78,7 +78,11 @@ class ClientWorld(AbstractWorld):
         buttons = pygame.mouse.get_pressed(3)
         if buttons[0]:
             globals.player.set_block(sel_cx, sel_cy, sel_bx, sel_by, blocks.AIR)
-        elif buttons[2] and globals.player.can_reach(sel_x, sel_y, True):
+        elif buttons[2] and globals.player.can_reach(
+            sel_x, sel_y,
+            globals.player.selected_block.bounding_box,
+            (player.physics.offset_bb for player in globals.all_players.values())
+        ):
             globals.player.set_block(sel_cx, sel_cy, sel_bx, sel_by, globals.player.selected_block)
 
     def _is_under_block_in_2_chunks(self) -> bool:

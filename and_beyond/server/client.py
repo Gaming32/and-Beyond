@@ -16,7 +16,6 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from cryptography.hazmat.primitives.serialization.base import load_der_public_key
 
-from and_beyond import blocks
 from and_beyond.common import (KEY_LENGTH, MOVE_SPEED_CAP_SQ, NAMESPACE_AND_BEYOND, PROTOCOL_VERSION, USERNAME_REGEX, VERSION_DISPLAY_NAME,
                                VIEW_DISTANCE_BOX, get_version_name)
 from and_beyond.middleware import (BufferedWriterMiddleware, EncryptedReaderMiddleware, EncryptedWriterMiddleware,
@@ -386,7 +385,7 @@ class Client:
                         abs_x = (packet.cx << 4) + packet.bx
                         abs_y = (packet.cy << 4) + packet.by
                         chunk = self.loaded_chunks[chunk_pos]
-                        if self.player.can_reach(abs_x, abs_y, packet.block != blocks.AIR):
+                        if self.player.can_reach(abs_x, abs_y, packet.block.bounding_box):
                             await self.server.set_tile_type_global(chunk, packet.bx, packet.by, packet.block, self)
                         else:
                             # logging.warn("Player %s can't reach block %i, %i, yet they tried to update it.", self, abs_x, abs_y)
