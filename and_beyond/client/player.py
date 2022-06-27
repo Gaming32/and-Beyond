@@ -35,7 +35,6 @@ class ClientPlayer(AbstractPlayer):
     display_name: Optional[str]
     name_render: Optional[pygame.surface.Surface]
     name_offset: Vector2
-    physics: PlayerPhysics
     time_since_physics: float
 
     def __init__(self, name: Optional[str] = None) -> None:

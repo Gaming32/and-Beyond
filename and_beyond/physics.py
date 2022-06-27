@@ -39,7 +39,10 @@ class AABB:
     def intersect(self, other: 'AABB') -> bool:
         return not (self.x2 < other.x1 or other.x2 < self.x1 or self.y2 < other.y1 or other.y2 < self.y1)
 
-    def collides_with_world(self, world: AbstractWorld) -> bool:
+    def contains_point(self, x: float, y: float) -> bool:
+        return self.x1 <= x <= self.x2 and self.y1 <= y <= self.y2
+
+    def collides_with_world(self, world: AbstractWorld) -> Optional[tuple[int, int]]:
         for x_off in range(-2, 3):
             for y_off in range(-2, 3):
                 x = int(self.x1) + x_off
@@ -48,8 +51,8 @@ class AABB:
                 if block is None or block.bounding_box is None:
                     continue
                 if self.intersect(block.bounding_box + (x, y)):
-                    return True
-        return False
+                    return x, y
+        return None
 
     def __repr__(self) -> str:
         return f'AABB({self.x1}, {self.y1}, {self.x2}, {self.y2})'
@@ -98,11 +101,13 @@ class PlayerPhysics:
         # else:
         #     self.x_velocity = 0
         self.player.x += self.x_velocity
-        if self.offset_bb.collides_with_world(self.player.world):
+        collision_point = self.offset_bb.collides_with_world(self.player.world)
+        if collision_point is not None:
             self.player.x -= self.x_velocity
             self.x_velocity = 0
         self.player.y += self.y_velocity
-        if self.offset_bb.collides_with_world(self.player.world):
+        collision_point = self.offset_bb.collides_with_world(self.player.world)
+        if collision_point is not None:
             self.player.y -= self.y_velocity
             self.y_velocity = 0
             self.air_time = 0

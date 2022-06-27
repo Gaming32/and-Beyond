@@ -13,7 +13,6 @@ if TYPE_CHECKING:
 class Player(OfflinePlayer):
     name: str
     client: 'Client'
-    physics: PlayerPhysics
 
     def __init__(self, client: 'Client', name: Optional[str] = None) -> None:
         assert client.uuid is not None
