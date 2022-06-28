@@ -2,7 +2,7 @@ import json
 import locale
 import logging
 from collections import ChainMap
-from typing import MutableMapping, Optional, Union
+from typing import Any, MutableMapping, Optional, Union
 
 TranslateMapping = MutableMapping[str, str]
 MaybeText = Union[str, 'Text']
@@ -15,23 +15,51 @@ _language_mapping: Optional[TranslateMapping] = None
 class Text:
     value: str
     localized: bool
+    format_args: tuple[Any, ...]
+    format_kwargs: dict[str, Any]
 
     def __init__(self, value: str, localized: bool = False) -> None:
         self.value = value
         self.localized = localized
+        self.format_args = ()
+        self.format_kwargs = {}
+
+    def with_format_params(self, *args: Any, **kwargs: Any) -> 'Text':
+        new = Text(self.value, self.localized)
+        new.format_args = args
+        new.format_kwargs = kwargs
+        return new
 
     def __str__(self) -> str:
+        if self.format_args or self.format_kwargs:
+            if self.localized:
+                return translate_formatted(self.value, *self.format_args, **self.format_kwargs)
+            return self.value.format(*self.format_args, **self.format_kwargs)
         if self.localized:
             return translate(self.value)
         return self.value
 
-    def format(self, *args: str, **kwargs: str) -> str:
+    def format(self, *args: Any, **kwargs: Any) -> str:
         if self.localized:
             return translate_formatted(self.value, *args, **kwargs)
         return self.value.format(*args, **kwargs)
 
     def __repr__(self) -> str:
-        return f'Text({self.value!r}, {self.localized!r})'
+        base = f'Text({self.value!r}, {self.localized!r})'
+        if self.format_args or self.format_kwargs:
+            base += '.with_format_params('
+            if self.format_args:
+                base += repr(self.format_args[0])
+                for i in range(1, len(self.format_args)):
+                    base += ', ' + repr(self.format_args[i])
+                if self.format_kwargs:
+                    base += ', '
+            if self.format_kwargs:
+                for (k, v) in self.format_kwargs.items():
+                    base += f'{k}={v!r}, '
+                base = base[:-2]
+            return base + ')'
+        return base
 
     def __eq__(self, o: object) -> bool:
         if not isinstance(o, Text):
@@ -83,7 +111,7 @@ def translate(key: str) -> str:
     return _language_mapping.get(key, key)
 
 
-def translate_formatted(key: str, *args: str, **kwargs: str) -> str:
+def translate_formatted(key: str, *args: Any, **kwargs: Any) -> str:
     _load()
     assert _language_mapping is not None
     format_string = _language_mapping.get(key)

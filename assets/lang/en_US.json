@@ -17,5 +17,13 @@
     "options.framerate.unlimited": "Unlimited",
     "options.fullscreen": "Fullscreen",
     "options.always_show_fps": "Always Show FPS",
-    "options.volume": "Volume"
+    "options.volume": "Volume",
+    "pause.title": "Game Paused",
+    "pause.continue": "Continue Game",
+    "pause.open_to_lan": "Open to LAN",
+    "pause.disconnect": "Disconnect",
+    "pause.save_and_quit": "Save and Quit",
+    "open_to_lan.enter_port_number": "Enter a port number (empty for random):",
+    "open_to_lan.not_valid_integer": "Not a valid integer: {0}",
+    "open_to_lan.port_out_of_range": "Port number must be between 0 and 65535 (inclusive)"
 }

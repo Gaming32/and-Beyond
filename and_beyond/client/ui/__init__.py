@@ -46,7 +46,7 @@ class UiElement(abc.ABC):
 
 class UiLabel(UiElement):
     text: MaybeText
-    _lines_cache: tuple[Optional[str], list[str]]
+    _lines_cache: tuple[Optional[MaybeText], list[str]]
     linewrap_width: int
 
     def __init__(self, text: MaybeText, linewrap_width: int = 0) -> None:
@@ -73,11 +73,11 @@ class UiLabel(UiElement):
 
     @property
     def lines(self) -> list[str]:
-        text = str(self.text)
-        if self._lines_cache[0] != text:
+        if self._lines_cache[0] is not self.text:
+            text = str(self.text)
             if self.linewrap_width > 0:
                 text = textwrap.fill(text, width=self.linewrap_width, replace_whitespace=False)
-            self._lines_cache = (text, text.split('\n'))
+            self._lines_cache = (self.text, text.split('\n'))
         return self._lines_cache[1]
 
 
