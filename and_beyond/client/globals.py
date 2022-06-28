@@ -161,7 +161,7 @@ ui_override: Optional['Ui'] = None
 
 local_world: 'ClientWorld'
 chunks_rendered_this_frame: int
-dirty_chunks: int
+dirty_chunks_count: int
 player: 'ClientPlayer'
 all_players: dict[UUID, 'ClientPlayer']
 camera: Vector2 = Vector2()

@@ -500,6 +500,12 @@ class WorldChunk:
         addr = self._get_biome_address(x, y)
         self.fp[addr] = type
 
+    def get_flags(self) -> 'ChunkFlags':
+        return ChunkFlags.from_bytes(self.fp[self.address + 548:self.address + 556], 'little', signed=False)
+
+    def set_flags(self, flags: int) -> None:
+        self.fp[self.address + 548:self.address + 556] = flags.to_bytes(8, 'little', signed=False)
+
     def _get_lighting_address(self, x: int, y: int) -> int:
         return self.address + 548 + x * 16 + y
 
@@ -637,6 +643,10 @@ DEFAULT_META: WorldMeta = {
 
 class BiomeTypes(enum.IntEnum):
     HILLS = 0
+
+
+class ChunkFlags(enum.IntFlag):
+    SKYLIGHT_GENERATED = 1
 
 
 CHUNK_VERSION = 1

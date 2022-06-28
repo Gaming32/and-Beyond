@@ -47,10 +47,45 @@ class Block:
         return self
 
     def on_place(self, chunk: 'WorldChunk', x: int, y: int) -> None:
-        chunk.set_blocklight(x, y, self.luminescence)
+        self._update_lighting(chunk, x, y, set())
+
+    def _update_lighting(self, chunk: 'WorldChunk', x: int, y: int, encountered: set[tuple[int, int]]) -> None:
+        if (x, y) in encountered:
+            return
+        left_blocklight = 0
+        if x > 0:
+            left_blocklight = chunk.get_blocklight(x - 1, y)
+        right_blocklight = 0
+        if x < 15:
+            right_blocklight = chunk.get_blocklight(x + 1, y)
+        down_blocklight = 0
+        if y > 0:
+            down_blocklight = chunk.get_blocklight(x, y - 1)
+        up_blocklight = 0
+        if y < 15:
+            up_blocklight = chunk.get_blocklight(x, y + 1)
+        blocklight = max(
+            self.luminescence,
+            left_blocklight - 1,
+            right_blocklight - 1,
+            down_blocklight - 1,
+            up_blocklight - 1
+        )
+        chunk.set_blocklight(x, y, blocklight)
+        if blocklight > 0:
+            encountered.add((x, y))
+            if x > 0:
+                chunk.get_tile_type(x - 1, y)._update_lighting(chunk, x - 1, y, encountered)
+            if x < 15:
+                chunk.get_tile_type(x + 1, y)._update_lighting(chunk, x + 1, y, encountered)
+            if y > 0:
+                chunk.get_tile_type(x, y - 1)._update_lighting(chunk, x, y - 1, encountered)
+            if y < 15:
+                chunk.get_tile_type(x, y + 1)._update_lighting(chunk, x, y + 1, encountered)
 
     def __repr__(self) -> str:
         return f'<Block {self.name} id={self.id}>'
+
 
 from and_beyond.physics import AABB
 

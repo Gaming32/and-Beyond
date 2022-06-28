@@ -1,6 +1,6 @@
-from functools import lru_cache
 import math as pymath
 import random
+from functools import lru_cache
 from typing import Optional
 
 import pygame
@@ -24,11 +24,9 @@ CHUNK_RENDER_SIZE = BLOCK_RENDER_SIZE * 16
 @autoslots
 class ClientWorld(AbstractWorld):
     loaded_chunks: dict[tuple[int, int], 'ClientChunk']
-    chunks_rendered_this_frame: int
 
     def __init__(self) -> None:
         self.loaded_chunks = {}
-        self.chunks_rendered_this_frame = 0
 
     def load(self) -> None:
         pass
@@ -112,6 +110,10 @@ class ClientWorld(AbstractWorld):
                 return True
         return False
 
+    def force_rerender(self) -> None:
+        for chunk in self.loaded_chunks.values():
+            chunk.dirty = True
+
     def get_chunk_or_none(self, x: int, y: int) -> Optional['ClientChunk']:
         return self.loaded_chunks.get((x, y))
 
@@ -143,7 +145,7 @@ class ClientChunk(WorldChunk):
 
     def render(self) -> pygame.surface.Surface:
         if self.dirty:
-            globals.dirty_chunks += 1
+            globals.dirty_chunks_count += 1
             if globals.chunks_rendered_this_frame < MAX_RENDER_CHUNKS:
                 globals.chunks_rendered_this_frame += 1
                 self.surf.fill((0, 0, 0, 0))
@@ -170,6 +172,18 @@ class ClientChunk(WorldChunk):
 
     def set_tile_type(self, x: int, y: int, type: Block) -> None:
         super().set_tile_type(x, y, type)
+        self.redraw.add((x, y))
+
+    def set_blocklight(self, x: int, y: int, blocklight: int) -> None:
+        super().set_blocklight(x, y, blocklight)
+        self.redraw.add((x, y))
+
+    def set_skylight(self, x: int, y: int, skylight: int) -> None:
+        super().set_skylight(x, y, skylight)
+        self.redraw.add((x, y))
+
+    def set_packed_lighting(self, x: int, y: int, packed_lighting: int) -> None:
+        super().set_packed_lighting(x, y, packed_lighting)
         self.redraw.add((x, y))
 
 

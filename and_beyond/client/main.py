@@ -87,7 +87,7 @@ def render_debug() -> None:
         ])
     loaded_chunks = len(globals.local_world.loaded_chunks)
     lines.extend([
-        f'Loaded chunks: {loaded_chunks - globals.dirty_chunks}/{loaded_chunks}',
+        f'Loaded chunks: {loaded_chunks - globals.dirty_chunks_count}/{loaded_chunks}',
     ])
     for line in lines:
         text_render = DEBUG_FONT.render(line, False, (0, 0, 0))
@@ -200,6 +200,9 @@ while globals.running:
                     elif event.key == K_SLASH:
                         should_chat_open = True
                         globals.chat_client.current_chat = '/'
+                    if key.get_pressed()[K_F4]:
+                        if event.key == K_a:
+                            globals.local_world.force_rerender()
                 else:
                     if event.key == pygame.K_BACKSPACE:
                         text = globals.chat_client.current_chat
@@ -327,7 +330,7 @@ while globals.running:
                 if globals.singleplayer_pipe_in is None or not globals.paused:
                     globals.player.safe_physics_tick()
             globals.chunks_rendered_this_frame = 0
-            globals.dirty_chunks = 0
+            globals.dirty_chunks_count = 0
             globals.local_world.tick(screen)
             # globals.player.render(screen)
             for player in globals.all_players.values():
