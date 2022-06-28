@@ -51,10 +51,17 @@ class Block:
             self.update_lighting(chunk, x, y)
 
     def update_lighting(self, chunk: 'WorldChunk', x: int, y: int) -> None:
-        while self._propogate_lighting(chunk, x, y, set()):
+        while self._propogate_lighting(chunk, x, y, x, y, set()):
             pass
 
-    def _propogate_lighting(self, chunk: 'WorldChunk', x: int, y: int, encountered: set[tuple[int, int]]) -> bool:
+    def _propogate_lighting(self,
+        chunk: 'WorldChunk',
+        x: int, y: int,
+        source_x: int, source_y: int,
+        encountered: set[tuple[int, int]]
+    ) -> bool:
+        if abs(x - source_x) > 16 or abs(y - source_y) > 16:
+            return False
         if (x, y) in encountered:
             return False
         left_blocklight = 0
@@ -81,13 +88,21 @@ class Block:
         encountered.add((x, y))
         child_changed = False
         if x > 0:
-            child_changed |= chunk.get_tile_type(x - 1, y)._propogate_lighting(chunk, x - 1, y, encountered)
+            child_changed |= chunk.get_tile_type(x - 1, y)._propogate_lighting(
+                chunk, x - 1, y, source_x, source_y, encountered
+            )
         if x < 15:
-            child_changed |= chunk.get_tile_type(x + 1, y)._propogate_lighting(chunk, x + 1, y, encountered)
+            child_changed |= chunk.get_tile_type(x + 1, y)._propogate_lighting(
+                chunk, x + 1, y, source_x, source_y, encountered
+            )
         if y > 0:
-            child_changed |= chunk.get_tile_type(x, y - 1)._propogate_lighting(chunk, x, y - 1, encountered)
+            child_changed |= chunk.get_tile_type(x, y - 1)._propogate_lighting(
+                chunk, x, y - 1, source_x, source_y, encountered
+            )
         if y < 15:
-            child_changed |= chunk.get_tile_type(x, y + 1)._propogate_lighting(chunk, x, y + 1, encountered)
+            child_changed |= chunk.get_tile_type(x, y + 1)._propogate_lighting(
+                chunk, x, y + 1, source_x, source_y, encountered
+            )
         return child_changed or blocklight != old_blocklight
 
     def _propogate_lighting_dimmer(self, chunk: 'WorldChunk', x: int, y: int) -> None:
