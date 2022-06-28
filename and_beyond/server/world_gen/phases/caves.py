@@ -47,7 +47,7 @@ class CavePhase(AbstractPhase):
                 noise = self.noise(abs_x / X_SCALE, abs_y / Y_SCALE) + Y_OFFSET
                 if noise > BOUND:
                     continue
-                chunk.set_tile_type(x, y, blocks.AIR)
+                chunk.set_tile_type_no_event(x, y, blocks.AIR)
 
 
 def test() -> None:

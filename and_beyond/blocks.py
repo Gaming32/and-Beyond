@@ -47,7 +47,8 @@ class Block:
         return self
 
     def on_place(self, chunk: 'WorldChunk', x: int, y: int) -> None:
-        self.update_lighting(chunk, x, y)
+        if chunk.get_tile_type(x, y).luminescence != self.luminescence:
+            self.update_lighting(chunk, x, y)
 
     def update_lighting(self, chunk: 'WorldChunk', x: int, y: int) -> None:
         while self._propogate_lighting(chunk, x, y, set()):

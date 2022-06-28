@@ -390,6 +390,7 @@ class Client:
                         else:
                             # logging.warn("Player %s can't reach block %i, %i, yet they tried to update it.", self, abs_x, abs_y)
                             packet.block = chunk.get_tile_type(packet.bx, packet.by)
+                            packet.packed_lighting = chunk.get_packed_lighting(packet.bx, packet.by)
                             await write_packet(packet, self.writer)
                 elif isinstance(packet, ChatPacket):
                     if packet.message[0] == '/':
