@@ -421,11 +421,11 @@ class Client:
                 assert self.server.world is not None
                 for step in range(step_count):
                     self.player.x += step_x
-                    if self.player.physics.offset_bb.collides_with_world(self.server.world):
+                    if self.player.physics.offset_bb.expand(-0.2).collides_with_world(self.server.world):
                         collided = True
                         break
                     self.player.y += step_y
-                    if self.player.physics.offset_bb.collides_with_world(self.server.world):
+                    if self.player.physics.offset_bb.expand(-0.2).collides_with_world(self.server.world):
                         collided = True
                         break
             if collided:
