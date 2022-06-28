@@ -499,6 +499,29 @@ class WorldChunk:
         addr = self._get_biome_address(x, y)
         self.fp[addr] = type
 
+    def _get_lighting_address(self, x: int, y: int) -> int:
+        return self.address + 548 + x * 16 + y
+
+    def get_packed_lighting(self, x: int, y: int) -> int:
+        return self.fp[self._get_lighting_address(x, y)]
+
+    def set_packed_lighting(self, x: int, y: int, packed_lighting: int) -> None:
+        self.fp[self._get_lighting_address(x, y)] = packed_lighting
+
+    def get_skylight(self, x: int, y: int) -> int:
+        return self.fp[self._get_lighting_address(x, y)] & 0xf
+
+    def set_skylight(self, x: int, y: int, skylight: int) -> None:
+        addr = self._get_lighting_address(x, y)
+        self.fp[addr] = (self.fp[addr] & 0xf0) | skylight
+
+    def get_blocklight(self, x: int, y: int) -> int:
+        return self.fp[self._get_lighting_address(x, y)] >> 4
+
+    def set_blocklight(self, x: int, y: int, blocklight: int) -> None:
+        addr = self._get_lighting_address(x, y)
+        self.fp[addr] = (self.fp[addr] & 0xf) | (blocklight << 4)
+
     def get_data(self) -> memoryview:
         return memoryview(self.fp)[self.address:self.address + 1024]
 
