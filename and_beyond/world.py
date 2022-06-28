@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Awaitable, ByteString, Callable, Optional
 from uuid import UUID
 
 import aiofiles
+from typing_extensions import Self
 
 from and_beyond import blocks
 from and_beyond.abstract_player import AbstractPlayer
@@ -453,7 +454,7 @@ class WorldChunk:
         self.load_counter = 0
 
     @classmethod
-    def virtual_chunk(cls, x: int, y: int, abs_x: int, abs_y: int, data: ByteString) -> 'WorldChunk':
+    def virtual_chunk(cls, x: int, y: int, abs_x: int, abs_y: int, data: ByteString) -> Self:
         self = cls.__new__(cls)
         self.section = None
         self.x = x
@@ -488,7 +489,7 @@ class WorldChunk:
         self.fp[addr] = type.id
 
     def _get_biome_address(self, x: int, y: int) -> int:
-        return self.address + (x * 16 + y) * 2
+        return self.address + 516 + (x * 16 + y) * 2
 
     def get_biome_type(self, x: int, y: int) -> 'BiomeTypes':
         addr = self._get_biome_address(x, y)
@@ -496,6 +497,7 @@ class WorldChunk:
 
     def set_biome_type(self, x: int, y: int, type: 'BiomeTypes') -> None:
         addr = self._get_biome_address(x, y)
+        self.fp[addr] = type
 
     def get_data(self) -> memoryview:
         return memoryview(self.fp)[self.address:self.address + 1024]
