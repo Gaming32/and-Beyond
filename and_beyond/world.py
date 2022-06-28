@@ -297,12 +297,13 @@ class World(AbstractWorld):
 class WorldSection:
     """
     Section format:
-        0:32      -- Unused
+        0:6       -- The file magic, b'BEYOND'
+        6:10      -- The section format version, stored as a UINT4
+        10:32     -- Unused
         32:262176 -- Chunk data (see chunk data format)
     Chunk data format:
-        Each chunk is stored at an address (relative to the start of the
-        section) of `32 + (x * 16 + y) * 1024`. Each chunk is stored in
-        chunk format (see the WorldChunk doc)
+        Each chunk is stored at an address (relative to the start of the section) of `32 + (x * 16 + y) * 1024`. Each
+        chunk is stored in chunk format (see the WorldChunk docstring)
     """
     world: World
     x: int
@@ -411,17 +412,22 @@ class WorldChunk:
         0:512    -- Block data (see block data format)
         512:516  -- Chunk data version (UINT4)
         516:548  -- Biome data (see biome data format)
-        548:1024 -- Unused
+        548:556  -- Chunk flags
+        556:812  -- Lighting data
+        812:1024 -- Unused
     Block data format:
-        Each block is stored at an address (relative to the start of the
-        chunk) of `(x * 16 + y) * 2`. Each block is two bytes: a UINT8
-        representing the type, and a single representing any metadata
-        (could be any format)
+        Each block is stored at an address (relative to the start of the chunk) of `(x * 16 + y) * 2`. Each block is
+        two bytes: a UINT8 representing the type, and a single representing any metadata (could be any format)
     Biome data format:
-        Each biome is stored at an address (relative to the start of the
-        chunk) of `516 + (x * 16 + y) * 2`. Each biome is two bytes: a UINT8
-        representing the type, and a single representing any metadata
-        (could be any format)
+        Each biome is stored at an address (relative to the start of the chunk) of `516 + (x * 16 + y) * 2`. Each biome
+        is two bytes: a UINT8 representing the type, and a single representing any metadata (could be any format)
+    Chunk flags:
+        The chunk flags are an 64-bit bitmask that contains boolean information about the chunk.
+            0x1 -- Whether skylight has been calculated yet
+    Lighting data format:
+        The lighting data for each block is stored at an address (relative to the start of the chunk) of
+        `548 + x * 16 + y`. Each block is represented by one byte, which is used to store two nibbles. The lower 4 bits
+        of the byte represent the skylight, and the upper 4 bits represent the blocklight.
     """
 
     section: Optional[WorldSection]
