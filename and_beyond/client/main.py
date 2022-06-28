@@ -85,8 +85,9 @@ def render_debug() -> None:
             f'CX/CY: {cx}/{cy}',
             f'SX/SY: {cx >> 4}/{cy >> 4}',
         ])
+    loaded_chunks = len(globals.local_world.loaded_chunks)
     lines.extend([
-        f'Loaded chunks: {len(globals.local_world.loaded_chunks)}',
+        f'Loaded chunks: {loaded_chunks - globals.dirty_chunks}/{loaded_chunks}',
     ])
     for line in lines:
         text_render = DEBUG_FONT.render(line, False, (0, 0, 0))
@@ -325,6 +326,8 @@ while globals.running:
                     move_up = False
                 if globals.singleplayer_pipe_in is None or not globals.paused:
                     globals.player.safe_physics_tick()
+            globals.chunks_rendered_this_frame = 0
+            globals.dirty_chunks = 0
             globals.local_world.tick(screen)
             # globals.player.render(screen)
             for player in globals.all_players.values():

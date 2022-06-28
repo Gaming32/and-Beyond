@@ -1,6 +1,9 @@
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from typing_extensions import Self
+
+if TYPE_CHECKING:
+    from and_beyond.world import WorldChunk
 
 BLOCKS: list[Optional['Block']] = [None] * 256
 
@@ -42,6 +45,9 @@ class Block:
     def set_luminescence(self, luminescence: int) -> Self:
         self.luminescence = luminescence
         return self
+
+    def on_place(self, chunk: 'WorldChunk', x: int, y: int) -> None:
+        chunk.set_blocklight(x, y, self.luminescence)
 
     def __repr__(self) -> str:
         return f'<Block {self.name} id={self.id}>'

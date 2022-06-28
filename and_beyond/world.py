@@ -487,6 +487,7 @@ class WorldChunk:
     def set_tile_type(self, x: int, y: int, type: Block) -> None:
         addr = self._get_tile_address(x, y)
         self.fp[addr] = type.id
+        type.on_place(self, x, y)
 
     def _get_biome_address(self, x: int, y: int) -> int:
         return self.address + 516 + (x * 16 + y) * 2
@@ -521,6 +522,10 @@ class WorldChunk:
     def set_blocklight(self, x: int, y: int, blocklight: int) -> None:
         addr = self._get_lighting_address(x, y)
         self.fp[addr] = (self.fp[addr] & 0xf) | (blocklight << 4)
+
+    def get_visual_light(self, x: int, y: int) -> int:
+        packed = self.get_packed_lighting(x, y)
+        return max(packed & 0xf, packed >> 4)
 
     def get_data(self) -> memoryview:
         return memoryview(self.fp)[self.address:self.address + 1024]

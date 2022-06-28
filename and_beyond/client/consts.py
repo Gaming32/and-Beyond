@@ -5,6 +5,7 @@ UI_FG = (194, 209, 151)
 
 BLOCK_RENDER_SIZE = 25
 CHAT_DISPLAY_TIME = 5.0 # Seconds
+MAX_RENDER_CHUNKS = 10 # Per frame
 
 SERVER_CONNECT_EVENT = pygame.event.custom_type()
 SERVER_DISCONNECT_EVENT = pygame.event.custom_type()
