@@ -18,6 +18,7 @@ class Block:
     bounding_box: Optional['AABB']
     turnable_texture: bool = False
     texture_path: Optional[str]
+    luminescence: int = 0
 
     def __init__(self, id: int, name: str) -> None:
         self.id = id
@@ -38,6 +39,10 @@ class Block:
         self.texture_path = path
         return self
 
+    def set_luminescence(self, luminescence: int) -> Self:
+        self.luminescence = luminescence
+        return self
+
     def __repr__(self) -> str:
         return f'<Block {self.name} id={self.id}>'
 
@@ -50,3 +55,4 @@ GRASS  = Block(3, 'grass')
 WOOD   = Block(4, 'wood')
 PLANKS = Block(5, 'planks')
 LEAVES = Block(6, 'leaves').set_turnable_texture(True)
+TORCH  = Block(7, 'torch').set_bounding_box(None).set_luminescence(12)

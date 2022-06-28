@@ -192,6 +192,8 @@ while globals.running:
                         globals.player.change_selected_block(blocks.PLANKS)
                     elif event.key == K_6:
                         globals.player.change_selected_block(blocks.LEAVES)
+                    elif event.key == K_7:
+                        globals.player.change_selected_block(blocks.TORCH)
                     if event.key == K_t:
                         should_chat_open = True
                     elif event.key == K_SLASH:
