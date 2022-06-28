@@ -110,8 +110,8 @@ class ServerConnection:
             time_since_ping += it_end - it_start
             if time_since_ping > 10: # Server hasn't responded for 10 seconds, it's probably down
                 if DEBUG:
-                    logging.warn("Server hasn't sent a ping in 10 seconds. Is it down?")
-                else:
+                    logging.warn("Server hasn't sent a ping in %i seconds. Is it down?", time_since_ping)
+                elif time_since_ping > 60:
                     self.disconnect_reason = 'The server stopped responding'
                     self.running = False
                     break
