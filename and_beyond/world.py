@@ -485,9 +485,9 @@ class WorldChunk:
         return get_block_by_id(self.fp[addr])
 
     def set_tile_type(self, x: int, y: int, type: Block) -> None:
+        type.on_place(self, x, y)
         addr = self._get_tile_address(x, y)
         self.fp[addr] = type.id
-        type.on_place(self, x, y)
 
     def _get_biome_address(self, x: int, y: int) -> int:
         return self.address + 516 + (x * 16 + y) * 2

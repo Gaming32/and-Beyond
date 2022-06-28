@@ -2,7 +2,7 @@ import re
 from uuid import UUID
 
 PORT = 7932
-PROTOCOL_VERSION = 5
+PROTOCOL_VERSION = 6
 PROTOCOL_VERSION_MAP = [
     'a1.2.2', # 0
     'a1.2.3', # 1
@@ -10,8 +10,9 @@ PROTOCOL_VERSION_MAP = [
     'a1.3.0', # 3
     'a1.3.3', # 4
     'a1.3.5', # 5
+    'a1.4.0', # 6
 ]
-VERSION_DISPLAY_NAME = 'a1.3.5'
+VERSION_DISPLAY_NAME = 'a1.4.0'
 
 KEY_LENGTH = 32
 AUTH_SERVER = 'ab-auth.jemnetworks.com'

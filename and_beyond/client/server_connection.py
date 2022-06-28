@@ -137,6 +137,7 @@ class ServerConnection:
                 if chunk_pos in world.loaded_chunks:
                     chunk = world.loaded_chunks[chunk_pos]
                     chunk.set_tile_type(packet.bx, packet.by, packet.block)
+                    chunk.set_packed_lighting(packet.bx, packet.by, packet.packed_lighting)
             elif isinstance(packet, PlayerPositionPacket):
                 # globals.player.last_x = globals.player.render_x = globals.player.x
                 # globals.player.last_y = globals.player.render_y = globals.player.y

@@ -301,26 +301,34 @@ class ChunkUpdatePacket(Packet):
     bx: int
     by: int
     block: Block
+    packed_lighting: int
 
-    def __init__(self, cx: int = 0, cy: int = 0, bx: int = 0, by: int = 0, block: Block = blocks.AIR) -> None:
+    def __init__(self,
+        cx: int = 0, cy: int = 0,
+        bx: int = 0, by: int = 0,
+        block: Block = blocks.AIR,
+        packed_lighting: int = 0
+    ) -> None:
         self.cx = cx
         self.cy = cy
         self.bx = bx
         self.by = by
         self.block = block
+        self.packed_lighting = packed_lighting
 
     async def read(self, reader: ReaderMiddleware) -> None:
         self.cx = await _read_varint(reader)
         self.cy = await _read_varint(reader)
-        block_info = await reader.readexactly(3)
+        block_info = await reader.readexactly(4)
         self.bx = block_info[0]
         self.by = block_info[1]
         self.block = get_block_by_id(block_info[2])
+        self.packed_lighting = block_info[3]
 
     def write(self, writer: WriterMiddleware) -> None:
         _write_varint(self.cx, writer)
         _write_varint(self.cy, writer)
-        writer.write(bytes((self.bx, self.by, self.block.id)))
+        writer.write(bytes((self.bx, self.by, self.block.id, self.packed_lighting)))
 
 
 @autoslots

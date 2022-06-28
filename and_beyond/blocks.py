@@ -47,11 +47,23 @@ class Block:
         return self
 
     def on_place(self, chunk: 'WorldChunk', x: int, y: int) -> None:
-        self._update_lighting(chunk, x, y, set())
+        self.update_lighting(chunk, x, y)
 
-    def _update_lighting(self, chunk: 'WorldChunk', x: int, y: int, encountered: set[tuple[int, int]]) -> None:
+    def update_lighting(self, chunk: 'WorldChunk', x: int, y: int) -> None:
+        old_luminescence = chunk.get_tile_type(x, y).luminescence
+        # if old_luminescence < self.luminescence:
+        while self._propogate_lighting_brighter(chunk, x, y, set()):
+            pass
+        # elif old_luminescence > self.luminescence:
+        #     self._propogate_lighting_dimmer(chunk, x, y)
+
+    def _propogate_lighting_brighter(self,
+        chunk: 'WorldChunk',
+        x: int, y: int,
+        encountered: set[tuple[int, int]]
+    ) -> bool:
         if (x, y) in encountered:
-            return
+            return False
         left_blocklight = 0
         if x > 0:
             left_blocklight = chunk.get_blocklight(x - 1, y)
@@ -71,17 +83,22 @@ class Block:
             down_blocklight - 1,
             up_blocklight - 1
         )
+        old_blocklight = chunk.get_blocklight(x, y)
         chunk.set_blocklight(x, y, blocklight)
-        if blocklight > 0:
-            encountered.add((x, y))
-            if x > 0:
-                chunk.get_tile_type(x - 1, y)._update_lighting(chunk, x - 1, y, encountered)
-            if x < 15:
-                chunk.get_tile_type(x + 1, y)._update_lighting(chunk, x + 1, y, encountered)
-            if y > 0:
-                chunk.get_tile_type(x, y - 1)._update_lighting(chunk, x, y - 1, encountered)
-            if y < 15:
-                chunk.get_tile_type(x, y + 1)._update_lighting(chunk, x, y + 1, encountered)
+        encountered.add((x, y))
+        child_changed = False
+        if x > 0:
+            child_changed |= chunk.get_tile_type(x - 1, y)._propogate_lighting_brighter(chunk, x - 1, y, encountered)
+        if x < 15:
+            child_changed |= chunk.get_tile_type(x + 1, y)._propogate_lighting_brighter(chunk, x + 1, y, encountered)
+        if y > 0:
+            child_changed |= chunk.get_tile_type(x, y - 1)._propogate_lighting_brighter(chunk, x, y - 1, encountered)
+        if y < 15:
+            child_changed |= chunk.get_tile_type(x, y + 1)._propogate_lighting_brighter(chunk, x, y + 1, encountered)
+        return child_changed or blocklight != old_blocklight
+
+    def _propogate_lighting_dimmer(self, chunk: 'WorldChunk', x: int, y: int) -> None:
+        pass
 
     def __repr__(self) -> str:
         return f'<Block {self.name} id={self.id}>'

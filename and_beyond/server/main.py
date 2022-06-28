@@ -150,9 +150,10 @@ class AsyncServer:
     async def set_block(self, cx: int, cy: int, bx: int, by: int, block: Block) -> None:
         assert self.world is not None
         tasks: list[asyncio.Task[None]] = []
-        self.world.get_chunk(cx, cy).set_tile_type(bx, by, block)
+        chunk = self.world.get_chunk(cx, cy)
+        chunk.set_tile_type(bx, by, block)
         chunk_pos = (cx, cy)
-        packet = ChunkUpdatePacket(cx, cy, bx, by, block)
+        packet = ChunkUpdatePacket(cx, cy, bx, by, block, chunk.get_packed_lighting(bx, by))
         for client in self.clients:
             if chunk_pos in client.loaded_chunks:
                 tasks.append(self.loop.create_task(write_packet(packet, client.writer)))
@@ -451,7 +452,12 @@ class AsyncServer:
     ) -> None:
         chunk.set_tile_type(x, y, type)
         cpos = (chunk.abs_x, chunk.abs_y)
-        packet = ChunkUpdatePacket(chunk.abs_x, chunk.abs_y, x, y, type)
+        packet = ChunkUpdatePacket(
+            chunk.abs_x, chunk.abs_y,
+            x, y,
+            type,
+            chunk.get_packed_lighting(x, y)
+        )
         await self.send_to_all(packet, cpos, exclude_player)
 
     async def send_to_all(self,
