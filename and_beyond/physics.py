@@ -1,7 +1,6 @@
 import math
 from typing import TYPE_CHECKING, Optional, Sequence, Union
 
-from and_beyond import blocks
 from and_beyond.abstract_player import AbstractPlayer
 from and_beyond.common import GRAVITY, TERMINAL_VELOCITY
 from and_beyond.utils import autoslots
@@ -75,8 +74,6 @@ class PlayerPhysics:
     player: AbstractPlayer
     dirty: bool
 
-    fix_dx: float
-    fix_dy: float
     air_time: int
     bounding_box: AABB
 
@@ -96,10 +93,6 @@ class PlayerPhysics:
             return
         self.y_velocity += GRAVITY * delta
         self.x_velocity *= 0.75
-        # if self.x_velocity > 0.1 or self.x_velocity < -0.1:
-        #     pass # self.x_velocity *= 0.7
-        # else:
-        #     self.x_velocity = 0
         self.player.x += self.x_velocity
         collision_point = self.offset_bb.collides_with_world(self.player.world)
         if collision_point is not None:
@@ -120,62 +113,3 @@ class PlayerPhysics:
     @property
     def offset_bb(self) -> AABB:
         return self.bounding_box + (self.player.x, self.player.y)
-
-    # Thanks to Griffpatch and his amazing Tile Scrolling Platformer series for this code :)
-    def fix_collision_in_direction(self, dx: float, dy: float) -> bool:
-        self.fix_dx = dx
-        self.fix_dy = dy
-        return any((
-            self.fix_collision_at_point(self.player.x + 0.2, self.player.y - EPSILON),
-            self.fix_collision_at_point(self.player.x + 0.2, self.player.y + 0.5),
-            self.fix_collision_at_point(self.player.x + 0.2, self.player.y + 1),
-            self.fix_collision_at_point(self.player.x + 0.2, self.player.y + 1.5),
-            self.fix_collision_at_point(self.player.x + 0.8, self.player.y - EPSILON),
-            self.fix_collision_at_point(self.player.x + 0.8, self.player.y + 0.5),
-            self.fix_collision_at_point(self.player.x + 0.8, self.player.y + 1),
-            self.fix_collision_at_point(self.player.x + 0.8, self.player.y + 1.5),
-        ))
-
-    def fix_collision_in_direction_reduced_hitbox(self, dx: float, dy: float) -> bool:
-        self.fix_dx = dx
-        self.fix_dy = dy
-        return any((
-            self.fix_collision_at_point(self.player.x + 0.4, self.player.y + 0.2),
-            self.fix_collision_at_point(self.player.x + 0.4, self.player.y + 1.3),
-            self.fix_collision_at_point(self.player.x + 0.6, self.player.y + 0.2),
-            self.fix_collision_at_point(self.player.x + 0.6, self.player.y + 1.3),
-        ))
-
-    def fix_collision_at_point(self, x: float, y: float) -> bool:
-        ix = math.floor(x)
-        iy = math.floor(y)
-        cx = ix >> 4
-        cy = iy >> 4
-        bx = ix - (cx << 4)
-        by = iy - (cy << 4)
-        cpos = (cx, cy)
-        if cpos in self.player.loaded_chunks:
-            tile = self.player.loaded_chunks[cpos].get_tile_type(bx, by)
-            if tile.bounding_box is None:
-                return False
-        mx = x - ix
-        my = y - iy
-        if self.fix_dy < 0:
-            self.player.y += 1 - my
-        if self.fix_dx < 0:
-            self.player.x += 1 - mx
-        if self.fix_dy > 0:
-            self.player.y -= EPSILON + my
-        if self.fix_dx > 0:
-            self.player.x -= EPSILON + mx
-        return True
-
-    def get_tile_type(self, x: int, y: int) -> 'blocks.Block':
-        cx = x >> 4
-        cy = y >> 4
-        bx = x - (cx << 4)
-        by = y - (cy << 4)
-        cpos = (cx, cy)
-        if cpos in self.player.loaded_chunks:
-            return self.player.loaded_chunks[cpos].get_tile_type(bx, by)
-        return blocks.AIR # If we get in an unloaded chunk (assume non-solid)
