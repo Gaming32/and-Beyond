@@ -28,6 +28,7 @@ from and_beyond.server.client import Client
 from and_beyond.server.commands import COMMANDS, AbstractCommandSender, ConsoleCommandSender
 from and_beyond.server.consts import GC_TIME_SECONDS
 from and_beyond.server.world_gen.core import WorldGenerator
+from and_beyond.text import MaybeText
 from and_beyond.utils import ainput, autoslots, get_opt, init_logger, mean, shuffled
 from and_beyond.world import World, WorldChunk
 
@@ -512,7 +513,7 @@ class AsyncServer:
     def __repr__(self) -> str:
         return f'<AsyncServer{" SINGLEPLAYER" * (not self.multiplayer)} bind={self.host}:{self.port} world={str(self.world)!r} tps={self.get_tps_str()}>'
 
-    async def send_chat(self, message: str, at: Optional[float] = None, log: bool = False) -> None:
+    async def send_chat(self, message: MaybeText, at: Optional[float] = None, log: bool = False) -> None:
         if log:
             logging.info('CHAT: %s', message)
         if at is None:

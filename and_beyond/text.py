@@ -4,10 +4,11 @@ import logging
 from collections import ChainMap
 from typing import Any, MutableMapping, Optional, Union
 
+from and_beyond.en_us import EN_US
+
 TranslateMapping = MutableMapping[str, str]
 MaybeText = Union[str, 'Text']
 
-_en_us: Optional[TranslateMapping] = None
 _current_language = locale.getdefaultlocale()[0] or 'en_US'
 _language_mapping: Optional[TranslateMapping] = None
 
@@ -90,19 +91,17 @@ def _load_language_mapping(language: str) -> Optional[TranslateMapping]:
 
 
 def _load() -> None:
-    global _en_us, _language_mapping
-    if _en_us is None:
-        _en_us = _load_language_mapping('en_US') or {}
+    global _language_mapping
     if _language_mapping is not None:
         return
     if _current_language == 'en_US':
-        _language_mapping = _en_us
+        _language_mapping = EN_US
         return
     current_language = _load_language_mapping(_current_language)
     if current_language is None:
-        _language_mapping = _en_us
+        _language_mapping = EN_US
         return
-    _language_mapping = ChainMap(current_language, _en_us)
+    _language_mapping = ChainMap(current_language, EN_US)
 
 
 def translate(key: str) -> str:

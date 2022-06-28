@@ -5,6 +5,7 @@ import time
 from json.decoder import JSONDecodeError
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional
 from uuid import UUID
+from and_beyond.text import MaybeText
 
 from and_beyond.world import OfflinePlayer
 
@@ -21,10 +22,10 @@ class AbstractCommandSender(abc.ABC):
     operator: int
 
     @abc.abstractmethod
-    async def reply(self, message: str) -> None:
+    async def reply(self, message: MaybeText) -> None:
         pass
 
-    async def reply_broadcast(self, message: str) -> None:
+    async def reply_broadcast(self, message: MaybeText) -> None:
         await self.reply(message)
         logging_message = f'[{self}: {message}]'
         logging.info(logging_message)
@@ -82,7 +83,7 @@ class ClientCommandSender(AbstractCommandSender):
             return 0
         return self.client.player.operator_level
 
-    async def reply(self, message: str) -> None:
+    async def reply(self, message: MaybeText) -> None:
         return await self.client.send_chat(message)
 
 
