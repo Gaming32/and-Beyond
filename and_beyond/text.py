@@ -18,7 +18,7 @@ class Text:
     format_args: tuple[Any, ...]
     format_kwargs: dict[str, Any]
 
-    def __init__(self, value: str, localized: bool = False) -> None:
+    def __init__(self, value: str, localized: bool) -> None:
         self.value = value
         self.localized = localized
         self.format_args = ()
@@ -126,3 +126,9 @@ def plain_text(text: str) -> Text:
 
 def translatable_text(key: str) -> Text:
     return Text(key, True)
+
+
+def maybe_text_to_text(text: MaybeText) -> Text:
+    if isinstance(text, Text):
+        return text
+    return Text(text, False)

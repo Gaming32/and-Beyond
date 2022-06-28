@@ -393,10 +393,11 @@ class Client:
                             packet.packed_lighting = chunk.get_packed_lighting(packet.bx, packet.by)
                             await write_packet(packet, self.writer)
                 elif isinstance(packet, ChatPacket):
-                    if packet.message[0] == '/':
-                        await self.server.run_command(packet.message[1:], self.command_sender)
+                    message = packet.message
+                    if not message.localized and message.value[0] == '/':
+                        await self.server.run_command(message.value[1:], self.command_sender)
                     else:
-                        await self.server.send_chat(f'<{self.player}> {packet.message}', log=True)
+                        await self.server.send_chat(f'<{self.player}> {message}', log=True)
                 else:
                     logging.warn('Client %s sent illegal packet: %s', self, packet.type.name)
                     await self.disconnect(f'Packet type not legal for C->S: {packet.type.name}')

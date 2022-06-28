@@ -9,6 +9,7 @@ from and_beyond import blocks
 from and_beyond.blocks import Block, get_block_by_id
 from and_beyond.common import KEY_LENGTH, PROTOCOL_VERSION
 from and_beyond.middleware import ReaderMiddleware, WriterMiddleware
+from and_beyond.text import MaybeText, Text, maybe_text_to_text
 from and_beyond.utils import autoslots
 from and_beyond.world import WorldChunk
 
@@ -89,6 +90,10 @@ async def _read_string(reader: ReaderMiddleware) -> str:
     return (await _read_binary(reader)).decode('utf-8')
 
 
+async def _read_text(reader: ReaderMiddleware) -> Text:
+    return Text(await _read_string(reader), await _read_bool(reader))
+
+
 async def _read_uuid(reader: ReaderMiddleware) -> UUID:
     return UUID(bytes=await reader.readexactly(16))
 
@@ -132,6 +137,11 @@ def _write_binary(value: bytes, writer: WriterMiddleware) -> None:
 
 def _write_string(value: str, writer: WriterMiddleware) -> None:
     _write_binary(value.encode('utf-8'), writer)
+
+
+def _write_text(text: Text, writer: WriterMiddleware) -> None:
+    _write_string(text.value, writer)
+    _write_bool(text.localized, writer)
 
 
 def _write_uuid(value: UUID, writer: WriterMiddleware) -> None:
@@ -375,19 +385,19 @@ class SimplePlayerPositionPacket(Packet):
 
 class ChatPacket(Packet):
     type = PacketType.CHAT
-    message: str
+    message: Text
     time: float
 
-    def __init__(self, message: str = '', time: float = 0) -> None:
-        self.message = message
+    def __init__(self, message: MaybeText = '', time: float = 0) -> None:
+        self.message = maybe_text_to_text(message)
         self.time = time
 
     async def read(self, reader: ReaderMiddleware) -> None:
-        self.message = await _read_string(reader)
+        self.message = await _read_text(reader)
         self.time = await _read_double(reader)
 
     def write(self, writer: WriterMiddleware) -> None:
-        _write_string(self.message, writer)
+        _write_text(self.message, writer)
         _write_double(self.time, writer)
 
 
