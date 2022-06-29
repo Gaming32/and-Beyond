@@ -8,20 +8,20 @@ from and_beyond.chat import ChatMessage
 from and_beyond.client import globals
 from and_beyond.client.assets import CHAT_FONT
 from and_beyond.client.consts import CHAT_DISPLAY_TIME
+from and_beyond.text import MaybeText
 
 
 class ClientChatMessage(ChatMessage):
     message_render: Surface
     dirty: bool
 
-    def __init__(self, message: str, at: Optional[float] = None) -> None:
+    def __init__(self, message: MaybeText, at: Optional[float] = None) -> None:
         super().__init__(message, at)
         self.dirty = True
 
     def render(self) -> Surface:
         if self.dirty:
-            # print(self.message)
-            self.message_render = CHAT_FONT.render(self.message, True, (255, 255, 255))
+            self.message_render = CHAT_FONT.render(str(self.message), True, (255, 255, 255))
         return self.message_render
 
 
@@ -45,7 +45,12 @@ class ChatClient:
         self.current_chat = ''
 
     def add_message(self, message: ClientChatMessage) -> None:
-        self.messages.append(message)
+        lines = str(message.message).split('\n')
+        if len(lines) == 1: # Common case
+            self.messages.append(message)
+        else:
+            for line in lines:
+                self.messages.append(ClientChatMessage(line, message.time))
         self.dirty = True
 
     def clear(self) -> None:

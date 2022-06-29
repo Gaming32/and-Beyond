@@ -1,18 +1,22 @@
 import abc
 import asyncio
 import enum
+import json
 import struct
 from typing import Optional, TypeVar, cast
 from uuid import UUID
 
 from and_beyond import blocks
+from and_beyond.abc import JsonSerializable, ValidJson
 from and_beyond.blocks import Block, get_block_by_id
 from and_beyond.common import KEY_LENGTH, PROTOCOL_VERSION
 from and_beyond.middleware import ReaderMiddleware, WriterMiddleware
+from and_beyond.text import MaybeText, Text, maybe_text_to_text
 from and_beyond.utils import autoslots
 from and_beyond.world import WorldChunk
 
 _T_int = TypeVar('_T_int', bound=int)
+_T_JsonSerializable = TypeVar('_T_JsonSerializable', bound=JsonSerializable)
 _D = struct.Struct('<d')
 
 
@@ -89,6 +93,14 @@ async def _read_string(reader: ReaderMiddleware) -> str:
     return (await _read_binary(reader)).decode('utf-8')
 
 
+async def _read_json(reader: ReaderMiddleware) -> ValidJson:
+    return json.loads(await _read_string(reader))
+
+
+async def _read_json_serializable(reader: ReaderMiddleware, factory: type[_T_JsonSerializable]) -> _T_JsonSerializable:
+    return factory.from_json(await _read_json(reader))
+
+
 async def _read_uuid(reader: ReaderMiddleware) -> UUID:
     return UUID(bytes=await reader.readexactly(16))
 
@@ -132,6 +144,14 @@ def _write_binary(value: bytes, writer: WriterMiddleware) -> None:
 
 def _write_string(value: str, writer: WriterMiddleware) -> None:
     _write_binary(value.encode('utf-8'), writer)
+
+
+def _write_json(value: ValidJson, writer: WriterMiddleware) -> None:
+    _write_string(json.dumps(value), writer)
+
+
+def _write_json_serializable(value: JsonSerializable, writer: WriterMiddleware) -> None:
+    _write_json(value.to_json(), writer)
 
 
 def _write_uuid(value: UUID, writer: WriterMiddleware) -> None:
@@ -375,19 +395,19 @@ class SimplePlayerPositionPacket(Packet):
 
 class ChatPacket(Packet):
     type = PacketType.CHAT
-    message: str
+    message: Text
     time: float
 
-    def __init__(self, message: str = '', time: float = 0) -> None:
-        self.message = message
+    def __init__(self, message: MaybeText = '', time: float = 0) -> None:
+        self.message = maybe_text_to_text(message)
         self.time = time
 
     async def read(self, reader: ReaderMiddleware) -> None:
-        self.message = await _read_string(reader)
+        self.message = await _read_json_serializable(reader, Text)
         self.time = await _read_double(reader)
 
     def write(self, writer: WriterMiddleware) -> None:
-        _write_string(self.message, writer)
+        _write_json_serializable(self.message, writer)
         _write_double(self.time, writer)
 
 

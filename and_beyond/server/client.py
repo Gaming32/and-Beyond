@@ -2,13 +2,13 @@ import asyncio
 import logging
 import math
 import time
+import uuid
 from asyncio import IncompleteReadError, StreamReader, StreamWriter
 from asyncio.events import AbstractEventLoop
 from asyncio.tasks import Task, shield
 from collections import deque
 from typing import TYPE_CHECKING, Optional, TypeVar
 from uuid import UUID
-import uuid
 
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -16,8 +16,8 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from cryptography.hazmat.primitives.serialization.base import load_der_public_key
 
-from and_beyond.common import (KEY_LENGTH, MOVE_SPEED_CAP_SQ, NAMESPACE_AND_BEYOND, PROTOCOL_VERSION, USERNAME_REGEX, VERSION_DISPLAY_NAME,
-                               VIEW_DISTANCE_BOX, get_version_name)
+from and_beyond.common import (KEY_LENGTH, MOVE_SPEED_CAP_SQ, NAMESPACE_AND_BEYOND, PROTOCOL_VERSION, USERNAME_REGEX,
+                               VERSION_DISPLAY_NAME, VIEW_DISTANCE_BOX, get_version_name)
 from and_beyond.middleware import (BufferedWriterMiddleware, EncryptedReaderMiddleware, EncryptedWriterMiddleware,
                                    ReaderMiddleware, WriterMiddleware, create_writer_middlewares)
 from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket, ChunkUpdatePacket, ClientRequestPacket,
@@ -26,6 +26,7 @@ from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket, ChunkUp
                                read_packet, read_packet_timeout, write_packet)
 from and_beyond.server.commands import ClientCommandSender
 from and_beyond.server.player import Player
+from and_beyond.text import MaybeText
 from and_beyond.utils import mean, spiral_loop_gen
 from and_beyond.world import WorldChunk
 
@@ -393,10 +394,11 @@ class Client:
                             packet.packed_lighting = chunk.get_packed_lighting(packet.bx, packet.by)
                             await write_packet(packet, self.writer)
                 elif isinstance(packet, ChatPacket):
-                    if packet.message[0] == '/':
-                        await self.server.run_command(packet.message[1:], self.command_sender)
+                    message = packet.message
+                    if not message.localized and message.value[0] == '/':
+                        await self.server.run_command(message.value[1:], self.command_sender)
                     else:
-                        await self.server.send_chat(f'<{self.player}> {packet.message}', log=True)
+                        await self.server.send_chat(f'<{self.player}> {message}', log=True)
                 else:
                     logging.warn('Client %s sent illegal packet: %s', self, packet.type.name)
                     await self.disconnect(f'Packet type not legal for C->S: {packet.type.name}')
@@ -535,7 +537,7 @@ class Client:
         peername = self._writer.get_extra_info('peername')
         return f'<Client host={peername[0]}:{peername[1]} player={self.player!r} server={self.server!r}>'
 
-    async def send_chat(self, message: str, at: Optional[float] = None) -> None:
+    async def send_chat(self, message: MaybeText, at: Optional[float] = None) -> None:
         if at is None:
             at = time.time()
         packet = ChatPacket(message, at)

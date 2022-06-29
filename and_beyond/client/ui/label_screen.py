@@ -1,7 +1,7 @@
-import textwrap
 from typing import Any, Callable, Optional
 
-from and_beyond.client.ui import Ui, UiButton, UiLabel
+from and_beyond.client.ui import BACK_TEXT, Ui, UiButton, UiLabel
+from and_beyond.text import MaybeText
 
 CloseCallback = Callable[[], Any]
 
@@ -9,9 +9,13 @@ CloseCallback = Callable[[], Any]
 class LabelScreen(Ui):
     callback: Optional[CloseCallback]
 
-    def __init__(self, text: str, ok_text: str = 'Back', closed_callback: Optional[CloseCallback] = None) -> None:
+    def __init__(self,
+        text: MaybeText,
+        ok_text: MaybeText = BACK_TEXT,
+        closed_callback: Optional[CloseCallback] = None
+    ) -> None:
         super().__init__([
-            UiLabel(textwrap.fill(text, width=75, replace_whitespace=False)),
+            UiLabel(text, 75),
             UiButton(ok_text, self.close),
         ])
         self.callback = closed_callback
@@ -23,11 +27,11 @@ class LabelScreen(Ui):
 
     @classmethod
     def show_message(cls,
-            text: str,
-            ok_text: str = 'Back',
-            closed_callback: Optional[CloseCallback] = None,
-            parent: Optional['Ui'] = None
-        ) -> 'LabelScreen':
+        text: MaybeText,
+        ok_text: MaybeText = BACK_TEXT,
+        closed_callback: Optional[CloseCallback] = None,
+        parent: Optional['Ui'] = None
+    ) -> 'LabelScreen':
         screen = LabelScreen(text, ok_text, closed_callback)
         screen.show(parent)
         return screen

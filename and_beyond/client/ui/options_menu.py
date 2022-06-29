@@ -3,17 +3,23 @@ from typing import Any
 from pygame import *
 from pygame.locals import *
 
+from and_beyond import text
 from and_beyond.client import globals
-from and_beyond.client.ui import SliderCallback, Ui, UiButton, UiLabel, UiSlider, UiToggleButton
+from and_beyond.client.ui import BACK_TEXT, SliderCallback, Ui, UiButton, UiLabel, UiSlider, UiToggleButton
+from and_beyond.text import translatable_text
 
 
 class FramerateSlider(UiSlider):
     def __init__(self, callback: SliderCallback) -> None:
-        super().__init__('Framerate', callback, 30, 122)
+        super().__init__(translatable_text('options.framerate'), callback, 30, 122)
 
     def draw_and_call(self, surf: Surface, at: Vector2, preseed: list[bool], released: list[bool]) -> Any:
-        number = 'Unlimited' if self.value > 120 else str(self.value)
-        return self.draw_and_call_text(surf, at, preseed, released, f'Framerate: {number}')
+        number = text.translate('options.framerate.unlimited') if self.value > 120 else str(self.value)
+        # return self.draw_and_call_text(surf, at, preseed, released, f'Framerate: {number}')
+        return self.draw_and_call_text(
+            surf, at, preseed, released,
+            text.translate('options.framerate') + text.translate('ui.option.sep') + number
+        )
 
 
 class OptionsMenu(Ui):
@@ -23,17 +29,17 @@ class OptionsMenu(Ui):
     volume_slider: UiSlider
 
     def __init__(self) -> None:
-        self.fullscreen_toggle = UiToggleButton('Fullscreen', self.fullscreen_toggle_cb)
+        self.fullscreen_toggle = UiToggleButton(translatable_text('options.fullscreen'), self.fullscreen_toggle_cb)
         self.framerate_slider = FramerateSlider(self.framerate_slider_cb)
-        self.fps_toggle = UiToggleButton('Always Show FPS', self.fps_toggle_cb)
-        self.volume_slider = UiSlider('Volume', self.volume_slider_cb, 0, 101)
+        self.fps_toggle = UiToggleButton(translatable_text('options.always_show_fps'), self.fps_toggle_cb)
+        self.volume_slider = UiSlider(translatable_text('options.volume'), self.volume_slider_cb, 0, 101)
         super().__init__([
-            UiLabel('Options'),
+            UiLabel(translatable_text('options.title')),
             self.fullscreen_toggle,
             self.framerate_slider,
             self.fps_toggle,
             self.volume_slider,
-            UiButton('Back', self.close_option_menu),
+            UiButton(BACK_TEXT, self.close_option_menu),
         ])
 
     def draw_and_call(self, surf: Surface) -> None:

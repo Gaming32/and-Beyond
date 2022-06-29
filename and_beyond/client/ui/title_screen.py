@@ -13,17 +13,18 @@ from and_beyond.client.ui.label_screen import LabelScreen
 from and_beyond.client.ui.options_menu import OptionsMenu
 from and_beyond.client.ui.question_screen import QuestionScreen
 from and_beyond.common import PORT
+from and_beyond.text import translatable_text
 
 
 class TitleScreen(Ui):
     def __init__(self) -> None:
         super().__init__([
             UiLabel('...and BEYOND'),
-            UiButton('Singleplayer', self.singleplayer),
-            UiButton('Multiplayer', self.multiplayer),
-            UiButton('Options', self.show_options),
-            UiButton('Account', self.show_account_menu),
-            UiButton('Quit', self.quit),
+            UiButton(translatable_text('title.singleplayer'), self.singleplayer),
+            UiButton(translatable_text('title.multiplayer'), self.multiplayer),
+            UiButton(translatable_text('options.title'), self.show_options),
+            UiButton(translatable_text('title.account'), self.show_account_menu),
+            UiButton(translatable_text('title.quit'), self.quit),
         ])
 
     def draw_and_call(self, surf: pygame.surface.Surface) -> None:
