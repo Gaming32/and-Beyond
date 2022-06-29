@@ -210,6 +210,7 @@ def change_texture_brightness(tex: pygame.surface.Surface, brightness: int) -> p
 
 
 def get_lit_texture(tex: pygame.surface.Surface, light: int) -> pygame.surface.Surface:
+    return tex
     if globals.config.config['spooky_lighting']:
         brightness = 255 * light // 15
     else:
