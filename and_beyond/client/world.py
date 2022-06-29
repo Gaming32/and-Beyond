@@ -1,5 +1,6 @@
 import math as pymath
 import random
+from functools import lru_cache
 from typing import Optional
 
 import pygame
@@ -12,7 +13,7 @@ from and_beyond import blocks
 from and_beyond.blocks import Block
 from and_beyond.client import globals
 from and_beyond.client.assets import BLOCK_SPRITES, EMPTY_TEXTURE, MISSING_TEXTURE, SELECTED_ITEM_BG
-from and_beyond.client.consts import BLOCK_RENDER_SIZE
+from and_beyond.client.consts import BLOCK_RENDER_SIZE, MAX_RENDER_CHUNKS
 from and_beyond.client.utils import world_to_screen
 from and_beyond.utils import autoslots
 from and_beyond.world import AbstractWorld, WorldChunk
@@ -109,6 +110,10 @@ class ClientWorld(AbstractWorld):
                 return True
         return False
 
+    def force_rerender(self) -> None:
+        for chunk in self.loaded_chunks.values():
+            chunk.dirty = True
+
     def get_chunk_or_none(self, x: int, y: int) -> Optional['ClientChunk']:
         return self.loaded_chunks.get((x, y))
 
@@ -140,16 +145,19 @@ class ClientChunk(WorldChunk):
 
     def render(self) -> pygame.surface.Surface:
         if self.dirty:
-           self.surf.fill((0, 0, 0, 0))
-           for x in range(16):
-                for y in range(16):
-                    block = self.get_tile_type(x, y)
-                    if block.texture_path is None:
-                        continue
-                    tex = get_block_texture(block)
-                    rpos = Vector2(x, 15 - y) * BLOCK_RENDER_SIZE
-                    self.surf.blit(tex, Rect(rpos, (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)))
-           self.dirty = False
+            globals.dirty_chunks_count += 1
+            if globals.chunks_rendered_this_frame < MAX_RENDER_CHUNKS:
+                globals.chunks_rendered_this_frame += 1
+                self.surf.fill((0, 0, 0, 0))
+                for x in range(16):
+                    for y in range(16):
+                        block = self.get_tile_type(x, y)
+                        if block.texture_path is None:
+                            continue
+                        tex = get_lit_texture(get_block_texture(block), self.get_visual_light(x, y))
+                        rpos = Vector2(x, 15 - y) * BLOCK_RENDER_SIZE
+                        self.surf.blit(tex, Rect(rpos, (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)))
+                self.dirty = False
         elif self.redraw:
             for (x, y) in list(self.redraw):
                 block = self.get_tile_type(x, y)
@@ -157,13 +165,25 @@ class ClientChunk(WorldChunk):
                 rect = Rect(rpos, (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE))
                 self.surf.fill((0, 0, 0, 0), rect)
                 if block.texture_path is not None:
-                    tex = get_block_texture(block)
+                    tex = get_lit_texture(get_block_texture(block), self.get_visual_light(x, y))
                     self.surf.blit(tex, Rect(rpos, (BLOCK_RENDER_SIZE, BLOCK_RENDER_SIZE)))
             self.redraw.clear()
         return self.surf
 
     def set_tile_type(self, x: int, y: int, type: Block) -> None:
         super().set_tile_type(x, y, type)
+        self.redraw.add((x, y))
+
+    def set_blocklight(self, x: int, y: int, blocklight: int) -> None:
+        super().set_blocklight(x, y, blocklight)
+        self.redraw.add((x, y))
+
+    def set_skylight(self, x: int, y: int, skylight: int) -> None:
+        super().set_skylight(x, y, skylight)
+        self.redraw.add((x, y))
+
+    def set_packed_lighting(self, x: int, y: int, packed_lighting: int) -> None:
+        super().set_packed_lighting(x, y, packed_lighting)
         self.redraw.add((x, y))
 
 
@@ -180,3 +200,19 @@ def get_block_texture(block: Block) -> pygame.surface.Surface:
         else:
             tex = sprites[0]
     return tex
+
+
+@lru_cache
+def change_texture_brightness(tex: pygame.surface.Surface, brightness: int) -> pygame.surface.Surface:
+    res = tex.copy()
+    res.fill((brightness, brightness, brightness), special_flags=pygame.BLEND_RGB_MULT)
+    return res
+
+
+def get_lit_texture(tex: pygame.surface.Surface, light: int) -> pygame.surface.Surface:
+    return tex
+    if globals.config.config['spooky_lighting']:
+        brightness = 255 * light // 15
+    else:
+        brightness = 255 * (light + 1) // 16
+    return change_texture_brightness(tex, brightness)

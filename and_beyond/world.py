@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Awaitable, ByteString, Callable, Optional
 from uuid import UUID
 
 import aiofiles
+from typing_extensions import Self
 
 from and_beyond import blocks
 from and_beyond.abstract_player import AbstractPlayer
@@ -297,12 +298,13 @@ class World(AbstractWorld):
 class WorldSection:
     """
     Section format:
-        0:32      -- Unused
+        0:6       -- The file magic, b'BEYOND'
+        6:10      -- The section format version, stored as a UINT4
+        10:32     -- Unused
         32:262176 -- Chunk data (see chunk data format)
     Chunk data format:
-        Each chunk is stored at an address (relative to the start of the
-        section) of `32 + (x * 16 + y) * 1024`. Each chunk is stored in
-        chunk format (see the WorldChunk doc)
+        Each chunk is stored at an address (relative to the start of the section) of `32 + (x * 16 + y) * 1024`. Each
+        chunk is stored in chunk format (see the WorldChunk docstring)
     """
     world: World
     x: int
@@ -411,17 +413,22 @@ class WorldChunk:
         0:512    -- Block data (see block data format)
         512:516  -- Chunk data version (UINT4)
         516:548  -- Biome data (see biome data format)
-        548:1024 -- Unused
+        548:556  -- Chunk flags
+        556:812  -- Lighting data
+        812:1024 -- Unused
     Block data format:
-        Each block is stored at an address (relative to the start of the
-        chunk) of `(x * 16 + y) * 2`. Each block is two bytes: a UINT8
-        representing the type, and a single representing any metadata
-        (could be any format)
+        Each block is stored at an address (relative to the start of the chunk) of `(x * 16 + y) * 2`. Each block is
+        two bytes: a UINT8 representing the type, and a single representing any metadata (could be any format)
     Biome data format:
-        Each biome is stored at an address (relative to the start of the
-        chunk) of `516 + (x * 16 + y) * 2`. Each biome is two bytes: a UINT8
-        representing the type, and a single representing any metadata
-        (could be any format)
+        Each biome is stored at an address (relative to the start of the chunk) of `516 + (x * 16 + y) * 2`. Each biome
+        is two bytes: a UINT8 representing the type, and a single representing any metadata (could be any format)
+    Chunk flags:
+        The chunk flags are an 64-bit bitmask that contains boolean information about the chunk.
+            0x1 -- Whether skylight has been calculated yet
+    Lighting data format:
+        The lighting data for each block is stored at an address (relative to the start of the chunk) of
+        `548 + x * 16 + y`. Each block is represented by one byte, which is used to store two nibbles. The lower 4 bits
+        of the byte represent the skylight, and the upper 4 bits represent the blocklight.
     """
 
     section: Optional[WorldSection]
@@ -447,7 +454,7 @@ class WorldChunk:
         self.load_counter = 0
 
     @classmethod
-    def virtual_chunk(cls, x: int, y: int, abs_x: int, abs_y: int, data: ByteString) -> 'WorldChunk':
+    def virtual_chunk(cls, x: int, y: int, abs_x: int, abs_y: int, data: ByteString) -> Self:
         self = cls.__new__(cls)
         self.section = None
         self.x = x
@@ -478,11 +485,16 @@ class WorldChunk:
         return get_block_by_id(self.fp[addr])
 
     def set_tile_type(self, x: int, y: int, type: Block) -> None:
+        type.on_place(self, x, y)
+        addr = self._get_tile_address(x, y)
+        self.fp[addr] = type.id
+
+    def set_tile_type_no_event(self, x: int, y: int, type: Block) -> None:
         addr = self._get_tile_address(x, y)
         self.fp[addr] = type.id
 
     def _get_biome_address(self, x: int, y: int) -> int:
-        return self.address + (x * 16 + y) * 2
+        return self.address + 516 + (x * 16 + y) * 2
 
     def get_biome_type(self, x: int, y: int) -> 'BiomeTypes':
         addr = self._get_biome_address(x, y)
@@ -490,6 +502,40 @@ class WorldChunk:
 
     def set_biome_type(self, x: int, y: int, type: 'BiomeTypes') -> None:
         addr = self._get_biome_address(x, y)
+        self.fp[addr] = type
+
+    def get_flags(self) -> 'ChunkFlags':
+        return ChunkFlags.from_bytes(self.fp[self.address + 548:self.address + 556], 'little', signed=False)
+
+    def set_flags(self, flags: int) -> None:
+        self.fp[self.address + 548:self.address + 556] = flags.to_bytes(8, 'little', signed=False)
+
+    def _get_lighting_address(self, x: int, y: int) -> int:
+        return self.address + 548 + x * 16 + y
+
+    def get_packed_lighting(self, x: int, y: int) -> int:
+        return self.fp[self._get_lighting_address(x, y)]
+
+    def set_packed_lighting(self, x: int, y: int, packed_lighting: int) -> None:
+        self.fp[self._get_lighting_address(x, y)] = packed_lighting
+
+    def get_skylight(self, x: int, y: int) -> int:
+        return self.fp[self._get_lighting_address(x, y)] & 0xf
+
+    def set_skylight(self, x: int, y: int, skylight: int) -> None:
+        addr = self._get_lighting_address(x, y)
+        self.fp[addr] = (self.fp[addr] & 0xf0) | skylight
+
+    def get_blocklight(self, x: int, y: int) -> int:
+        return self.fp[self._get_lighting_address(x, y)] >> 4
+
+    def set_blocklight(self, x: int, y: int, blocklight: int) -> None:
+        addr = self._get_lighting_address(x, y)
+        self.fp[addr] = (self.fp[addr] & 0xf) | (blocklight << 4)
+
+    def get_visual_light(self, x: int, y: int) -> int:
+        packed = self.get_packed_lighting(x, y)
+        return max(packed & 0xf, packed >> 4)
 
     def get_data(self) -> memoryview:
         return memoryview(self.fp)[self.address:self.address + 1024]
@@ -601,6 +647,10 @@ DEFAULT_META: WorldMeta = {
 
 class BiomeTypes(enum.IntEnum):
     HILLS = 0
+
+
+class ChunkFlags(enum.IntFlag):
+    SKYLIGHT_GENERATED = 1
 
 
 CHUNK_VERSION = 1

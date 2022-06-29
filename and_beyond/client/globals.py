@@ -36,6 +36,7 @@ class _Config(TypedDict):
     auth_token: Optional[str]
     uuid: Optional[str]
     username: str
+    spooky_lighting: bool
 
 
 class ConfigManager:
@@ -65,6 +66,7 @@ class ConfigManager:
             'auth_token': None,
             'uuid': None,
             'username': 'Player',
+            'spooky_lighting': False,
         }
 
     def save(self, reassign: bool = True) -> None:
@@ -158,6 +160,8 @@ paused: bool = False
 ui_override: Optional['Ui'] = None
 
 local_world: 'ClientWorld'
+chunks_rendered_this_frame: int
+dirty_chunks_count: int
 player: 'ClientPlayer'
 all_players: dict[UUID, 'ClientPlayer']
 camera: Vector2 = Vector2()

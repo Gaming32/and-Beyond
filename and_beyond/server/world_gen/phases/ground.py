@@ -44,4 +44,4 @@ class GroundPhase(HeightmappedPhase):
                     type = blocks.DIRT
                 else:
                     type = blocks.STONE
-                chunk.set_tile_type(x, y, type)
+                chunk.set_tile_type_no_event(x, y, type)

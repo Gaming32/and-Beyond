@@ -85,8 +85,9 @@ def render_debug() -> None:
             f'CX/CY: {cx}/{cy}',
             f'SX/SY: {cx >> 4}/{cy >> 4}',
         ])
+    loaded_chunks = len(globals.local_world.loaded_chunks)
     lines.extend([
-        f'Loaded chunks: {len(globals.local_world.loaded_chunks)}',
+        f'Loaded chunks: {loaded_chunks - globals.dirty_chunks_count}/{loaded_chunks}',
     ])
     for line in lines:
         text_render = DEBUG_FONT.render(line, False, (0, 0, 0))
@@ -192,11 +193,16 @@ while globals.running:
                         globals.player.change_selected_block(blocks.PLANKS)
                     elif event.key == K_6:
                         globals.player.change_selected_block(blocks.LEAVES)
+                    elif event.key == K_7:
+                        globals.player.change_selected_block(blocks.TORCH)
                     if event.key == K_t:
                         should_chat_open = True
                     elif event.key == K_SLASH:
                         should_chat_open = True
                         globals.chat_client.current_chat = '/'
+                    if key.get_pressed()[K_F4]:
+                        if event.key == K_a:
+                            globals.local_world.force_rerender()
                 else:
                     if event.key == pygame.K_BACKSPACE:
                         text = globals.chat_client.current_chat
@@ -323,6 +329,8 @@ while globals.running:
                     move_up = False
                 if globals.singleplayer_pipe_in is None or not globals.paused:
                     globals.player.safe_physics_tick()
+            globals.chunks_rendered_this_frame = 0
+            globals.dirty_chunks_count = 0
             globals.local_world.tick(screen)
             # globals.player.render(screen)
             for player in globals.all_players.values():

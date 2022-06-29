@@ -5,6 +5,7 @@ import time
 from json.decoder import JSONDecodeError
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional
 from uuid import UUID
+from and_beyond.text import MaybeText, translatable_text
 
 from and_beyond.world import OfflinePlayer
 
@@ -21,10 +22,10 @@ class AbstractCommandSender(abc.ABC):
     operator: int
 
     @abc.abstractmethod
-    async def reply(self, message: str) -> None:
+    async def reply(self, message: MaybeText) -> None:
         pass
 
-    async def reply_broadcast(self, message: str) -> None:
+    async def reply_broadcast(self, message: MaybeText) -> None:
         await self.reply(message)
         logging_message = f'[{self}: {message}]'
         logging.info(logging_message)
@@ -40,9 +41,9 @@ class AbstractCommandSender(abc.ABC):
         ))
 
     async def no_permissions(self, min_level: int) -> None:
-        await self.reply('You do not have the permissions for that command.')
-        await self.reply(f'It requires a minimum permission level of {min_level},')
-        await self.reply(f'but you only have a permission level of {self.operator}.')
+        await self.reply(translatable_text('server.missing_permissions')
+            .with_format_params(min_level=min_level, operator_level=self.operator)
+        )
 
     def __str__(self) -> str:
         return self.name
@@ -82,7 +83,7 @@ class ClientCommandSender(AbstractCommandSender):
             return 0
         return self.client.player.operator_level
 
-    async def reply(self, message: str) -> None:
+    async def reply(self, message: MaybeText) -> None:
         return await self.client.send_chat(message)
 
 

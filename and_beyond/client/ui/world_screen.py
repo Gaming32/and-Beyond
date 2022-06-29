@@ -7,7 +7,8 @@ from pathlib import Path
 
 from and_beyond.client import globals
 from and_beyond.client.globals import GameStatus
-from and_beyond.client.ui import Ui, UiButton, UiLabel
+from and_beyond.client.ui import BACK_TEXT, Ui, UiButton, UiLabel
+from and_beyond.text import translatable_text
 from and_beyond.utils import DEBUG
 
 if sys.platform == 'win32':
@@ -21,7 +22,7 @@ class WorldScreen(Ui):
 
     def __init__(self) -> None:
         super().__init__([
-            UiLabel('Select a world')
+            UiLabel(translatable_text('singleplayer.title'))
         ])
         self.worlds_path = Path('worlds')
         if self.worlds_path.exists():
@@ -38,11 +39,14 @@ class WorldScreen(Ui):
             self.worlds_path.mkdir()
             world_n = 1
         self.elements.extend([
-            UiButton('(New world)', (lambda: self.new_world(world_n))),
-            UiButton('Back', self.close),
+            UiButton(translatable_text('singleplayer.new_world'), (lambda: self.new_world(world_n))),
+            UiButton(BACK_TEXT, self.close),
         ])
         if sys.platform == 'win32':
-            self.elements.insert(-1, UiButton('Open worlds folder', (lambda: os.startfile('worlds'))))
+            self.elements.insert(-1, UiButton(
+                translatable_text('singleplayer.open_worlds_folder'),
+                (lambda: os.startfile('worlds'))
+            ))
 
     def new_world(self, n: int) -> None:
         self.load_world(f'world{n}')

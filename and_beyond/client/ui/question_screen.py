@@ -1,4 +1,3 @@
-import textwrap
 from typing import Optional
 
 import pygame
@@ -6,7 +5,8 @@ from pygame import Surface
 from pygame.constants import KEYUP
 
 from and_beyond.client import globals
-from and_beyond.client.ui import TextInputCallback, Ui, UiButton, UiLabel, UiTextInput
+from and_beyond.client.ui import CANCEL_TEXT, OK_TEXT, TextInputCallback, Ui, UiButton, UiLabel, UiTextInput
+from and_beyond.text import MaybeText
 from and_beyond.utils import NO_OP
 
 
@@ -17,16 +17,16 @@ class QuestionScreen(Ui):
 
     def __init__(
             self,
-            label: str,
-            ok_text: str = 'Ok',
+            label: MaybeText,
+            ok_text: MaybeText = OK_TEXT,
             allow_cancel: bool = True,
-            cancel_text: str = 'Cancel',
+            cancel_text: MaybeText = CANCEL_TEXT,
             ok_callback: Optional[TextInputCallback] = None,
             default_text: str = ''
         ) -> None:
         self.text_input = UiTextInput(NO_OP, default_text)
         super().__init__([
-            UiLabel(textwrap.fill(label, width=100, replace_whitespace=False)),
+            UiLabel(label, 100),
             self.text_input,
             UiButton(ok_text, self.done),
         ])

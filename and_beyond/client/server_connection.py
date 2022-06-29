@@ -110,8 +110,8 @@ class ServerConnection:
             time_since_ping += it_end - it_start
             if time_since_ping > 10: # Server hasn't responded for 10 seconds, it's probably down
                 if DEBUG:
-                    logging.warn("Server hasn't sent a ping in 10 seconds. Is it down?")
-                else:
+                    logging.warn("Server hasn't sent a ping in %i seconds. Is it down?", time_since_ping)
+                elif time_since_ping > 60:
                     self.disconnect_reason = 'The server stopped responding'
                     self.running = False
                     break
@@ -137,6 +137,7 @@ class ServerConnection:
                 if chunk_pos in world.loaded_chunks:
                     chunk = world.loaded_chunks[chunk_pos]
                     chunk.set_tile_type(packet.bx, packet.by, packet.block)
+                    chunk.set_packed_lighting(packet.bx, packet.by, packet.packed_lighting)
             elif isinstance(packet, PlayerPositionPacket):
                 # globals.player.last_x = globals.player.render_x = globals.player.x
                 # globals.player.last_y = globals.player.render_y = globals.player.y

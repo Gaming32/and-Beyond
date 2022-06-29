@@ -60,5 +60,5 @@ class TreeDecorationPhase(AbstractPhase):
                     continue
                 abs_x = x + off
                 if chunk.get_tile_type(abs_x, y) == blocks.AIR:
-                    chunk.set_tile_type(abs_x, y, val)
+                    chunk.set_tile_type_no_event(abs_x, y, val)
             y += 1
