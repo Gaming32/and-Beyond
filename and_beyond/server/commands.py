@@ -5,8 +5,8 @@ import time
 from json.decoder import JSONDecodeError
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional
 from uuid import UUID
-from and_beyond.text import MaybeText, translatable_text
 
+from and_beyond.text import MaybeText, translatable_text
 from and_beyond.world import OfflinePlayer
 
 if TYPE_CHECKING:
@@ -92,10 +92,10 @@ class ClientCommandSender(AbstractCommandSender):
 
 class Command(abc.ABC):
     name: str
-    description: Optional[str]
+    description: Optional[MaybeText]
     permission: int
 
-    def __init__(self, name: str, description: Optional[str] = None, permission: int = 0) -> None:
+    def __init__(self, name: str, description: Optional[MaybeText] = None, permission: int = 0) -> None:
         self.name = name
         self.description = description
         self.permission = permission
@@ -114,7 +114,12 @@ class Command(abc.ABC):
 class WrapperCommand(Command):
     func: CommandCallable
 
-    def __init__(self, func: CommandCallable, name: str, description: Optional[str] = None, permission: int = 0) -> None:
+    def __init__(self,
+        func: CommandCallable,
+        name: str,
+        description: Optional[MaybeText] = None,
+        permission: int = 0
+    ) -> None:
         super().__init__(name, description=description, permission=permission)
         self.func = func
 
@@ -125,10 +130,10 @@ class WrapperCommand(Command):
 
 
 def function_command(
-        name: str,
-        description: Optional[str] = None,
-        permission: int = 0
-    ) -> Callable[[CommandCallable], Command]:
+    name: str,
+    description: Optional[MaybeText] = None,
+    permission: int = 0
+) -> Callable[[CommandCallable], Command]:
     def decorator(fn: CommandCallable) -> Command:
         command = WrapperCommand(fn, name, description, permission)
         DEFAULT_COMMANDS[name] = command

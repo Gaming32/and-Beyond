@@ -29,9 +29,12 @@ EN_US = {
     'open_to_lan.enter_port_number': 'Enter a port number (empty for random):',
     'open_to_lan.not_valid_integer': 'Not a valid integer: {0}',
     'open_to_lan.port_out_of_range': 'Port number must be between 0 and 65535 (inclusive)',
+    'open_to_lan.success': 'Opened to LAN on port {0:d}',
     'server.missing_permissions':
         'You do not have the permissions for that command.\n'
         'It requires a minimum permission level of {min_level:d},\n'
         'but you only have a permission level of {operator_level:d}.',
     'server.unknown_command': 'No command named "{0}"',
+    'server.joined_game': '{0} joined the game.',
+    'server.left_game': '{0} left the game.',
 }

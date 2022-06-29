@@ -148,7 +148,7 @@ class AsyncServer:
                 await self.listen('0.0.0.0', port)
                 self.multiplayer = True
                 self.paused = False
-                await self.send_chat(f'Opened to LAN on port {self.port}')
+                await self.send_chat(translatable_text('open_to_lan.success').with_format_params(self.port))
 
     async def set_block(self, cx: int, cy: int, bx: int, by: int, block: Block) -> None:
         assert self.world is not None

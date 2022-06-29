@@ -26,7 +26,7 @@ from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket, ChunkUp
                                read_packet, read_packet_timeout, write_packet)
 from and_beyond.server.commands import ClientCommandSender
 from and_beyond.server.player import Player
-from and_beyond.text import MaybeText
+from and_beyond.text import MaybeText, translatable_text
 from and_beyond.utils import mean, spiral_loop_gen
 from and_beyond.world import WorldChunk
 
@@ -132,7 +132,7 @@ class Client:
         # self.server.skip_gc = False
         logging.info('%s joined the game', self.player)
         if self.uuid.int != 0 or self.server.multiplayer: # Don't show in singleplayer
-            await self.server.send_chat(f'{self.player} joined the game')
+            await self.server.send_chat(translatable_text('server.joined_game').with_format_params(str(self.player)))
 
     async def handshake(self) -> bool:
         async def read_and_verify(should_be: type[_T_Packet]) -> Optional[_T_Packet]:
@@ -530,8 +530,9 @@ class Client:
                     await write_packet(packet, client.writer)
         logging.info('Client %s disconnected for reason: %s', self, reason)
         if self.player is not None:
-            logging.info('%s left the game', self.player)
-            await self.server.send_chat(f'{self.player} left the game')
+            message = translatable_text('server.left_game').with_format_params(str(self.player))
+            logging.info(message)
+            await self.server.send_chat(message)
 
     def __repr__(self) -> str:
         peername = self._writer.get_extra_info('peername')
