@@ -1,19 +1,22 @@
 import json
 import locale
 import logging
+import os
 from collections import ChainMap
 from typing import Any, MutableMapping, Optional, Union, cast
 
 from typing_extensions import Self
 
 from and_beyond.abc import ValidJson
-from and_beyond.en_us import EN_US
+from and_beyond.i18n_data import EN_US
 
 TranslateMapping = MutableMapping[str, str]
 MaybeText = Union[str, 'Text']
 
-_current_language = locale.getdefaultlocale()[0] or 'en_US'
+# _current_language = locale.getdefaultlocale()[0] or 'en_US'
+_current_language = 'ru_RU'
 _language_mapping: Optional[TranslateMapping] = None
+_available_languages: dict[str, TranslateMapping] = {'en_US': EN_US}
 
 
 class Text:
@@ -104,6 +107,7 @@ class Text:
             self.format_kwargs = {}
         return self
 
+
 def get_current_language() -> str:
     return _current_language
 
@@ -114,13 +118,29 @@ def set_current_language(language: str) -> None:
     _language_mapping = None # Reset cache
 
 
-def _load_language_mapping(language: str) -> Optional[TranslateMapping]:
+def get_available_languages() -> dict[str, TranslateMapping]:
+    if len(_available_languages) == 1:
+        try:
+            for lang_file in os.listdir('assets/lang'):
+                if not lang_file.lower().endswith('.json') or lang_file.count('_') != 1:
+                    continue
+                lang_data, lang = _load_language_mapping(lang_file)
+                if lang_data is None:
+                    continue
+                _available_languages[lang] = lang_data
+        except Exception:
+            logging.warning('Failed to load available languages', exc_info=True)
+    return _available_languages
+
+
+def _load_language_mapping(lang_file: str) -> tuple[Optional[TranslateMapping], str]:
+    language = os.path.splitext(lang_file)[0]
     try:
-        with open(f'assets/lang/{language}.json') as f:
-            return json.load(f)
+        with open(f'assets/lang/{lang_file}') as f:
+            return json.load(f), language
     except Exception:
         logging.warning('Failed to load translations for %s', language, exc_info=True)
-        return None
+        return None, language
 
 
 def _load() -> None:
@@ -130,7 +150,7 @@ def _load() -> None:
     if _current_language == 'en_US':
         _language_mapping = EN_US
         return
-    current_language = _load_language_mapping(_current_language)
+    current_language = get_available_languages().get(_current_language)
     if current_language is None:
         _language_mapping = EN_US
         return

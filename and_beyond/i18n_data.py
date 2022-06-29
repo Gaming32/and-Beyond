@@ -1,4 +1,5 @@
 EN_US = {
+    'language.en_US': 'English (United States)',
     'ui.back': 'Back',
     'ui.ok': 'Ok',
     'ui.cancel': 'Cancel',
