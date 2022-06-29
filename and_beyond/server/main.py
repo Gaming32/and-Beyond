@@ -28,7 +28,7 @@ from and_beyond.server.client import Client
 from and_beyond.server.commands import COMMANDS, AbstractCommandSender, ConsoleCommandSender
 from and_beyond.server.consts import GC_TIME_SECONDS
 from and_beyond.server.world_gen.core import WorldGenerator
-from and_beyond.text import MaybeText
+from and_beyond.text import MaybeText, translatable_text
 from and_beyond.utils import ainput, autoslots, get_opt, init_logger, mean, shuffled
 from and_beyond.world import World, WorldChunk
 
@@ -480,9 +480,10 @@ class AsyncServer:
             command = COMMANDS[name]
             await command.call(sender, rest[0] if rest else '')
         else:
+            message = translatable_text('server.unknown_command').with_format_params(name)
             if not isinstance(sender, ConsoleCommandSender):
-                logging.info('<%s> No command named "%s"', sender, name)
-            await sender.reply(f'No command named "{name}"')
+                logging.info('<%s> %s', sender, message)
+            await sender.reply(message)
 
     def get_tps(self, time: int = 60) -> float:
         return mean(itertools.islice(self.last_tps_values, max(len(self.last_tps_values) - time, 0), None))

@@ -59,7 +59,7 @@ class ConsoleCommandSender(AbstractCommandSender):
     def __init__(self, server: 'AsyncServer') -> None:
         self.server = server
 
-    async def reply(self, message: str) -> None:
+    async def reply(self, message: MaybeText) -> None:
         print(message) # Wow so complicated
 
 

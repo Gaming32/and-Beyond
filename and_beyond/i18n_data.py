@@ -32,5 +32,6 @@ EN_US = {
     'server.missing_permissions':
         'You do not have the permissions for that command.\n'
         'It requires a minimum permission level of {min_level:d},\n'
-        'but you only have a permission level of {operator_level:d}.'
+        'but you only have a permission level of {operator_level:d}.',
+    'server.unknown_command': 'No command named "{0}"',
 }
