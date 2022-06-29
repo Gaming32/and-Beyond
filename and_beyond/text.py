@@ -2,8 +2,11 @@ import json
 import locale
 import logging
 from collections import ChainMap
-from typing import Any, MutableMapping, Optional, Union
+from typing import Any, MutableMapping, Optional, Union, cast
 
+from typing_extensions import Self
+
+from and_beyond.abc import ValidJson
 from and_beyond.en_us import EN_US
 
 TranslateMapping = MutableMapping[str, str]
@@ -16,8 +19,8 @@ _language_mapping: Optional[TranslateMapping] = None
 class Text:
     value: str
     localized: bool
-    format_args: tuple[Any, ...]
-    format_kwargs: dict[str, Any]
+    format_args: tuple[ValidJson, ...]
+    format_kwargs: dict[str, ValidJson]
 
     def __init__(self, value: str, localized: bool) -> None:
         self.value = value
@@ -25,7 +28,7 @@ class Text:
         self.format_args = ()
         self.format_kwargs = {}
 
-    def with_format_params(self, *args: Any, **kwargs: Any) -> 'Text':
+    def with_format_params(self, *args: ValidJson, **kwargs: ValidJson) -> 'Text':
         new = Text(self.value, self.localized)
         new.format_args = args
         new.format_kwargs = kwargs
@@ -70,6 +73,36 @@ class Text:
     def __hash__(self) -> int:
         return hash((self.value, self.localized))
 
+    def to_json(self) -> ValidJson:
+        if self.localized or self.format_args or self.format_kwargs:
+            result: ValidJson = {
+                'value': self.value,
+                'localized': self.localized
+            }
+            if self.format_args:
+                result['format_args'] = self.format_args
+            if self.format_kwargs:
+                result['format_kwargs'] = self.format_kwargs
+            return result
+        return self.value
+
+    @classmethod
+    def from_json(cls, data: ValidJson) -> Self:
+        if isinstance(data, str):
+            return cls(data, False)
+        assert isinstance(data, dict)
+        self = cls.__new__(cls)
+        self.value = cast(str, data['value'])
+        self.localized = cast(bool, data['localized'])
+        if 'format_args' in data:
+            self.format_args = tuple(cast(list[ValidJson], data['format_args']))
+        else:
+            self.format_args = ()
+        if 'format_kwargs' in data:
+            self.format_kwargs = cast(dict[str, ValidJson], data['format_kwargs'])
+        else:
+            self.format_kwargs = {}
+        return self
 
 def get_current_language() -> str:
     return _current_language

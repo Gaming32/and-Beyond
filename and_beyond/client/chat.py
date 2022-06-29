@@ -1,7 +1,6 @@
 import time
 from typing import Optional
 
-from pygame import SRCALPHA
 from pygame.rect import Rect
 from pygame.surface import Surface
 
@@ -22,22 +21,7 @@ class ClientChatMessage(ChatMessage):
 
     def render(self) -> Surface:
         if self.dirty:
-            lines = str(self.message).splitlines()
-            line_renders: list[Surface] = []
-            for line in lines:
-                line_renders.append(CHAT_FONT.render(line, True, (255, 255, 255)))
-            if len(line_renders) == 1:
-                self.message_render = line_renders[0] # Common case
-            else:
-                width = max(line_renders, key=lambda s: s.get_width()).get_width()
-                height = sum(s.get_height() + 10 for s in line_renders) - 10
-                total_render = Surface((width, height), SRCALPHA)
-                total_render.fill((0, 0, 0, 0))
-                y = 0
-                for line_render in line_renders:
-                    total_render.blit(line_render, (0, y))
-                    y += line_render.get_height() + 10
-                self.message_render = total_render
+            self.message_render = CHAT_FONT.render(str(self.message), True, (255, 255, 255))
         return self.message_render
 
 
@@ -61,7 +45,12 @@ class ChatClient:
         self.current_chat = ''
 
     def add_message(self, message: ClientChatMessage) -> None:
-        self.messages.append(message)
+        lines = str(message.message).split('\n')
+        if len(lines) == 1: # Common case
+            self.messages.append(message)
+        else:
+            for line in lines:
+                self.messages.append(ClientChatMessage(line, message.time))
         self.dirty = True
 
     def clear(self) -> None:

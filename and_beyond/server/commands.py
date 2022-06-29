@@ -5,7 +5,7 @@ import time
 from json.decoder import JSONDecodeError
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional
 from uuid import UUID
-from and_beyond.text import MaybeText
+from and_beyond.text import MaybeText, translatable_text
 
 from and_beyond.world import OfflinePlayer
 
@@ -41,9 +41,9 @@ class AbstractCommandSender(abc.ABC):
         ))
 
     async def no_permissions(self, min_level: int) -> None:
-        await self.reply('You do not have the permissions for that command.')
-        await self.reply(f'It requires a minimum permission level of {min_level},')
-        await self.reply(f'but you only have a permission level of {self.operator}.')
+        await self.reply(translatable_text('server.missing_permissions')
+            .with_format_params(min_level=min_level, operator_level=self.operator)
+        )
 
     def __str__(self) -> str:
         return self.name
