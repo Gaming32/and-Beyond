@@ -1,5 +1,7 @@
 {
     "reportWildcardImportFromLibrary": false,
     "reportUnusedImport": "warning",
-    "reportMissingTypeArgument": "warning"
+    "reportMissingTypeArgument": "warning",
+    "reportUnnecessaryTypeIgnoreComment": "warning",
+    "reportUnnecessaryCast": "warning"
 }
