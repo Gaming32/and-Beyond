@@ -13,8 +13,7 @@ from and_beyond.i18n_data import EN_US
 TranslateMapping = MutableMapping[str, str]
 MaybeText = Union[str, 'Text']
 
-# _current_language = locale.getdefaultlocale()[0] or 'en_US'
-_current_language = 'ru_RU'
+_current_language = locale.getdefaultlocale()[0] or 'en_US'
 _language_mapping: Optional[TranslateMapping] = None
 _available_languages: dict[str, TranslateMapping] = {'en_US': EN_US}
 

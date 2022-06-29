@@ -29,6 +29,7 @@ from pygame import *
 from pygame.locals import *
 
 from and_beyond import blocks
+from and_beyond import text as text_module
 from and_beyond.client import globals
 from and_beyond.client.chat import ChatClient
 from and_beyond.client.consts import PERIODIC_TICK_EVENT, SERVER_CONNECT_EVENT, SERVER_DISCONNECT_EVENT, UI_FG
@@ -49,6 +50,9 @@ if sys.platform == 'win32':
 
 globals.display_info = pygame.display.Info()
 globals.config = config = ConfigManager(globals.display_info)
+if text_module.get_current_language() != globals.config.config['language']:
+    # The user selected language doesn't match the current locale
+    text_module.set_current_language(globals.config.config['language'])
 
 
 def reset_window() -> pygame.surface.Surface:

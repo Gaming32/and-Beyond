@@ -11,6 +11,7 @@ from pygame import Vector2
 from and_beyond.common import AUTH_SERVER
 from and_beyond.http_auth import AuthClient
 from and_beyond.pipe_commands import PipeCommandsToServer, write_pipe
+from and_beyond.text import get_current_language
 from and_beyond.utils import get_opt
 
 if TYPE_CHECKING:
@@ -37,6 +38,7 @@ class _Config(TypedDict):
     uuid: Optional[str]
     username: str
     spooky_lighting: bool
+    language: str
 
 
 class ConfigManager:
@@ -67,6 +69,7 @@ class ConfigManager:
             'uuid': None,
             'username': 'Player',
             'spooky_lighting': False,
+            'language': get_current_language(),
         }
 
     def save(self, reassign: bool = True) -> None:

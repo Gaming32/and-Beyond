@@ -6,6 +6,7 @@ from pygame.locals import *
 from and_beyond import text
 from and_beyond.client import globals
 from and_beyond.client.ui import BACK_TEXT, SliderCallback, Ui, UiButton, UiLabel, UiSlider, UiToggleButton
+from and_beyond.client.ui.language_menu import LanguageMenu
 from and_beyond.text import translatable_text
 
 
@@ -39,6 +40,7 @@ class OptionsMenu(Ui):
             self.framerate_slider,
             self.fps_toggle,
             self.volume_slider,
+            UiButton(translatable_text('language_menu.title'), self.show_languages),
             UiButton(BACK_TEXT, self.close_option_menu),
         ])
 
@@ -51,6 +53,7 @@ class OptionsMenu(Ui):
         return super().draw_and_call(surf)
 
     def close_option_menu(self) -> None:
+        globals.config.save(False)
         self.close()
 
     def fullscreen_toggle_cb(self, fullscreen: bool) -> None:
@@ -66,3 +69,6 @@ class OptionsMenu(Ui):
         volume = value / 100
         globals.config.config['volume'] = volume
         globals.mixer.set_volume(volume)
+
+    def show_languages(self) -> None:
+        LanguageMenu().show()
