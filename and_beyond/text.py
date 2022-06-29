@@ -117,6 +117,14 @@ def set_current_language(language: str) -> None:
     _language_mapping = None # Reset cache
 
 
+def _get_base_lang(lang: str) -> Optional[str]:
+    underscore_index = lang.find('_')
+    if underscore_index != -1:
+        base_lang = lang[:underscore_index]
+        return base_lang
+    return None
+
+
 def get_available_languages() -> dict[str, TranslateMapping]:
     if len(_available_languages) == 1:
         try:
@@ -127,6 +135,9 @@ def get_available_languages() -> dict[str, TranslateMapping]:
                 if lang_data is None:
                     continue
                 _available_languages[lang] = lang_data
+                base_lang = _get_base_lang(lang)
+                if base_lang is not None and base_lang not in _available_languages:
+                    _available_languages[base_lang] = lang_data
         except Exception:
             logging.warning('Failed to load available languages', exc_info=True)
     return _available_languages
@@ -151,8 +162,12 @@ def _load() -> None:
         return
     current_language = get_available_languages().get(_current_language)
     if current_language is None:
-        _language_mapping = EN_US
-        return
+        base_lang = _get_base_lang(_current_language)
+        if base_lang is not None:
+            current_language = get_available_languages().get(base_lang)
+        if current_language is None:
+            _language_mapping = EN_US
+            return
     _language_mapping = ChainMap(current_language, EN_US)
 
 
