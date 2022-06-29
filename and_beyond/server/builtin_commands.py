@@ -3,7 +3,7 @@ import sys
 import humanize
 
 from and_beyond.server.client import Client
-from and_beyond.server.commands import (COMMANDS, AbstractCommandSender, ClientCommandSender, ConsoleCommandSender,
+from and_beyond.server.commands import (AbstractCommandSender, ClientCommandSender, ConsoleCommandSender,
                                         evaluate_client, evaluate_offline_player, function_command)
 
 if sys.platform != 'win32':
@@ -12,9 +12,9 @@ if sys.platform != 'win32':
 
 @function_command('help', 'Show this help', 0)
 async def help_command(sender: AbstractCommandSender, args: str) -> None:
-    max_name_width = max(len(c) for c in COMMANDS)
+    max_name_width = max(len(c) for c in sender.server.commands)
     await sender.reply("Here's a list of the commands you can use:")
-    for (name, command) in COMMANDS.items():
+    for (name, command) in sender.server.commands.items():
         if sender.operator >= command.permission and command.description is not None:
             await sender.reply(f' + /{name:{max_name_width}} -- {command.description}')
 

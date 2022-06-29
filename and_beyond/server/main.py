@@ -25,7 +25,7 @@ from and_beyond.http_errors import InsecureAuth
 from and_beyond.packet import ChunkUpdatePacket, Packet, write_packet
 from and_beyond.pipe_commands import PipeCommandsToServer, read_pipe
 from and_beyond.server.client import Client
-from and_beyond.server.commands import COMMANDS, AbstractCommandSender, ConsoleCommandSender
+from and_beyond.server.commands import DEFAULT_COMMANDS, AbstractCommandSender, CommandDict, ConsoleCommandSender
 from and_beyond.server.consts import GC_TIME_SECONDS
 from and_beyond.server.world_gen.core import WorldGenerator
 from and_beyond.text import MaybeText, translatable_text
@@ -39,6 +39,7 @@ if sys.platform == 'win32':
 @autoslots
 class AsyncServer:
     random_tick_rate: Fraction
+    commands: CommandDict
 
     loop: AbstractEventLoop
     singleplayer_pipe_in: Optional[BinaryIO]
@@ -71,6 +72,7 @@ class AsyncServer:
 
     def __init__(self) -> None:
         self.random_tick_rate = Fraction(RANDOM_TICK_RATE)
+        self.commands = DEFAULT_COMMANDS.copy()
         self.singleplayer_pipe_in = None
         self.singleplayer_pipe_out = None
         self.multiplayer = True
@@ -476,8 +478,8 @@ class AsyncServer:
 
     async def run_command(self, cmd: str, sender: AbstractCommandSender) -> Any:
         name, *rest = cmd.split(' ', 1)
-        if name in COMMANDS:
-            command = COMMANDS[name]
+        if name in self.commands:
+            command = self.commands[name]
             await command.call(sender, rest[0] if rest else '')
         else:
             message = translatable_text('server.unknown_command').with_format_params(name)

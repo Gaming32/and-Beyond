@@ -14,6 +14,9 @@ if TYPE_CHECKING:
     from and_beyond.server.main import AsyncServer
 
 CommandCallable = Callable[['AbstractCommandSender', str], Awaitable[Any]]
+CommandDict = dict[str, 'Command']
+
+DEFAULT_COMMANDS: CommandDict = {}
 
 
 class AbstractCommandSender(abc.ABC):
@@ -128,7 +131,7 @@ def function_command(
     ) -> Callable[[CommandCallable], Command]:
     def decorator(fn: CommandCallable) -> Command:
         command = WrapperCommand(fn, name, description, permission)
-        COMMANDS[name] = command
+        DEFAULT_COMMANDS[name] = command
         return command
     return decorator
 
@@ -175,6 +178,3 @@ async def evaluate_offline_player(arg: str, sender: AbstractCommandSender) -> Op
     except (FileNotFoundError, JSONDecodeError):
         return None
     return player
-
-
-COMMANDS: dict[str, Command] = {}
