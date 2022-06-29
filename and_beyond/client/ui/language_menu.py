@@ -14,9 +14,8 @@ class LanguageMenu(Ui):
         elements.append(self.current_language_label)
         languages = get_available_languages()
         for lang_name in sorted(languages):
-            translate_key = f'language.{lang_name}'
             elements.append(UiButton(
-                languages[lang_name].get(translate_key, translate_key),
+                languages[lang_name].get('language.name', lang_name),
                 lambda lang_name=lang_name: self.set_language(lang_name)
             ))
         elements.append(UiButton(translatable_text('ui.back'), self.close))
@@ -30,5 +29,5 @@ class LanguageMenu(Ui):
     def set_current_language_label(self, language: str) -> None:
         self.current_language_label.text = text.translate_formatted(
             'language_menu.current_language',
-            text.translate(f'language.{language}')
+            text.translate(f'language.name')
         )
