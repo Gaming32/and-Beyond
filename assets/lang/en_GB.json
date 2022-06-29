@@ -19,6 +19,8 @@
     "options.fullscreen": "Fullscreen",
     "options.always_show_fps": "Always Show FPS",
     "options.volume": "Volume",
+    "language_menu.title": "Language",
+    "language_menu.current_language": "Current Language: {0}",
     "pause.title": "Game Paused",
     "pause.continue": "Continue Game",
     "pause.open_to_lan": "Open to LAN",
