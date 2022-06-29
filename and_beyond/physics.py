@@ -2,6 +2,7 @@ import math
 from typing import TYPE_CHECKING, Optional, Sequence, Union
 
 from and_beyond.abstract_player import AbstractPlayer
+from and_beyond.blocks import Block
 from and_beyond.common import GRAVITY, TERMINAL_VELOCITY
 from and_beyond.utils import autoslots
 from and_beyond.world import AbstractWorld
@@ -41,7 +42,7 @@ class AABB:
     def contains_point(self, x: float, y: float) -> bool:
         return self.x1 <= x <= self.x2 and self.y1 <= y <= self.y2
 
-    def collides_with_world(self, world: AbstractWorld) -> Optional[tuple[int, int]]:
+    def collides_with_world(self, world: AbstractWorld) -> Optional[tuple[int, int, Block]]:
         for x_off in range(-2, 3):
             for y_off in range(-2, 3):
                 x = int(self.x1) + x_off
@@ -50,7 +51,7 @@ class AABB:
                 if block is None or block.bounding_box is None:
                     continue
                 if self.intersect(block.bounding_box + (x, y)):
-                    return x, y
+                    return x, y, block
         return None
 
     def __repr__(self) -> str:
@@ -58,6 +59,7 @@ class AABB:
 
     def draw_debug(self, surf: 'pygame.surface.Surface') -> None:
         import pygame
+
         from and_beyond.client.utils import world_to_screen
         pygame.draw.lines(surf, (255, 0, 0), True, [
             world_to_screen(self.x1, self.y1, surf),
@@ -101,7 +103,15 @@ class PlayerPhysics:
         self.player.y += self.y_velocity
         collision_point = self.offset_bb.collides_with_world(self.player.world)
         if collision_point is not None:
-            self.player.y -= self.y_velocity
+            if collision_point[2].bounding_box is not None:
+                if collision_point[1] > self.player.y:
+                    self.player.y = (
+                        collision_point[1] - collision_point[2].bounding_box.y1 - self.bounding_box.y2 - EPSILON
+                    )
+                else:
+                    self.player.y = collision_point[1] + collision_point[2].bounding_box.y2 + EPSILON
+            else:
+                self.player.y -= self.y_velocity
             self.y_velocity = 0
             self.air_time = 0
         else:
