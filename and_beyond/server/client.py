@@ -130,9 +130,10 @@ class Client:
         self.server.clients_by_name[self.nickname] = self
         self.ready = True
         # self.server.skip_gc = False
-        logging.info('%s joined the game', self.player)
+        message = translatable_text('server.joined_game').with_format_params(str(self.player))
+        logging.info(message)
         if self.uuid.int != 0 or self.server.multiplayer: # Don't show in singleplayer
-            await self.server.send_chat(translatable_text('server.joined_game').with_format_params(str(self.player)))
+            await self.server.send_chat(message)
 
     async def handshake(self) -> bool:
         async def read_and_verify(should_be: type[_T_Packet]) -> Optional[_T_Packet]:
