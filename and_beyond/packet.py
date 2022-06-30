@@ -11,7 +11,7 @@ from and_beyond.abc import JsonSerializable, ValidJson
 from and_beyond.blocks import Block, get_block_by_id
 from and_beyond.common import KEY_LENGTH, PROTOCOL_VERSION
 from and_beyond.middleware import ReaderMiddleware, WriterMiddleware
-from and_beyond.text import MaybeText, Text, maybe_text_to_text
+from and_beyond.text import EMPTY_TEXT, MaybeText, Text, maybe_text_to_text
 from and_beyond.world import WorldChunk
 
 _T_int = TypeVar('_T_int', bound=int)
@@ -96,8 +96,14 @@ async def _read_json(reader: ReaderMiddleware) -> ValidJson:
     return json.loads(await _read_string(reader))
 
 
-async def _read_json_serializable(reader: ReaderMiddleware, factory: type[_T_JsonSerializable]) -> _T_JsonSerializable:
-    return factory.from_json(await _read_json(reader))
+async def _read_json_serializable(
+    reader: ReaderMiddleware,
+    factory: type[_T_JsonSerializable]
+) -> Optional[_T_JsonSerializable]:
+    value = await _read_json(reader)
+    if value is None:
+        return None
+    return factory.from_json(value)
 
 
 async def _read_uuid(reader: ReaderMiddleware) -> UUID:
@@ -146,10 +152,13 @@ def _write_string(value: str, writer: WriterMiddleware) -> None:
 
 
 def _write_json(value: ValidJson, writer: WriterMiddleware) -> None:
-    _write_string(json.dumps(value), writer)
+    _write_string(json.dumps(value, separators=(',', ':')), writer)
 
 
-def _write_json_serializable(value: JsonSerializable, writer: WriterMiddleware) -> None:
+def _write_json_serializable(value: Optional[JsonSerializable], writer: WriterMiddleware) -> None:
+    if value is None:
+        _write_binary(b'null', writer)
+        return
     _write_json(value.to_json(), writer)
 
 
@@ -250,16 +259,16 @@ class RemovePlayerPacket(Packet):
 
 class DisconnectPacket(Packet):
     type = PacketType.DISCONNECT
-    reason: str
+    reason: Text
 
-    def __init__(self, reason: str = '') -> None:
-        self.reason = reason
+    def __init__(self, reason: MaybeText = EMPTY_TEXT) -> None:
+        self.reason = maybe_text_to_text(reason)
 
     async def read(self, reader: ReaderMiddleware) -> None:
-        self.reason = await _read_string(reader)
+        self.reason = await _read_json_serializable(reader, Text) or EMPTY_TEXT
 
     def write(self, writer: WriterMiddleware) -> None:
-        _write_string(self.reason, writer)
+        _write_json_serializable(self.reason, writer)
 
 
 class PingPacket(Packet):
@@ -392,12 +401,12 @@ class ChatPacket(Packet):
     message: Text
     time: float
 
-    def __init__(self, message: MaybeText = '', time: float = 0) -> None:
+    def __init__(self, message: MaybeText = EMPTY_TEXT, time: float = 0) -> None:
         self.message = maybe_text_to_text(message)
         self.time = time
 
     async def read(self, reader: ReaderMiddleware) -> None:
-        self.message = await _read_json_serializable(reader, Text)
+        self.message = await _read_json_serializable(reader, Text) or EMPTY_TEXT
         self.time = await _read_double(reader)
 
     def write(self, writer: WriterMiddleware) -> None:

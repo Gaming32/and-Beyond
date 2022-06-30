@@ -32,6 +32,7 @@ from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket, ChunkUp
                                DisconnectPacket, Packet, PingPacket, PlayerInfoPacket, PlayerPositionPacket,
                                RemovePlayerPacket, ServerInfoPacket, SimplePlayerPositionPacket, UnloadChunkPacket,
                                read_packet, read_packet_timeout, write_packet)
+from and_beyond.text import Text, plain_text, translatable_text
 from and_beyond.utils import DEBUG
 
 _T_Packet = TypeVar('_T_Packet', bound=Packet)
@@ -50,7 +51,7 @@ class ServerConnection:
     send_packets_task: Optional[asyncio.Task[None]]
     uuid: UUID
 
-    disconnect_reason: Optional[str]
+    disconnect_reason: Optional[Text]
     _should_post_event: bool
 
     def __init__(self) -> None:
@@ -88,7 +89,7 @@ class ServerConnection:
         try:
             self._reader, self._writer = await asyncio.open_connection(server, port)
         except OSError as e:
-            self.disconnect_reason = f'Failed to connect:\n{e}'
+            self.disconnect_reason = translatable_text('connect.failure', str(e))
             logging.error('Failed to connect to server %s', server, exc_info=True)
             return
         self.reader = self._reader
@@ -112,14 +113,18 @@ class ServerConnection:
                 if DEBUG:
                     logging.warn("Server hasn't sent a ping in %i seconds. Is it down?", time_since_ping)
                 elif time_since_ping > 60:
-                    self.disconnect_reason = 'The server stopped responding'
+                    self.disconnect_reason = translatable_text('ingame.server_unresponsive')
                     self.running = False
                     break
             it_start = time.perf_counter()
             try:
                 packet = await read_packet(self.reader)
             except ConnectionError as e:
-                self.disconnect_reason = f'Connection lost ({e})'
+                self.disconnect_reason = translatable_text('ingame.connection_lost', str(e))
+                self.running = False
+                break
+            except asyncio.IncompleteReadError:
+                self.disconnect_reason = translatable_text('server.closed')
                 self.running = False
                 break
             await asyncio.sleep(0)
@@ -172,13 +177,17 @@ class ServerConnection:
             try:
                 packet = await read_packet_timeout(self.reader, 7)
             except TimeoutError:
-                self.disconnect_reason = 'Server handshake timeout'
+                self.disconnect_reason = translatable_text('connect.client.handshake_timeout')
                 return None
             if isinstance(packet, DisconnectPacket):
                 self.disconnect_reason = packet.reason
                 return None
             if not isinstance(packet, should_be):
-                self.disconnect_reason = f'Server packet of type {packet.type!s} should be of type {should_be.type!s}'
+                self.disconnect_reason = translatable_text(
+                    'connect.client.incorrect_packet',
+                    was_type=str(packet.type),
+                    should_be_type=str(should_be.type)
+                )
                 return None
             return packet
         packet = ClientRequestPacket(PROTOCOL_VERSION) # Explicit > implicit
@@ -193,13 +202,13 @@ class ServerConnection:
         server_public_key = load_der_public_key(packet.public_key)
         is_localhost = self._writer.get_extra_info('peername')[0] in ('localhost', '127.0.0.1', '::1')
         if not isinstance(server_public_key, ec.EllipticCurvePublicKey):
-            self.disconnect_reason = 'Server key not EllipticCurvePublicKey'
+            self.disconnect_reason = translatable_text('connect.client.wrong_key_type', 'EllipticCurvePublicKey')
             return False
         if packet.offline:
             if globals.singleplayer_pipe_out is None:
                 use_uuid = globals.config.uuid
                 if use_uuid is None:
-                    self.disconnect_reason = 'You must have logged in at some point to play multiplayer'
+                    self.disconnect_reason = translatable_text('connect.never_logged_in')
                     return False
             else:
                 use_uuid = UUID(int=0) # Singleplayer
@@ -218,20 +227,20 @@ class ServerConnection:
         else:
             async with AuthClient(globals.auth_server, globals.allow_insecure_auth) as auth:
                 if (error := await auth.verify_connection()) is not None:
-                    self.disconnect_reason = error
+                    self.disconnect_reason = plain_text(error)
                     return False
                 token = globals.config.config['auth_token']
                 if token is None:
-                    self.disconnect_reason = 'You must be logged in to play multiplayer in online mode'
+                    self.disconnect_reason = translatable_text('connect.not_logged_in')
                     return False
                 try:
                     profile = await auth.auth.get_profile(token)
                 except Exception as e:
                     logging.warn('Failed to fetch profile', exc_info=True)
                     if isinstance(e, Unauthorized):
-                        self.disconnect_reason = 'You must be logged in to play multiplayer in online mode'
+                        self.disconnect_reason = translatable_text('connect.not_logged_in')
                     else:
-                        self.disconnect_reason = f'Failed to fetch profile: {e}'
+                        self.disconnect_reason = translatable_text('connect.profile_fetch_failure', str(e))
                     return False
                 sess_token, session = await auth.sessions.create(profile, key_bytes)
                 packet = BasicAuthPacket(bytes.fromhex(sess_token))

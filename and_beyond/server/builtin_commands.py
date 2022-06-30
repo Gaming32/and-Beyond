@@ -5,6 +5,7 @@ import humanize
 from and_beyond.server.client import Client
 from and_beyond.server.commands import (AbstractCommandSender, ClientCommandSender, ConsoleCommandSender,
                                         evaluate_client, evaluate_offline_player, function_command)
+from and_beyond.text import plain_text, translatable_text
 
 if sys.platform != 'win32':
     import resource
@@ -140,7 +141,10 @@ async def kick_command(sender: AbstractCommandSender, args: str) -> None:
     if client is None:
         await sender.reply('First argument must be player')
         return None
-    reason = (len(argv) > 1 and argv[1]) or f'Kicked by operator'
+    if len(argv) > 1:
+        reason = plain_text(argv[1])
+    else:
+        reason = translatable_text('server.kicked_by_op')
     await client.disconnect(reason)
     await sender.reply_broadcast(f'Kicked {client.player} for reason "{reason}"')
 
@@ -152,7 +156,10 @@ async def ban_command(sender: AbstractCommandSender, args: str) -> None:
         await sender.reply('Usage:')
         await sender.reply(f'  /ban <player> [reason]')
         return None
-    reason = (len(argv) > 1 and argv[1]) or f'Banned by operator'
+    if len(argv) > 1:
+        reason = plain_text(argv[1])
+    else:
+        reason = translatable_text('server.banned_by_op')
     client = evaluate_client(argv[0], sender)
     if client is None:
         player = await evaluate_offline_player(argv[0], sender)

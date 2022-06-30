@@ -44,8 +44,8 @@ class AbstractCommandSender(abc.ABC):
         ))
 
     async def no_permissions(self, min_level: int) -> None:
-        await self.reply(translatable_text('server.missing_permissions')
-            .with_format_params(min_level=min_level, operator_level=self.operator)
+        await self.reply(
+            translatable_text('server.missing_permissions', min_level=min_level, operator_level=self.operator)
         )
 
     def __str__(self) -> str:

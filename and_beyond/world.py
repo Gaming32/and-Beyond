@@ -20,6 +20,7 @@ from typing_extensions import Self
 from and_beyond import blocks
 from and_beyond.abstract_player import AbstractPlayer
 from and_beyond.blocks import Block, get_block_by_id
+from and_beyond.text import Text
 
 if TYPE_CHECKING:
     from and_beyond.server.world_gen.core import WorldGenerator
@@ -565,7 +566,7 @@ class OfflinePlayer(AbstractPlayer):
     uuid: UUID
     data_path: Path
     world: World
-    banned: Optional[str]
+    banned: Optional[Text]
     operator_level: int
     aloop: AbstractEventLoop
 
@@ -607,6 +608,8 @@ class OfflinePlayer(AbstractPlayer):
                 self.x = data.get('x', spawn_x)
                 self.y = data.get('y', spawn_y)
                 banned = data.get('banned', None)
+                if banned is not None:
+                    banned = Text.from_json(banned)
                 operator_level = data.get('operator', 0)
         else:
             self.x = spawn_x
@@ -618,7 +621,7 @@ class OfflinePlayer(AbstractPlayer):
         data = {
             'x': self.x,
             'y': self.y,
-            'banned': self.banned,
+            'banned': None if not self.banned else self.banned.to_json(),
             'operator': self.operator_level,
         }
         raw_data = await self.aloop.run_in_executor(None, partial(json.dumps, data, indent=2))

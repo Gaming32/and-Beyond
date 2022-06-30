@@ -147,7 +147,7 @@ class AsyncServer:
                 await self.listen('0.0.0.0', port)
                 self.multiplayer = True
                 self.paused = False
-                await self.send_chat(translatable_text('open_to_lan.success').with_format_params(self.port))
+                await self.send_chat(translatable_text('open_to_lan.success', self.port))
 
     async def set_block(self, cx: int, cy: int, bx: int, by: int, block: Block) -> None:
         assert self.world is not None
@@ -385,7 +385,8 @@ class AsyncServer:
             logging.debug('Cancelling backup GC task...')
             self.gc_task.cancel()
         logging.debug('Kicking clients...')
-        await asyncio.gather(*(client.disconnect('Server closed') for client in self.clients))
+        message = translatable_text('server.closed')
+        await asyncio.gather(*(client.disconnect(message) for client in self.clients))
         if self.async_server is not None:
             logging.debug('Closing server...')
             self.async_server.close()
@@ -481,7 +482,7 @@ class AsyncServer:
             command = self.commands[name]
             await command.call(sender, rest[0] if rest else '')
         else:
-            message = translatable_text('server.unknown_command').with_format_params(name)
+            message = translatable_text('server.unknown_command', name)
             if not isinstance(sender, ConsoleCommandSender):
                 logging.info('<%s> %s', sender, message)
             await sender.reply(message)

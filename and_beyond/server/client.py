@@ -26,7 +26,7 @@ from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket, ChunkUp
                                read_packet, read_packet_timeout, write_packet)
 from and_beyond.server.commands import ClientCommandSender
 from and_beyond.server.player import Player
-from and_beyond.text import MaybeText, translatable_text
+from and_beyond.text import EMPTY_TEXT, MaybeText, Text, plain_text, translatable_text
 from and_beyond.utils import mean, spiral_loop_gen
 from and_beyond.world import WorldChunk
 
@@ -100,9 +100,9 @@ class Client:
         #         await self.disconnect('That name is taken.')
         #         return
         if (client := self.server.clients_by_uuid.get(self.uuid)) is not None:
-            await client.disconnect('You logged in from elsewhere.')
+            await client.disconnect(translatable_text('server.second_login'))
         elif self.nickname in self.server.clients_by_name:
-            await self.disconnect('That name is taken.')
+            await self.disconnect(translatable_text('connect.server.name_taken'))
             return
         self.player = Player(self, self.nickname)
         await self.player.ainit()
@@ -130,7 +130,7 @@ class Client:
         self.server.clients_by_name[self.nickname] = self
         self.ready = True
         # self.server.skip_gc = False
-        message = translatable_text('server.joined_game').with_format_params(str(self.player))
+        message = translatable_text('server.joined_game', str(self.player))
         logging.info(message)
         if self.uuid.int != 0 or self.server.multiplayer: # Don't show in singleplayer
             await self.server.send_chat(message)
@@ -140,21 +140,28 @@ class Client:
             try:
                 packet = await read_packet_timeout(self.reader, 7)
             except TimeoutError:
-                await self.disconnect('Client handshake timeout')
+                await self.disconnect(translatable_text('connect.server.handshake_timeout'))
                 return None
             except IncompleteReadError:
-                await self.disconnect('Client disconnected during login', kick=False)
+                await self.disconnect(translatable_text('connect.server.client_disconnected'), kick=False)
                 return None
             if not isinstance(packet, should_be):
-                await self.disconnect(f'Client packet of type {packet.type!s} should be of type {should_be.type!s}')
+                await self.disconnect(translatable_text(
+                    'connect.server.incorrect_packet',
+                    was_type=str(packet.type),
+                    should_be_type=str(should_be.type)
+                ))
                 return None
             return packet
         if (packet := await read_and_verify(ClientRequestPacket)) is None:
             return False
         if packet.protocol_version != PROTOCOL_VERSION:
-            await self.disconnect(f'This server is on version {VERSION_DISPLAY_NAME} '
-                                  f'(requires minimum {get_version_name(PROTOCOL_VERSION)} to join), '
-                                  f'but you connected with {get_version_name(packet.protocol_version)}')
+            await self.disconnect(translatable_text(
+                'connect.server.unsupported_version',
+                version_display_name=VERSION_DISPLAY_NAME,
+                min_version=get_version_name(PROTOCOL_VERSION),
+                actual_version=get_version_name(packet.protocol_version)
+            ))
             return False
         is_localhost = self._writer.get_extra_info('peername')[0] in ('localhost', '127.0.0.1', '::1')
         auth_client = self.server.auth_client
@@ -197,7 +204,7 @@ class Client:
             assert self.server.world is not None
             if (new_uuid := self.server.world._players_by_name.get(self.nickname)) is not None:
                 if packet.uuid.int != 0 and new_uuid != packet.uuid:
-                    await self.disconnect('Failed to validate UUID against cache.')
+                    await self.disconnect(translatable_text('connect.server.uuid_validate_failure'))
                     return False
                 self.uuid = new_uuid
             elif packet.uuid.int == 0:
@@ -207,14 +214,14 @@ class Client:
                 self.uuid = packet.uuid
             if enforce_hybrid:
                 if new_uuid is None:
-                    await self.disconnect('Must load UUID from cached when unable to authenticate.')
+                    await self.disconnect(translatable_text('connect.server.hybrid_login_failure'))
                     return False
             if self.nickname in self.server.clients_by_name or self.uuid in self.server.clients_by_uuid:
-                await self.disconnect('That name is taken.')
+                await self.disconnect(translatable_text('connect.server.name_taken'))
                 return False
             # Prevent people with illegal nicknames from joining
             if not USERNAME_REGEX.fullmatch(packet.name):
-                await self.disconnect('Your username is invalid.')
+                await self.disconnect(translatable_text('connect.server.invalid_username'))
                 return False
         else:
             assert auth_client is not None
@@ -223,7 +230,7 @@ class Client:
                 session = await auth_client.sessions.retrieve(client_token)
             except Exception as e:
                 logging.error('Failed to retrieve client session', exc_info=True)
-                await self.disconnect(f'Failed to retrieve client session: {e}')
+                await self.disconnect(translatable_text('connect.server.session_retrieve_failure', str(e)))
                 return False
             if is_localhost:
                 logging.debug('localhost connection not encrypted')
@@ -245,7 +252,7 @@ class Client:
         logging.debug('Encrypting connection...')
         client_public_key = load_der_public_key(key_bytes)
         if not isinstance(client_public_key, ec.EllipticCurvePublicKey):
-            await self.disconnect('Client key not EllipticCurvePublicKey')
+            await self.disconnect(translatable_text('connect.server.wrong_key_type', 'EllipticCurvePublicKey'))
             return False
         shared_key = server_key.exchange(
             ec.ECDH(),
@@ -343,7 +350,7 @@ class Client:
                 await write_packet(PingPacket(), self.writer)
             except ConnectionError:
                 logging.debug('Client failed ping, removing player from list of connected players')
-                await self.disconnect(f'{self.player} left the game', False)
+                await self.disconnect(translatable_text('server.left_game', str(self.player)), False)
                 return
 
     async def packet_tick(self) -> None:
@@ -353,7 +360,7 @@ class Client:
             try:
                 packet = await read_packet(self.reader)
             except (asyncio.IncompleteReadError, ConnectionError):
-                await self.disconnect(f'{self.player} left the game', False)
+                await self.disconnect(translatable_text('server.left_game', str(self.player)), False)
                 return
             if isinstance(packet, SimplePlayerPositionPacket):
                 if packet.x != math.inf and packet.y != math.inf:
@@ -361,7 +368,7 @@ class Client:
                         int(packet.x ** 2)
                         int(packet.y ** 2)
                     except (ValueError, OverflowError) as e:
-                        await self.disconnect(str(e))
+                        await self.disconnect(plain_text(str(e)))
                         break
                     self.new_x = packet.x
                     self.new_y = packet.y
@@ -402,7 +409,7 @@ class Client:
                         await self.server.send_chat(f'<{self.player}> {message}', log=True)
                 else:
                     logging.warn('Client %s sent illegal packet: %s', self, packet.type.name)
-                    await self.disconnect(f'Packet type not legal for C->S: {packet.type.name}')
+                    await self.disconnect(translatable_text('server.illegal_packet', packet.type.name))
                     return
         distance_x = self.new_x - self.player.x
         distance_y = self.new_y - self.player.y
@@ -453,7 +460,7 @@ class Client:
         self.last_y_velocities.append(distance_y)
         avg_y_vel = mean(self.last_y_velocities)
         if self.air_time > 5 and avg_y_vel > -0.25:
-            await self.disconnect('Fly hacking detected')
+            await self.disconnect(translatable_text('server.fly_hacking'))
 
     async def set_position_safe(self, x: Optional[float] = None, y: Optional[float] = None, include_others: bool = False) -> None:
         assert self.player is not None
@@ -476,13 +483,13 @@ class Client:
         self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
         return self.load_chunks_task
 
-    async def disconnect(self, reason: str = '', kick: bool = True) -> None:
+    async def disconnect(self, reason: Text = EMPTY_TEXT, kick: bool = True) -> None:
         # Shield is necessary, as this shutdown method *must* be called.
         # It used to cancel in the middle of this method, preventing player
         # data from being saved.
         await shield(self._disconnect(reason, kick))
 
-    async def _disconnect(self, reason: str, kick: bool) -> None:
+    async def _disconnect(self, reason: Text, kick: bool) -> None:
         if self.disconnecting:
             logging.debug('Already disconnecting %s', self)
             return
@@ -531,7 +538,7 @@ class Client:
                     await write_packet(packet, client.writer)
         logging.info('Client %s disconnected for reason: %s', self, reason)
         if self.player is not None:
-            message = translatable_text('server.left_game').with_format_params(str(self.player))
+            message = translatable_text('server.left_game', str(self.player))
             logging.info(message)
             await self.server.send_chat(message)
 
@@ -543,4 +550,7 @@ class Client:
         if at is None:
             at = time.time()
         packet = ChatPacket(message, at)
-        await write_packet(packet, self.writer)
+        try:
+            await write_packet(packet, self.writer)
+        except ConnectionError:
+            pass

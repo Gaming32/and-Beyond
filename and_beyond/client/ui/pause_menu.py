@@ -77,7 +77,7 @@ class PauseMenu(Ui):
                     port = int(port_str)
                 except ValueError:
                     LabelScreen.show_message(
-                        text.translatable_text('open_to_lan.not_valid_integer').with_format_params(port_str),
+                        text.translatable_text('open_to_lan.not_valid_integer', port_str),
                         closed_callback=screen.show
                     )
                     return

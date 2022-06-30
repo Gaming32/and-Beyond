@@ -26,11 +26,11 @@ class Text:
     format_args: tuple[FormatValueType, ...]
     format_kwargs: dict[str, FormatValueType]
 
-    def __init__(self, value: str, localized: bool) -> None:
+    def __init__(self, value: str, localized: bool, *args: FormatValueType, **kwargs: FormatValueType) -> None:
         self.value = value
         self.localized = localized
-        self.format_args = ()
-        self.format_kwargs = {}
+        self.format_args = args
+        self.format_kwargs = kwargs
 
     def with_format_params(self, *args: FormatValueType, **kwargs: FormatValueType) -> 'Text':
         new = Text(self.value, self.localized)
@@ -53,21 +53,17 @@ class Text:
         return self.value.format(*args, **kwargs)
 
     def __repr__(self) -> str:
-        base = f'Text({self.value!r}, {self.localized!r})'
+        base = ('translatable_text' if self.localized else 'plain_text') + f'({self.value!r}'
         if self.format_args or self.format_kwargs:
-            base += '.with_format_params('
+            base += ', '
             if self.format_args:
-                base += repr(self.format_args[0])
-                for i in range(1, len(self.format_args)):
-                    base += ', ' + repr(self.format_args[i])
-                if self.format_kwargs:
-                    base += ', '
+                for format_arg in self.format_args:
+                    base += repr(format_arg) + ', '
             if self.format_kwargs:
                 for (k, v) in self.format_kwargs.items():
                     base += f'{k}={v!r}, '
-                base = base[:-2]
-            return base + ')'
-        return base
+            base = base[:-2]
+        return base + ')'
 
     def __eq__(self, o: object) -> bool:
         if not isinstance(o, Text):
@@ -210,15 +206,18 @@ def translate_formatted(key: str, *args: Any, **kwargs: Any) -> str:
     return format_string.format(*args, **kwargs)
 
 
-def plain_text(text: str) -> Text:
-    return Text(text, False)
+def plain_text(text: str, *args: FormatValueType, **kwargs: FormatValueType) -> Text:
+    return Text(text, False, *args, **kwargs)
 
 
-def translatable_text(key: str) -> Text:
-    return Text(key, True)
+def translatable_text(key: str, *args: FormatValueType, **kwargs: FormatValueType) -> Text:
+    return Text(key, True, *args, **kwargs)
 
 
 def maybe_text_to_text(text: MaybeText) -> Text:
     if isinstance(text, Text):
         return text
     return Text(text, False)
+
+
+EMPTY_TEXT = plain_text('')

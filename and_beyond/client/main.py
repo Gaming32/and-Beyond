@@ -44,6 +44,7 @@ from and_beyond.client.world import ClientWorld
 from and_beyond.common import JUMP_DELAY_MS, JUMP_SPEED, MOVE_SPEED, VERSION_DISPLAY_NAME
 from and_beyond.packet import ChatPacket
 from and_beyond.pipe_commands import read_pipe
+from and_beyond.text import Text, translatable_text
 
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -127,7 +128,7 @@ globals.mixer = Mixer()
 globals.mixer.set_volume(globals.config.config['volume'])
 globals.mixer.play_song()
 
-disconnect_reason: Optional[str] = None
+disconnect_reason: Optional[Text] = None
 move_left = False
 move_right = False
 move_up = False
@@ -304,7 +305,7 @@ while globals.running:
                         globals.singleplayer_popen = None
                         globals.game_status = GameStatus.MAIN_MENU
                         if disconnect_reason is not None:
-                            if disconnect_reason.lower() != 'Server closed':
+                            if disconnect_reason != translatable_text('server.closed'):
                                 globals.ui_override = LabelScreen(disconnect_reason)
                             disconnect_reason = None
                 else:
