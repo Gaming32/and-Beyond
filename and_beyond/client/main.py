@@ -256,12 +256,12 @@ while globals.running:
                 globals.chat_client.clear()
                 globals.mixer.stop_all_music()
                 globals.mixer.play_song()
-                globals.connecting_status = 'Disconnecting'
+                globals.connecting_status = translatable_text('connect_status.disconnecting')
                 if globals.game_connection is not None:
                     globals.game_connection.stop()
                     globals.game_connection = None
                 if globals.singleplayer_pipe_out is not None:
-                    globals.connecting_status = 'Stopping singleplayer server'
+                    globals.connecting_status = translatable_text('connect_status.stopping_sp_server')
                     globals.close_singleplayer_server(False)
                     globals.singleplayer_pipe_out = None
                 globals.all_players.clear()
@@ -284,18 +284,24 @@ while globals.running:
                     screen.get_height() - 15 - text_render.get_height()
                 )
             )
-        elif globals.game_status in (GameStatus.CONNECTING, GameStatus.STOPPING):
+        elif (
+            globals.game_status in (GameStatus.CONNECTING, GameStatus.STOPPING)
+            or globals.player.x == inf or globals.player.y == inf
+        ):
             screen.fill((0, 0, 0))
-            text_render = GAME_FONT.render(globals.connecting_status, True, UI_FG)
+            text_render = GAME_FONT.render(str(globals.connecting_status), True, UI_FG)
             x = screen.get_width() // 2 - text_render.get_width() // 2
             y = screen.get_height() // 2 - text_render.get_height() // 2
             area = text_render.get_rect().move(x, y)
             screen.blit(text_render, area)
             if globals.game_status == GameStatus.CONNECTING:
-                if globals.singleplayer_pipe_in is not None and globals.connecting_status.lower() == 'starting singleplayer server':
+                if (
+                    globals.singleplayer_pipe_in is not None
+                    and globals.connecting_status == translatable_text('connect_status.starting_sp_server')
+                ):
                     port = read_pipe(globals.singleplayer_pipe_in)
                     if port is not None:
-                        globals.connecting_status = 'Connecting to singleplayer server'
+                        globals.connecting_status = translatable_text('connect_status.connecting_sp_server')
                         TitleScreen.load_multiplayer('localhost', port)
             elif globals.game_status == GameStatus.STOPPING:
                 if globals.singleplayer_popen is not None:

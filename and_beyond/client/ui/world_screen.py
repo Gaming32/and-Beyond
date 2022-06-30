@@ -55,7 +55,7 @@ class WorldScreen(Ui):
         self.close()
         globals.game_status = GameStatus.CONNECTING
         logging.info('Starting singleplayer server')
-        globals.connecting_status = 'Starting singleplayer server'
+        globals.connecting_status = translatable_text('connect_status.starting_sp_server')
         (ro, wo) = os.pipe()
         (ri, wi) = os.pipe()
         # Thanks to

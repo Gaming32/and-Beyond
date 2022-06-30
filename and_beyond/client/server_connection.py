@@ -82,9 +82,9 @@ class ServerConnection:
 
     async def main(self, server: str, port: int = PORT) -> None:
         logging.info('Connecting to server %s:%i...', server, port)
-        globals.connecting_status = (
-            'Connecting to server'
-            + (f' {server}' + (f':{port}' if port != PORT else '') if server != 'localhost' else '')
+        globals.connecting_status = translatable_text(
+            'connect_status.connecting',
+            f' {server}' + (f':{port}' if port != PORT else '') if server != 'localhost' else ''
         )
         try:
             self._reader, self._writer = await asyncio.open_connection(server, port)
@@ -94,11 +94,11 @@ class ServerConnection:
             return
         self.reader = self._reader
         self.writer = BufferedWriterMiddleware(self._writer)
-        globals.connecting_status = 'Handshaking'
+        globals.connecting_status = translatable_text('connect_status.handshaking')
         if not await self.handshake():
             return
         logging.info('Connected to server')
-        globals.connecting_status = 'Connected'
+        globals.connecting_status = translatable_text('connect_status.connected')
         globals.game_status = GameStatus.IN_GAME
         pygame.event.post(pygame.event.Event(SERVER_CONNECT_EVENT))
         globals.all_players[self.uuid] = globals.player

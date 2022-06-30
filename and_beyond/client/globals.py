@@ -11,7 +11,7 @@ from pygame import Vector2
 from and_beyond.common import AUTH_SERVER
 from and_beyond.http_auth import AuthClient
 from and_beyond.pipe_commands import PipeCommandsToServer, write_pipe
-from and_beyond.text import get_current_language
+from and_beyond.text import EMPTY_TEXT, Text, get_current_language
 from and_beyond.utils import get_opt
 
 if TYPE_CHECKING:
@@ -157,7 +157,7 @@ singleplayer_pipe_out: Optional[BinaryIO] = None
 if sys.platform == 'win32':
     singleplayer_pipe_in_ih: int
     singleplayer_pipe_out_ih: int
-connecting_status: str = ''
+connecting_status: Text = EMPTY_TEXT
 
 paused: bool = False
 ui_override: Optional['Ui'] = None
