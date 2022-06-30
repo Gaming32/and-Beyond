@@ -2,14 +2,16 @@ from typing import Protocol, Union
 
 from typing_extensions import Self
 
-ValidJson = Union[
-    dict[str, 'ValidJson'],
-    list['ValidJson'], tuple['ValidJson'],
+JsonPrimitive = Union[
     int, float,
     str,
     bool,
     None
 ]
+JsonObject = dict[str, 'ValidJson']
+JsonArray = Union[list['ValidJson'], tuple['ValidJson']]
+JsonStructure = Union[JsonObject, JsonArray]
+ValidJson = Union[JsonPrimitive, JsonStructure]
 
 
 class JsonSerializable(Protocol):

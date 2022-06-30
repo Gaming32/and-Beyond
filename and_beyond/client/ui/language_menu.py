@@ -9,8 +9,9 @@ class LanguageMenu(Ui):
 
     def __init__(self) -> None:
         elements: list[UiElement] = [UiLabel(translatable_text('language_menu.title'))]
-        self.current_language_label = UiLabel('')
-        self.set_current_language_label(text.get_current_language())
+        self.current_language_label = UiLabel(
+            translatable_text('language_menu.current_language').with_format_params(translatable_text('language.name'))
+        )
         elements.append(self.current_language_label)
         languages = get_available_languages()
         for lang_name in sorted(languages):
@@ -24,10 +25,3 @@ class LanguageMenu(Ui):
     def set_language(self, language: str) -> None:
         globals.config.config['language'] = language
         text.set_current_language(language)
-        self.set_current_language_label(language)
-
-    def set_current_language_label(self, language: str) -> None:
-        self.current_language_label.text = text.translate_formatted(
-            'language_menu.current_language',
-            text.translate(f'language.name')
-        )

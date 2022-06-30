@@ -68,8 +68,8 @@ class ServerConnection:
         self.thread.start()
 
     def stop(self) -> None:
-        self.running = False
         self._should_post_event = False
+        self.running = False
 
     def start_thread(self, server: str, port: int = PORT) -> None:
         self.running = True

@@ -8,7 +8,7 @@ import pygame.font
 import pygame.mouse
 from pygame import *
 from pygame.locals import *
-from and_beyond import text
+from and_beyond import text as text_module
 
 from and_beyond.client import globals
 from and_beyond.client.assets import GAME_FONT
@@ -46,12 +46,12 @@ class UiElement(abc.ABC):
 
 class UiLabel(UiElement):
     text: MaybeText
-    _lines_cache: tuple[Optional[MaybeText], list[str]]
+    _lines_cache: tuple[Optional[MaybeText], str, list[str]]
     linewrap_width: int
 
     def __init__(self, text: MaybeText, linewrap_width: int = 0) -> None:
         self.text = text
-        self._lines_cache = (None, [])
+        self._lines_cache = (None, text_module.get_current_language(), [])
         self.linewrap_width = linewrap_width
 
     def get_height(self) -> float:
@@ -73,12 +73,12 @@ class UiLabel(UiElement):
 
     @property
     def lines(self) -> list[str]:
-        if self._lines_cache[0] is not self.text:
+        if self._lines_cache[0] is not self.text or self._lines_cache[1] != text_module.get_current_language():
             text = str(self.text)
             if self.linewrap_width > 0:
                 text = textwrap.fill(text, width=self.linewrap_width, replace_whitespace=False)
-            self._lines_cache = (self.text, text.split('\n'))
-        return self._lines_cache[1]
+            self._lines_cache = (self.text, text_module.get_current_language(), text.split('\n'))
+        return self._lines_cache[2]
 
 
 class UiTextInput(UiElement):
@@ -191,11 +191,11 @@ class UiToggleButton(UiButton):
         self.toggled = toggled
 
     def _set_label(self) -> None:
-        label = str(self.tb_label) + text.translate('ui.option.sep')
+        label = str(self.tb_label) + text_module.translate('ui.option.sep')
         if self._toggled:
-            label += text.translate('ui.toggle.on')
+            label += text_module.translate('ui.toggle.on')
         else:
-            label += text.translate('ui.toggle.off')
+            label += text_module.translate('ui.toggle.off')
         self.label = label
 
     def _callback(self) -> Any:
@@ -253,7 +253,7 @@ class UiSlider(UiElement):
 
     def draw_and_call(self, surf: Surface, at: Vector2, preseed: list[bool], released: list[bool]) -> Any:
         return self.draw_and_call_text(
-            surf, at, preseed, released, str(self.label) + text.translate('ui.option.sep') + str(self.value)
+            surf, at, preseed, released, str(self.label) + text_module.translate('ui.option.sep') + str(self.value)
         )
 
     def _map_01(self) -> float:
