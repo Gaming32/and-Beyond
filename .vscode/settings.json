@@ -2,5 +2,21 @@
     "python.analysis.typeCheckingMode": "basic",
     "editor.rulers": [
         119
+    ],
+    "cSpell.enabled": false,
+    "cSpell.overrides": [
+        {
+            "filename": "and_beyond/i18n_data.py",
+            "enabled": true,
+            "language": "en-US"
+        },
+        {
+            "filename": "assets/lang/en_GB.json",
+            "enabled": true,
+            "language": "en-GB"
+        }
+    ],
+    "cSpell.ignoreWords": [
+        "ingame"
     ]
 }
