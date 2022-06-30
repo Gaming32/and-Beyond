@@ -29,11 +29,17 @@ F3          | Open debug menu
 ## Command-line arguments
 
 Argument                  | Action
---------------------------| ----------------------------------------------------------------
+------------------------- | ----------------------------------------------------------------
 `--auth-server <address>` | Use the specified authentication server instead of the default
 `--insecure-auth`         | Allow the auth server to be insecure (use HTTP instead of HTTPS)
 `--debug`                 | Run in debug mode (shows debug messages)
 `--no-op`                 | Don't actually enter the main loop
+
+### Clients
+
+Argument                    | Action
+--------------------------- | ---------------------------------------------------------------------------------------------
+`--enable-lighting-preview` | Enable rendering of the preview lighting engine. The lighting engine is currently incomplete.
 
 ### Servers
 

@@ -180,3 +180,5 @@ if '://' not in auth_server:
     auth_server = 'http://' + auth_server
 allow_insecure_auth = '--insecure-auth' in sys.argv
 auth_client: Optional[AuthClient] = None # NOTE: Main thread *only*
+
+enable_lighting_preview = '--enable-lighting-preview' in sys.argv
