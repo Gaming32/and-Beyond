@@ -10,9 +10,9 @@ PROTOCOL_VERSION_MAP = [
     'a1.3.0', # 3
     'a1.3.3', # 4
     'a1.3.5', # 5
-    'a1.4.0', # 6
+    'a1.3.6', # 6
 ]
-VERSION_DISPLAY_NAME = 'a1.4.0'
+VERSION_DISPLAY_NAME = 'a1.3.6'
 
 KEY_LENGTH = 32
 AUTH_SERVER = 'ab-auth.jemnetworks.com'
@@ -32,14 +32,6 @@ RANDOM_TICK_RATE = 1 / 2 # Numerator = blocks in chunk, denominator = blocks in 
 TERMINAL_VELOCITY = -2
 JUMP_DELAY_MS = 60
 NAMESPACE_AND_BEYOND = UUID('90a415d9-4d93-4bd9-a47b-f077d58baf52') # Totally not just some call to uuid4()
-
-# v = vo + a * t
-# a * t = v - vo
-# t = (v - vo) / a
-# Where v is TERMINAL_VELOCITY,
-# vo is JUMP_SPEED
-# and a is GRAVITY
-TERMINAL_VELOCITY_TIME = (TERMINAL_VELOCITY - JUMP_SPEED) / GRAVITY
 
 
 def get_version_name(protocol_version: int) -> str:
