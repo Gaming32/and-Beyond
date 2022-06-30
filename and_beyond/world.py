@@ -20,7 +20,6 @@ from typing_extensions import Self
 from and_beyond import blocks
 from and_beyond.abstract_player import AbstractPlayer
 from and_beyond.blocks import Block, get_block_by_id
-from and_beyond.utils import autoslots
 
 if TYPE_CHECKING:
     from and_beyond.server.world_gen.core import WorldGenerator
@@ -93,7 +92,6 @@ class AbstractWorld(abc.ABC):
         return True
 
 
-@autoslots
 class World(AbstractWorld):
     name: str
     safe_name: str
@@ -294,7 +292,6 @@ class World(AbstractWorld):
         return f'<World {self.name!r} safe_name={self.safe_name!r} len(open_sections)={len(self.open_sections)}>'
 
 
-@autoslots
 class WorldSection:
     """
     Section format:
@@ -406,7 +403,6 @@ class WorldSection:
         self.fp[:10] = b'BEYOND' + ver.to_bytes(4, 'little', signed=False)
 
 
-@autoslots
 class WorldChunk:
     """
     Chunk format:

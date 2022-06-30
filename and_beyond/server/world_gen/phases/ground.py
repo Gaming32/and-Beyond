@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING
 from and_beyond import blocks
 from and_beyond.server.world_gen.perlin import PerlinNoise
 from and_beyond.server.world_gen.phase import HeightmappedPhase
-from and_beyond.utils import autoslots
 from and_beyond.world import WorldChunk
 
 if TYPE_CHECKING:
@@ -15,7 +14,6 @@ Y_SCALE = 96
 Y_OFFSET = -32
 
 
-@autoslots
 class GroundPhase(HeightmappedPhase):
     perlin: PerlinNoise
 

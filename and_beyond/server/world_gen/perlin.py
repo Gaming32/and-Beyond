@@ -2,7 +2,6 @@ import math
 import random
 from typing import Callable, Optional
 
-from and_beyond.utils import autoslots
 
 PERM = [
     151, 160, 137, 91, 90, 15,
@@ -22,7 +21,6 @@ PERM = [
 ]
 
 
-@autoslots
 class PerlinNoise:
     perm: list[int]
 

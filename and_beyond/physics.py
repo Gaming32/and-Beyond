@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Optional, Sequence, Union
 from and_beyond.abstract_player import AbstractPlayer
 from and_beyond.blocks import Block
 from and_beyond.common import GRAVITY, TERMINAL_VELOCITY
-from and_beyond.utils import autoslots
 from and_beyond.world import AbstractWorld
 
 if TYPE_CHECKING:
@@ -69,7 +68,6 @@ class AABB:
         ])
 
 
-@autoslots
 class PlayerPhysics:
     x_velocity: float
     y_velocity: float

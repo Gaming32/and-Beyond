@@ -5,7 +5,6 @@ from opensimplex import OpenSimplex
 
 from and_beyond import blocks
 from and_beyond.server.world_gen.phase import AbstractPhase
-from and_beyond.utils import autoslots
 from and_beyond.world import WorldChunk
 
 if TYPE_CHECKING:
@@ -18,7 +17,6 @@ Y_OFFSET = 0
 OCTAVES = 3
 
 
-@autoslots
 class CavePhase(AbstractPhase):
     simplex: OpenSimplex
 

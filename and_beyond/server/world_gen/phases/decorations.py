@@ -5,7 +5,6 @@ from and_beyond import blocks
 from and_beyond.blocks import Block
 from and_beyond.server.world_gen.perlin import PerlinNoise
 from and_beyond.server.world_gen.phase import AbstractPhase
-from and_beyond.utils import autoslots
 from and_beyond.world import WorldChunk
 
 if TYPE_CHECKING:
@@ -27,7 +26,6 @@ TREE: list[list[Union[None, Block]]] = [
 ]
 
 
-@autoslots
 class TreeDecorationPhase(AbstractPhase):
     perlin: PerlinNoise
 

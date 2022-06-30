@@ -12,7 +12,6 @@ from and_beyond.blocks import Block, get_block_by_id
 from and_beyond.common import KEY_LENGTH, PROTOCOL_VERSION
 from and_beyond.middleware import ReaderMiddleware, WriterMiddleware
 from and_beyond.text import MaybeText, Text, maybe_text_to_text
-from and_beyond.utils import autoslots
 from and_beyond.world import WorldChunk
 
 _T_int = TypeVar('_T_int', bound=int)
@@ -267,7 +266,6 @@ class PingPacket(Packet):
     type = PacketType.PING
 
 
-@autoslots
 class ChunkPacket(Packet):
     type = PacketType.CHUNK
     chunk: Optional[WorldChunk]
@@ -294,7 +292,6 @@ class ChunkPacket(Packet):
         writer.write(self.chunk.get_data())
 
 
-@autoslots
 class UnloadChunkPacket(Packet):
     type = PacketType.CHUNK_UNLOAD
     x: int
@@ -313,7 +310,6 @@ class UnloadChunkPacket(Packet):
         _write_varint(self.y, writer)
 
 
-@autoslots
 class ChunkUpdatePacket(Packet):
     type = PacketType.CHUNK_UPDATE
     cx: int
@@ -351,7 +347,6 @@ class ChunkUpdatePacket(Packet):
         writer.write(bytes((self.bx, self.by, self.block.id, self.packed_lighting)))
 
 
-@autoslots
 class PlayerPositionPacket(Packet):
     type = PacketType.PLAYER_POS
     player: UUID
@@ -374,7 +369,6 @@ class PlayerPositionPacket(Packet):
         _write_double(self.y, writer)
 
 
-@autoslots
 class SimplePlayerPositionPacket(Packet):
     type = PacketType.SIMPLE_PLAYER_POS
     x: float

@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from and_beyond import blocks
 from and_beyond.server.world_gen.perlin import PerlinNoise
 from and_beyond.server.world_gen.phase import HeightmappedPhase
-from and_beyond.utils import autoslots
 from and_beyond.world import WorldChunk
 
 if TYPE_CHECKING:
@@ -22,7 +21,6 @@ Y_OFFSET_SURFACE = 480
 ISLAND_HEIGHTMAP = sys.intern('ISLAND')
 
 
-@autoslots
 class SkyIslandsPhase(HeightmappedPhase):
     perlin: PerlinNoise
 

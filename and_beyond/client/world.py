@@ -15,13 +15,11 @@ from and_beyond.client import globals
 from and_beyond.client.assets import BLOCK_SPRITES, EMPTY_TEXTURE, MISSING_TEXTURE, SELECTED_ITEM_BG
 from and_beyond.client.consts import BLOCK_RENDER_SIZE, MAX_RENDER_CHUNKS
 from and_beyond.client.utils import world_to_screen
-from and_beyond.utils import autoslots
 from and_beyond.world import AbstractWorld, WorldChunk
 
 CHUNK_RENDER_SIZE = BLOCK_RENDER_SIZE * 16
 
 
-@autoslots
 class ClientWorld(AbstractWorld):
     loaded_chunks: dict[tuple[int, int], 'ClientChunk']
 
@@ -121,7 +119,6 @@ class ClientWorld(AbstractWorld):
         return self.loaded_chunks[(x, y)]
 
 
-@autoslots
 class ClientChunk(WorldChunk):
     redraw: set[tuple[int, int]]
     dirty: bool

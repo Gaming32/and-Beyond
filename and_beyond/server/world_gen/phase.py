@@ -2,7 +2,6 @@ import abc
 import sys
 from typing import TYPE_CHECKING
 
-from and_beyond.utils import autoslots
 
 if TYPE_CHECKING:
     from and_beyond.server.world_gen.core import WorldGenerator
@@ -11,7 +10,6 @@ if TYPE_CHECKING:
 DEFAULT_HEIGHTMAP = sys.intern('DEFAULT')
 
 
-@autoslots
 class AbstractPhase(abc.ABC):
     generator: 'WorldGenerator'
 

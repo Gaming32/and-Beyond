@@ -18,10 +18,8 @@ from and_beyond.client.utils import lerp, world_to_screen
 from and_beyond.client.world import ClientWorld, get_block_texture
 from and_beyond.packet import ChunkUpdatePacket, SimplePlayerPositionPacket
 from and_beyond.physics import PlayerPhysics
-from and_beyond.utils import autoslots
 
 
-@autoslots
 class ClientPlayer(AbstractPlayer):
     last_x: float
     last_y: float

@@ -69,18 +69,10 @@ class ColoredFormatter(logging.Formatter):
         return message
 
 
-def autoslots(cls: _T_type) -> _T_type:
-    slots = set(cls.__slots__) if hasattr(cls, '__slots__') else set() # type: ignore
-    slots.update(cls.__annotations__.keys())
-    cls.__slots__ = slots # type: ignore
-    return cls
-
-
 def get_opt(opt: str, offset: int = 1) -> str:
     return sys.argv[sys.argv.index(opt) + offset]
 
 
-@autoslots
 class MaxSizedDict(dict[_KT, _KV], Generic[_KT, _KV]):
     max_size: int
 

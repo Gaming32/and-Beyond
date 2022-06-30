@@ -29,14 +29,13 @@ from and_beyond.server.commands import DEFAULT_COMMANDS, AbstractCommandSender, 
 from and_beyond.server.consts import GC_TIME_SECONDS
 from and_beyond.server.world_gen.core import WorldGenerator
 from and_beyond.text import MaybeText, translatable_text
-from and_beyond.utils import ainput, autoslots, get_opt, init_logger, mean, shuffled
+from and_beyond.utils import ainput, get_opt, init_logger, mean, shuffled
 from and_beyond.world import World, WorldChunk
 
 if sys.platform == 'win32':
     import msvcrt
 
 
-@autoslots
 class AsyncServer:
     random_tick_rate: Fraction
     commands: CommandDict

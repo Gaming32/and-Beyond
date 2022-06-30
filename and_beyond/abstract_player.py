@@ -3,14 +3,12 @@ import math
 from typing import TYPE_CHECKING, Iterable, Optional
 
 from and_beyond.common import REACH_DISTANCE_SQ
-from and_beyond.utils import autoslots
 
 if TYPE_CHECKING:
     from and_beyond.physics import AABB, PlayerPhysics
     from and_beyond.world import AbstractWorld, WorldChunk
 
 
-@autoslots
 class AbstractPlayer(abc.ABC):
     x: float
     y: float

@@ -5,12 +5,10 @@ from and_beyond.server.world_gen.phases.caves import CavePhase
 from and_beyond.server.world_gen.phases.decorations import TreeDecorationPhase
 from and_beyond.server.world_gen.phases.ground import GroundPhase
 from and_beyond.server.world_gen.phases.sky_islands import SkyIslandsPhase
-from and_beyond.utils import autoslots
 
 if TYPE_CHECKING:
     from and_beyond.world import WorldChunk
 
-@autoslots
 class WorldGenerator:
     seed: int
     ground: GroundPhase

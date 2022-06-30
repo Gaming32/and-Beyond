@@ -2,14 +2,12 @@ from typing import TYPE_CHECKING, Optional
 
 from and_beyond.packet import PlayerPositionPacket
 from and_beyond.physics import PlayerPhysics
-from and_beyond.utils import autoslots
 from and_beyond.world import OfflinePlayer
 
 if TYPE_CHECKING:
     from and_beyond.server.client import Client
 
 
-@autoslots
 class Player(OfflinePlayer):
     name: str
     client: 'Client'
