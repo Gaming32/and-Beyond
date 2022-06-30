@@ -16,7 +16,7 @@ from uuid import UUID
 
 import colorama
 
-import and_beyond.server.builtin_commands  # pyright: ignore [reportUnusedImport]
+import and_beyond.server.builtin_commands # pyright: ignore [reportUnusedImport]
 from and_beyond import blocks
 from and_beyond.blocks import Block
 from and_beyond.common import AUTH_SERVER, PORT, RANDOM_TICK_RATE

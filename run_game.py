@@ -1,6 +1,7 @@
 # pyright: reportUnusedImport=false
 # The launching script needs to be Python 2.X compatible so that it can tell people to upgrade ;)
 from __future__ import print_function
+import itertools
 
 import os
 import shlex
@@ -106,6 +107,15 @@ if not has_humanize:
     missing_deps_text += ' - Humanizer (humanize)\n'
     missing_deps.append('humanize')
 
+has_typing_extensions_410 = True
+try:
+    from typing_extensions import Never, Self
+except ImportError:
+    has_typing_extensions_410 = False
+if not has_typing_extensions_410:
+    missing_deps_text += ' - typing_extensions 4.1.0 or later (typing_extensions>=4.1.0)\n'
+    missing_deps.append('typing_extensions>=4.1.0')
+
 if missing_deps:
     print('You appear to be missing the following requirements for this game to run:')
     print(missing_deps_text, end='')
@@ -123,14 +133,22 @@ if missing_deps:
 
 GAME_DIR = Path(__file__).parent
 if GAME_DIR.is_file() and os.path.splitext(GAME_DIR)[1].lower() == '.pyz':
-    # Extract assets from PYZ
+    # Extract files from PYZ
+    date_for_refresh = GAME_DIR.stat().st_mtime
     import zipfile
     with zipfile.ZipFile(GAME_DIR, 'r') as zfp:
-        print('Extracting assets from PYZ')
+        print('Extracting files from PYZ...')
         start = time.perf_counter()
-        files_list = [f for f in zfp.namelist() if f.startswith('assets/')]
+        files_list = [
+            f for f in zfp.namelist()
+            if f.startswith('assets/') or f.startswith('and_beyond/')
+            if not os.path.exists(f) or os.path.getmtime(f) <= date_for_refresh
+        ]
         zfp.extractall(members=files_list)
         end = time.perf_counter()
-        print('Extracted', len(files_list), 'assets from PYZ in', end - start, 'seconds')
+        print('Extracted', len(files_list), 'files from PYZ in', end - start, 'seconds')
+        if '--debug' in sys.argv:
+            print('Extracted:', files_list)
+    sys.path.insert(0, '.')
 
 import and_beyond.client.main

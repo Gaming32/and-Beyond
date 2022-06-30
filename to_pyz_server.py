@@ -1,4 +1,3 @@
-import py_compile
 import time
 import zipfile
 from pathlib import Path
@@ -35,18 +34,7 @@ with open(DEST_FILE, 'wb') as fp:
             if '__pycache__' in (child.name, child.parent.name) or 'client' in child.parts:
                 print('Skipping', rel)
                 continue
-            if child.is_dir():
-                copy_to_zip(zfp, child, rel)
-            else:
-                print('Compiling', rel)
-                child_name = str(child)
-                child_name_pyc = child_name + 'c'
-                py_compile.compile(child_name, child_name_pyc, str(rel))
-                child_pyc = Path(child_name_pyc)
-                pyc_rel = child_pyc.relative_to('.').as_posix()
-                copy_to_zip(zfp, child_pyc, pyc_rel)
-                print('Cleaning', pyc_rel)
-                child_pyc.unlink()
+            copy_to_zip(zfp, child, rel)
 
         print('Writing __main__.py')
         zfp.write('run_server.py', '__main__.py')
