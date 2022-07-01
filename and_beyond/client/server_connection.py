@@ -78,7 +78,10 @@ class ServerConnection:
         try:
             self.aio_loop.run_until_complete(self.main(server, port))
         finally:
-            self.aio_loop.run_until_complete(self.shutdown())
+            try:
+                self.aio_loop.run_until_complete(self.shutdown())
+            finally:
+                self.aio_loop.close()
 
     async def main(self, server: str, port: int = PORT) -> None:
         logging.info('Connecting to server %s:%i...', server, port)
