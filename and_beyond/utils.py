@@ -6,7 +6,6 @@ from asyncio.events import AbstractEventLoop
 from typing import Any, Awaitable, Callable, Generator, Generic, Iterable, Optional, Sequence, TypeVar, Union, overload
 
 _T = TypeVar('_T')
-_T_type = TypeVar('_T_type', bound=type)
 _KT = TypeVar('_KT')
 _KV = TypeVar('_KV')
 

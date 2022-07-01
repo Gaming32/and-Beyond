@@ -105,9 +105,6 @@ class Block:
             )
         return child_changed or blocklight != old_blocklight
 
-    def _propogate_lighting_dimmer(self, chunk: 'WorldChunk', x: int, y: int) -> None:
-        pass
-
     def __repr__(self) -> str:
         return f'<Block {self.name} id={self.id}>'
 

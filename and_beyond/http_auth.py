@@ -84,10 +84,10 @@ class AuthenticatedUser(User):
         return await self.client.logout(self.token)
 
     async def update(self,
-            username: Optional[str] = None,
-            old_password: Optional[str] = None,
-            password: Optional[str] = None,
-        ) -> int:
+        username: Optional[str] = None,
+        old_password: Optional[str] = None,
+        password: Optional[str] = None,
+    ) -> int:
         return await self.client.update_profile(self.token, username, old_password, password)
 
     async def delete_user(self) -> User:
@@ -137,11 +137,11 @@ class _AuthClient:
             return AuthenticatedUser.from_json(self, json)
 
     async def update_profile(self,
-            token: str,
-            username: Optional[str] = None,
-            old_password: Optional[str] = None,
-            password: Optional[str] = None,
-        ) -> int:
+        token: str,
+        username: Optional[str] = None,
+        old_password: Optional[str] = None,
+        password: Optional[str] = None,
+    ) -> int:
         payload = {}
         if username is not None:
             payload['username'] = username

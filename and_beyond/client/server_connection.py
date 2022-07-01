@@ -255,9 +255,9 @@ class ServerConnection:
         return True
 
     def encrypt_connection(self,
-            client_key: ec.EllipticCurvePrivateKey,
-            server_public_key: ec.EllipticCurvePublicKey
-        ) -> None:
+        client_key: ec.EllipticCurvePrivateKey,
+        server_public_key: ec.EllipticCurvePublicKey
+    ) -> None:
         assert self._reader is not None
         assert self._writer is not None
         logging.debug('Encrypting connection...')
