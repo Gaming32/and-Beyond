@@ -26,8 +26,7 @@ if TYPE_CHECKING:
     from and_beyond.server.world_gen.core import WorldGenerator
 
 ALLOWED_FILE_CHARS = ' ._'
-SECTION_SIZE = 262176
-DATA_VERSION = 1
+DATA_VERSION = 2
 
 
 def safe_filename(name: str) -> str:
@@ -296,13 +295,15 @@ class World(AbstractWorld):
 class WorldSection:
     """
     Section format:
-        0:6       -- The file magic, b'BEYOND'
-        6:10      -- The section format version, stored as a UINT4
-        10:32     -- Unused
-        32:262176 -- Chunk data (see chunk data format)
+        0:6     -- The file magic, b'BEYOND'
+        6:10    -- The section format version, stored as a UINT4
+        10:42   -- A large bitmask representing which chunks are present in this section. If a chunk isn't present, it
+                   also needs to have an index of 0 in the relative offset table.
+        42:298  -- Chunk relative offset indices
+        298:end -- Chunk data (see chunk data format)
     Chunk data format:
-        Each chunk is stored at an address (relative to the start of the section) of `32 + (x * 16 + y) * 1024`. Each
-        chunk is stored in chunk format (see the WorldChunk docstring)
+        Each chunk is stored at the address `298 + file[42 + x * 16 + y] * 1024`. Each chunk is stored in chunk format
+        (see the WorldChunk docstring).
     """
     world: World
     x: int
@@ -323,9 +324,10 @@ class WorldSection:
             if fp.tell() == 0:
                 fp.write(b'BEYOND')
                 fp.write(DATA_VERSION.to_bytes(4, 'little', signed=False))
-            if fp.tell() < SECTION_SIZE:
-                fp.write(bytes(SECTION_SIZE - fp.tell()))
-            self.fp = mmap(fp.fileno(), SECTION_SIZE, access=ACCESS_WRITE)
+            if fp.tell() < 298:
+                fp.write(bytes(298 - fp.tell()))
+                fp.flush()
+            self.fp = mmap(fp.fileno(), fp.tell(), access=ACCESS_WRITE)
         self._load_magic()
         world.open_sections[(x, y)] = self
         self.cached_chunks = {}
@@ -349,10 +351,47 @@ class WorldSection:
         if self.data_version == DATA_VERSION:
             return False
         start = time.perf_counter()
+        if self.data_version < DATA_VERSION:
+            self._convert_1_2()
         self.data_version = DATA_VERSION
         end = time.perf_counter()
         logging.info('Optimized section (%i, %i) in %f seconds', self.x, self.y, end - start)
         return True
+
+    def _convert_1_2(self) -> None:
+        fp = self.fp
+        if fp[544:548] == b'\0\0\0\0':
+            first_chunk = None
+        else:
+            first_chunk = fp[32:1056]
+        fp[10:298] = bytes(288)
+        new_addr = 298
+        new_idx = 0
+        for x in range(16):
+            for y in range(16):
+                if x == 0 and y == 0:
+                    continue # First chunk is handled specially
+                base_idx = x * 16 + y
+                old_addr = 32 + base_idx * 1024
+                if fp[old_addr + 512:old_addr + 516] == b'\0\0\0\0':
+                    continue
+                fp.move(new_addr, old_addr, 1024)
+                new_addr += 1024
+                self._mark_chunk_present(x, y)
+                fp[42 + base_idx] = new_idx
+                new_idx += 1
+        if first_chunk is not None:
+            dest_size = new_addr + 1024
+        else:
+            dest_size = new_addr
+        if dest_size != fp.size():
+            fp.flush()
+            fp.resize(dest_size)
+            fp.flush()
+        if first_chunk is not None:
+            fp[new_addr:new_addr + 1024] = first_chunk
+            self._mark_chunk_present(0, 0)
+            fp[42] = new_idx
 
     def close(self) -> None:
         logging.debug('Closing section (%i, %i)', self.x, self.y)
@@ -372,8 +411,19 @@ class WorldSection:
     def __del__(self) -> None:
         self._close()
 
+    def is_chunk_present(self, x: int, y: int) -> bool:
+        idx = x * 16 + y
+        return self.fp[(idx >> 3) + 10] & (1 << (idx & 7)) != 0
+
+    def _mark_chunk_present(self, x: int, y: int) -> None:
+        idx = x * 16 + y
+        self.fp[(idx >> 3) + 10] |= 1 << (idx & 7)
+
+    def _get_chunk_base_address(self, x: int, y: int) -> int:
+        return 42 + x * 16 + y
+
     def _get_chunk_address(self, x: int, y: int) -> int:
-        return 32 + (x * 16 + y) * 1024
+        return 298 + (self.fp[self._get_chunk_base_address(x, y)] << 10)
 
     def get_chunk(self, x: int, y: int) -> 'WorldChunk':
         if (x, y) not in self.cached_chunks:
@@ -446,6 +496,14 @@ class WorldChunk:
         self.abs_x = x + (section.x << 4)
         self.abs_y = y + (section.y << 4)
         self.address = section._get_chunk_address(x, y)
+        if self.address == 298 and not section.is_chunk_present(x, y):
+            self.address = section.fp.size()
+            byte_address = (self.address - 298) >> 10
+            section.fp[section._get_chunk_base_address(x, y)] = byte_address
+            section._mark_chunk_present(x, y)
+            section.fp.flush()
+            section.fp.resize(section.fp.size() + 1024)
+            section.fp.flush()
         self.fp = section.fp
         self._version = None
         self.load_counter = 0
