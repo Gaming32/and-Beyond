@@ -116,7 +116,7 @@ class Client:
                 assert client.uuid is not None
                 assert client.nickname is not None
                 packet = PlayerInfoPacket(client.uuid, client.nickname)
-                await write_packet(packet, self.writer)
+                await self.send_or_remove(packet)
         packet = PlayerInfoPacket(self.uuid, self.nickname)
         await self.server.send_to_all(packet, exclude_player=self)
         await self.load_chunks_around_player(9)
@@ -244,9 +244,9 @@ class Client:
         return True
 
     async def encrypt_connection(self,
-            server_key: ec.EllipticCurvePrivateKey,
-            key_bytes: bytes,
-        ) -> bool:
+        server_key: ec.EllipticCurvePrivateKey,
+        key_bytes: bytes,
+    ) -> bool:
         assert self._reader is not None
         assert self._writer is not None
         logging.debug('Encrypting connection...')
@@ -275,8 +275,7 @@ class Client:
         self.loaded_chunks[(x, y)] = chunk
         self.server.all_loaded_chunks[(x, y)] = chunk
         chunk.mark_loaded()
-        packet = ChunkPacket(chunk)
-        await write_packet(packet, self.writer)
+        await self.send_or_remove(ChunkPacket(chunk))
 
     async def unload_chunk(self, x: int, y: int, server_only: bool = False) -> None:
         c = self.loaded_chunks.pop((x, y), None)
@@ -292,8 +291,7 @@ class Client:
                         end = time.perf_counter()
                         logging.debug('Closed section (%i, %i) in %f seconds', x >> 4, y >> 4, end - start)
         if not server_only:
-            packet = UnloadChunkPacket(x, y)
-            await write_packet(packet, self.writer)
+            await self.send_or_remove(UnloadChunkPacket(x, y))
 
     async def load_chunks_around_player(self, diameter: int = VIEW_DISTANCE_BOX) -> None:
         assert self.player is not None
@@ -335,13 +333,11 @@ class Client:
                 cx = int(client.player.x) >> 4
                 cy = int(client.player.y) >> 4
                 if (cx, cy) in self.loaded_chunks:
-                    packet = PlayerPositionPacket(client.uuid, client.player.x, client.player.y)
-                    await write_packet(packet, self.writer)
+                    await self.send_or_remove(PlayerPositionPacket(client.uuid, client.player.x, client.player.y))
                 cx = int(self.player.x) >> 4
                 cy = int(self.player.y) >> 4
                 if (cx, cy) in client.loaded_chunks:
-                    packet = PlayerPositionPacket(self.uuid, self.player.x, self.player.y)
-                    await write_packet(packet, client.writer)
+                    await self.send_or_remove(PlayerPositionPacket(self.uuid, self.player.x, self.player.y))
 
     async def periodic_ping(self) -> None:
         while self.server.running:
@@ -400,7 +396,7 @@ class Client:
                             # logging.warn("Player %s can't reach block %i, %i, yet they tried to update it.", self, abs_x, abs_y)
                             packet.block = chunk.get_tile_type(packet.bx, packet.by)
                             packet.packed_lighting = chunk.get_packed_lighting(packet.bx, packet.by)
-                            await write_packet(packet, self.writer)
+                            await self.send_or_remove(packet)
                 elif isinstance(packet, ChatPacket):
                     message = packet.message
                     if not message.localized and message.value[0] == '/':
@@ -476,7 +472,7 @@ class Client:
         else:
             self.player.y = y
         packet = SimplePlayerPositionPacket(x, y)
-        await write_packet(packet, self.writer)
+        await self.send_or_remove(packet)
         if include_others:
             assert self.uuid is not None
             packet = PlayerPositionPacket(self.uuid, self.player.x, self.player.y)
@@ -485,6 +481,12 @@ class Client:
     def load_chunks_around_player_task(self) -> Task[None]:
         self.load_chunks_task = self.aloop.create_task(self.load_chunks_around_player())
         return self.load_chunks_task
+
+    async def send_or_remove(self, packet: Packet) -> None:
+        try:
+            await write_packet(packet, self.writer)
+        except ConnectionError:
+            await self.disconnect(translatable_text('server.left_game', str(self.player)), kick=False)
 
     async def disconnect(self, reason: Text = EMPTY_TEXT, kick: bool = True) -> None:
         # Shield is necessary, as this shutdown method *must* be called.
@@ -552,8 +554,4 @@ class Client:
     async def send_chat(self, message: MaybeText, at: Optional[float] = None) -> None:
         if at is None:
             at = time.time()
-        packet = ChatPacket(message, at)
-        try:
-            await write_packet(packet, self.writer)
-        except ConnectionError:
-            pass
+        await self.send_or_remove(ChatPacket(message, at))

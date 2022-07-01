@@ -209,8 +209,12 @@ class World(AbstractWorld):
             else:
                 logging.warn('Invalid world spawn location (is partially null). Regenerating.')
         rand = random.Random(gen.seed)
-        x = rand.randint(-128, 128)
-        y = 0
+        x, y = self.get_closest_spawn(rand.randint(-128, 128), 0, gen)
+        self.meta['spawn_x'] = x
+        self.meta['spawn_y'] = y
+        return x, y
+
+    def get_closest_spawn(self, x: int, y: int, gen: 'WorldGenerator') -> tuple[int, int]:
         cmp = self._compare_valid_spawn(x, y, gen)
         dir = 1
         if cmp != 0: # If cmp == 0, we've already found the spawn
@@ -228,8 +232,6 @@ class World(AbstractWorld):
             while cmp != 0:
                 y += dir
                 cmp = self._compare_valid_spawn(x, y, gen)
-        self.meta['spawn_x'] = x
-        self.meta['spawn_y'] = y
         return x, y
 
     def is_valid_spawn(self, x: int, y: int, gen: 'WorldGenerator') -> bool:

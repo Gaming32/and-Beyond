@@ -22,7 +22,7 @@ from and_beyond.blocks import Block
 from and_beyond.common import AUTH_SERVER, PORT, RANDOM_TICK_RATE
 from and_beyond.http_auth import AuthClient
 from and_beyond.http_errors import InsecureAuth
-from and_beyond.packet import ChunkUpdatePacket, Packet, write_packet
+from and_beyond.packet import ChunkUpdatePacket, Packet
 from and_beyond.pipe_commands import PipeCommandsToServer, read_pipe
 from and_beyond.server.client import Client
 from and_beyond.server.commands import DEFAULT_COMMANDS, AbstractCommandSender, CommandDict, ConsoleCommandSender
@@ -158,7 +158,7 @@ class AsyncServer:
         packet = ChunkUpdatePacket(cx, cy, bx, by, block, chunk.get_packed_lighting(bx, by))
         for client in self.clients:
             if chunk_pos in client.loaded_chunks:
-                tasks.append(self.loop.create_task(write_packet(packet, client.writer)))
+                tasks.append(self.loop.create_task(client.send_or_remove(packet)))
         await asyncio.gather(*tasks)
 
     async def main(self) -> None:
@@ -473,7 +473,7 @@ class AsyncServer:
             if client is exclude_player:
                 continue
             if cpos_only is None or cpos_only in client.loaded_chunks:
-                tasks.append(self.loop.create_task(write_packet(packet, client.writer)))
+                tasks.append(self.loop.create_task(client.send_or_remove(packet)))
         return await asyncio.gather(*tasks)
 
     async def run_command(self, cmd: str, sender: AbstractCommandSender) -> Any:
