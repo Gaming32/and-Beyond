@@ -381,10 +381,14 @@ class WorldSection:
                 fp[42 + base_idx] = new_idx
                 new_idx += 1
         if first_chunk is not None:
-            if new_addr + 1024 != 262176:
-                fp.flush()
-                fp.resize(new_addr + 1024)
-                fp.flush()
+            dest_size = new_addr + 1024
+        else:
+            dest_size = new_addr
+        if dest_size != fp.size():
+            fp.flush()
+            fp.resize(dest_size)
+            fp.flush()
+        if first_chunk is not None:
             fp[new_addr:new_addr + 1024] = first_chunk
             self._mark_chunk_present(0, 0)
             fp[42] = new_idx
