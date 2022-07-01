@@ -310,6 +310,7 @@ class ServerConnection:
         globals.local_world.unload()
         globals.player.x = globals.player.render_x = math.inf
         globals.player.y = globals.player.render_y = math.inf
+        globals.player.physics.x_velocity = globals.player.physics.y_velocity = 0
         if self._writer is not None:
             try:
                 await self._writer.wait_closed()
