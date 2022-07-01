@@ -4,13 +4,14 @@ from asyncio.events import AbstractEventLoop
 from typing import Optional
 
 from and_beyond.client import globals
-from and_beyond.client.ui import Ui, UiButton, UiLabel
+from and_beyond.client.ui import BACK_TEXT, Ui, UiButton, UiLabel
 from and_beyond.client.ui.accounts.create_account_menu import CreateAccountMenu
 from and_beyond.client.ui.accounts.log_in_menu import LogInMenu
 from and_beyond.client.ui.accounts.update_profile_menu import UpdateProfileMenu
 from and_beyond.client.ui.label_screen import LabelScreen
 from and_beyond.http_auth import AuthClient, AuthenticatedUser
 from and_beyond.http_errors import AuthServerError
+from and_beyond.text import EMPTY_TEXT, translatable_text
 
 
 class AccountsMenu(Ui):
@@ -27,18 +28,24 @@ class AccountsMenu(Ui):
     logout_button: UiButton
 
     def __init__(self) -> None:
-        self.header_label = UiLabel('')
-        self.log_in_button = UiButton('Log in', self.log_in_cb)
-        self.create_account_button = UiButton('Create account', self.create_account_cb)
-        self.update_profile_button = UiButton('Update profile', self.update_profile_cb)
-        self.logout_button = UiButton('Logout', self.logout_cb)
+        self.header_label = UiLabel(EMPTY_TEXT)
+        self.log_in_button = UiButton(translatable_text('accounts.log_in.title'), self.log_in_cb)
+        self.create_account_button = UiButton(
+            translatable_text('accounts.create_account.title'),
+            self.create_account_cb
+        )
+        self.update_profile_button = UiButton(
+            translatable_text('accounts.update_profile.title'),
+            self.update_profile_cb
+        )
+        self.logout_button = UiButton(translatable_text('accounts.logout'), self.logout_cb)
         super().__init__([
             self.header_label,
             self.log_in_button,
             self.create_account_button,
             self.update_profile_button,
             self.logout_button,
-            UiButton('Back', self.close),
+            UiButton(BACK_TEXT, self.close),
         ])
         self.current_profile = None
 
@@ -74,12 +81,12 @@ class AccountsMenu(Ui):
 
     def init_elements(self) -> None:
         if self.current_profile is None:
-            self.header_label.text = 'Not logged in'
+            self.header_label.text = translatable_text('accounts.not_logged_in')
             self.log_in_button.hidden = False
             self.create_account_button.hidden = False
             self.logout_button.hidden = True
         else:
-            self.header_label.text = f'Logged in as: {self.current_profile.username}'
+            self.header_label.text = translatable_text('accounts.logged_in', self.current_profile.username)
             self.log_in_button.hidden = True
             self.create_account_button.hidden = True
             self.logout_button.hidden = False
@@ -101,7 +108,7 @@ class AccountsMenu(Ui):
             )
         except Exception as e:
             logging.warn('Logout failed', exc_info=True)
-            LabelScreen(f'Logout failed: {e}').show(self)
+            LabelScreen(translatable_text('accounts.logout_failed', str(e))).show(self)
             return
         globals.config.config['auth_token'] = None
         self.current_profile = None

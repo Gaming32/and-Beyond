@@ -40,7 +40,7 @@ class OptionsMenu(Ui):
             self.framerate_slider,
             self.fps_toggle,
             self.volume_slider,
-            UiButton(translatable_text('language_menu.title'), self.show_languages),
+            UiButton(translatable_text('options.language_menu.title'), self.show_languages),
             UiButton(BACK_TEXT, self.close_option_menu),
         ])
 

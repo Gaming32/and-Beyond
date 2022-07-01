@@ -39,17 +39,15 @@ class Text:
         return new
 
     def __str__(self) -> str:
-        if self.format_args or self.format_kwargs:
-            if self.localized:
-                return translate_formatted(self.value, *self.format_args, **self.format_kwargs)
-            return self.value.format(*self.format_args, **self.format_kwargs)
         if self.localized:
-            return translate(self.value)
+            return translate(self.value, *self.format_args, **self.format_kwargs)
+        if self.format_args or self.format_kwargs:
+            return self.value.format(*self.format_args, **self.format_kwargs)
         return self.value
 
     def format(self, *args: Any, **kwargs: Any) -> str:
         if self.localized:
-            return translate_formatted(self.value, *args, **kwargs)
+            return translate(self.value, *args, **kwargs)
         return self.value.format(*args, **kwargs)
 
     def __repr__(self) -> str:
@@ -191,19 +189,15 @@ def _load() -> None:
     _language_mapping = ChainMap(current_language, EN_US)
 
 
-def translate(key: str) -> str:
+def translate(key: str, *args: Any, **kwargs: Any) -> str:
     _load()
     assert _language_mapping is not None
+    if args or kwargs:
+        format_string = _language_mapping.get(key)
+        if format_string is None:
+            return key
+        return format_string.format(*args, **kwargs)
     return _language_mapping.get(key, key)
-
-
-def translate_formatted(key: str, *args: Any, **kwargs: Any) -> str:
-    _load()
-    assert _language_mapping is not None
-    format_string = _language_mapping.get(key)
-    if format_string is None:
-        return key
-    return format_string.format(*args, **kwargs)
 
 
 def plain_text(text: str, *args: FormatValueType, **kwargs: FormatValueType) -> Text:

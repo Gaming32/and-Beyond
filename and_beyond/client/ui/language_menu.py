@@ -8,9 +8,9 @@ class LanguageMenu(Ui):
     current_language_label: UiLabel
 
     def __init__(self) -> None:
-        elements: list[UiElement] = [UiLabel(translatable_text('language_menu.title'))]
+        elements: list[UiElement] = [UiLabel(translatable_text('options.language_menu.title'))]
         self.current_language_label = UiLabel(
-            translatable_text('language_menu.current_language', translatable_text('language.name'))
+            translatable_text('options.language_menu.current_language', translatable_text('language.name'))
         )
         elements.append(self.current_language_label)
         languages = get_available_languages()

@@ -13,7 +13,7 @@ from and_beyond import text as text_module
 from and_beyond.client import globals
 from and_beyond.client.assets import GAME_FONT
 from and_beyond.client.consts import UI_BG, UI_FG
-from and_beyond.text import MaybeText, translatable_text
+from and_beyond.text import EMPTY_TEXT, MaybeText, Text, maybe_text_to_text, translatable_text
 
 DEFAULT_ELEMENT_WIDTH = 350
 DEFAULT_ELEMENT_HEIGHT = 50
@@ -88,16 +88,21 @@ class UiTextInput(UiElement):
     width: int
     show_time: float
     mask: Optional[str]
-    placeholder: str
+    placeholder: Text
 
-    def __init__(self, update_cb: TextInputCallback, default_text: str = '', mask: Optional[str] = None, placeholder: str = '') -> None:
+    def __init__(self,
+        update_cb: TextInputCallback,
+        default_text: str = '',
+        mask: Optional[str] = None,
+        placeholder: MaybeText = EMPTY_TEXT
+    ) -> None:
         self.text = default_text
         self.callback = update_cb
         self.selected = False
         self.width = DEFAULT_ELEMENT_WIDTH
         self.show_time = 0
         self.mask = mask
-        self.placeholder = placeholder
+        self.placeholder = maybe_text_to_text(placeholder)
 
     def draw_and_call(self, surf: Surface, at: Vector2, pressed: list[bool], released: list[bool]) -> Any:
         self.show_time += globals.delta
@@ -107,7 +112,7 @@ class UiTextInput(UiElement):
             placeholder = True
         else:
             placeholder = False
-        text_render = GAME_FONT.render(text, True, UI_FG)
+        text_render = GAME_FONT.render(str(text), True, UI_FG)
         if text_render.get_width() > self.width - 20 or (text_render.get_width() < self.width - 20 and self.width > DEFAULT_ELEMENT_WIDTH):
             self.width = max(text_render.get_width() + 20, DEFAULT_ELEMENT_WIDTH)
         area = Rect(at + Vector2(DEFAULT_ELEMENT_WIDTH // 2 - self.width // 2, 0), (self.width, DEFAULT_ELEMENT_HEIGHT))
