@@ -350,13 +350,44 @@ class WorldSection:
             raise SectionFormatError(f'Section version too new! ({self.data_version} > {DATA_VERSION})')
         if self.data_version == DATA_VERSION:
             return False
-        if self.data_version < DATA_VERSION:
-            raise SectionFormatError(f'Upgrading sections from data version {self.data_version} is not supported')
         start = time.perf_counter()
+        if self.data_version < DATA_VERSION:
+            self._convert_1_2()
         self.data_version = DATA_VERSION
         end = time.perf_counter()
         logging.info('Optimized section (%i, %i) in %f seconds', self.x, self.y, end - start)
         return True
+
+    def _convert_1_2(self) -> None:
+        fp = self.fp
+        if fp[544:548] == b'\0\0\0\0':
+            first_chunk = None
+        else:
+            first_chunk = fp[32:1056]
+        fp[10:298] = bytes(288)
+        new_addr = 298
+        new_idx = 0
+        for x in range(16):
+            for y in range(16):
+                if x == 0 and y == 0:
+                    continue # First chunk is handled specially
+                base_idx = x * 16 + y
+                old_addr = 32 + base_idx * 1024
+                if fp[old_addr + 512:old_addr + 516] == b'\0\0\0\0':
+                    continue
+                fp.move(new_addr, old_addr, 1024)
+                new_addr += 1024
+                self._mark_chunk_present(x, y)
+                fp[42 + base_idx] = new_idx
+                new_idx += 1
+        if first_chunk is not None:
+            if new_addr + 1024 != 262176:
+                fp.flush()
+                fp.resize(new_addr + 1024)
+                fp.flush()
+            fp[new_addr:new_addr + 1024] = first_chunk
+            self._mark_chunk_present(0, 0)
+            fp[42] = new_idx
 
     def close(self) -> None:
         logging.debug('Closing section (%i, %i)', self.x, self.y)
