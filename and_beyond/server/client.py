@@ -424,21 +424,24 @@ class Client:
             old_cy = int(self.player.y) >> 4
             distance = math.sqrt(distance_sq)
             collided = False
-            step_count = math.ceil(distance)
-            if step_count > 0:
-                # Move in steps to detect collisions
-                step_x = distance_x / step_count
-                step_y = distance_y / step_count
-                assert self.server.world is not None
-                for step in range(step_count):
+            if distance > 0.01:
+                step_count = math.ceil(distance)
+                if step_count > 0:
+                    # Move in steps to detect collisions
+                    step_x = distance_x / step_count
+                    step_y = distance_y / step_count
+                    assert self.server.world is not None
                     self.player.x += step_x
-                    if self.player.physics.offset_bb.expand(-0.2).collides_with_world(self.server.world):
-                        collided = True
-                        break
                     self.player.y += step_y
-                    if self.player.physics.offset_bb.expand(-0.2).collides_with_world(self.server.world):
-                        collided = True
-                        break
+                    for step in range(step_count - 1):
+                        self.player.x += step_x
+                        if self.player.physics.offset_bb.expand(-0.2).collides_with_world(self.server.world):
+                            collided = True
+                            break
+                        self.player.y += step_y
+                        if self.player.physics.offset_bb.expand(-0.2).collides_with_world(self.server.world):
+                            collided = True
+                            break
             if collided:
                 await self.set_position_safe()
             else:
@@ -459,7 +462,7 @@ class Client:
             self.air_time += 0.05
         self.last_y_velocities.append(distance_y)
         avg_y_vel = mean(self.last_y_velocities)
-        if self.air_time > 5 and avg_y_vel > -0.25:
+        if self.air_time > 5 and 4 > avg_y_vel > -0.25:
             await self.disconnect(translatable_text('server.fly_hacking'))
 
     async def set_position_safe(self, x: Optional[float] = None, y: Optional[float] = None, include_others: bool = False) -> None:
