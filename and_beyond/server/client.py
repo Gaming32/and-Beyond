@@ -457,8 +457,7 @@ class Client:
             self.grounded_time = 0
             self.air_time += 0.05
         self.last_y_velocities.append(distance_y)
-        avg_y_vel = mean(self.last_y_velocities)
-        if self.air_time > 5 and 4 > avg_y_vel > -0.25:
+        if self.air_time > 5 and 4 > mean(self.last_y_velocities) > -0.25:
             await self.disconnect(translatable_text('server.fly_hacking'))
 
     async def set_position_safe(self, x: Optional[float] = None, y: Optional[float] = None, include_others: bool = False) -> None:
