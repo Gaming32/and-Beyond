@@ -128,6 +128,7 @@ globals.mixer = Mixer()
 globals.mixer.set_volume(globals.config.config['volume'])
 globals.mixer.play_song()
 
+crash_key_held = 0
 disconnect_reason: Optional[Text] = None
 move_left = False
 move_right = False
@@ -139,6 +140,7 @@ globals.frame = 0
 clock = pygame.time.Clock()
 pygame.time.set_timer(PERIODIC_TICK_EVENT, 250)
 last_jump_time = 0
+crashed = None
 while globals.running:
     try:
         globals.delta = clock.tick(globals.config.config['max_framerate']) / 1000
@@ -208,6 +210,8 @@ while globals.running:
                     if key.get_pressed()[K_F4]:
                         if event.key == K_a:
                             globals.local_world.force_rerender()
+                        elif event.key == K_c:
+                            crash_key_held = pygame.time.get_ticks()
                 else:
                     if event.key == pygame.K_BACKSPACE:
                         text = globals.chat_client.current_chat
@@ -269,6 +273,11 @@ while globals.running:
 
         if should_chat_open:
             chat_open = True
+        if crash_key_held > 0 and pygame.time.get_ticks() - crash_key_held > 2000:
+            held_keys = pygame.key.get_pressed()
+            if held_keys[K_F4] and held_keys[K_c]:
+                raise Exception('Crash key held')
+            crash_key_held = 0
 
         if globals.mixer.music_channel is not None and not globals.mixer.music_channel.get_busy():
             globals.mixer.play_song()
@@ -362,16 +371,22 @@ while globals.running:
     except BaseException as e:
         if isinstance(e, Exception):
             logging.critical('Game crashed hard with exception', exc_info=True)
+            crashed = e
         globals.running = False
 
 
 logging.info('Quitting...')
 
 # I can't use pygame.quit() because it segfaults for some reason when in fullscreen mode
-pygame.mixer.quit()
-pygame.font.quit()
-pygame.joystick.quit()
-pygame.display.quit()
+if crashed is None:
+    pygame.mixer.quit()
+    pygame.font.quit()
+    pygame.joystick.quit()
+    pygame.display.quit()
+else:
+    pygame.mixer.quit()
+    pygame.joystick.quit()
+
 
 if globals.game_connection is not None:
     globals.game_connection.stop()
@@ -379,3 +394,12 @@ globals.close_singleplayer_server()
 if globals.auth_client is not None:
     asyncio.get_event_loop().run_until_complete(globals.auth_client.close())
 config.save()
+
+if crashed is not None:
+    try:
+        from and_beyond.client import crash_gui
+        crash_gui.display_crash_gui(crashed)
+    except BaseException:
+        logging.warning("Couldn't display crash GUI", exc_info=True)
+    pygame.font.quit()
+    pygame.display.quit()
