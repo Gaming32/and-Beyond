@@ -45,13 +45,21 @@ class ClientWorld(AbstractWorld):
             rpos += half_size
             rpos.y = surf.get_height() - rpos.y
             surf.blit(chunk_render, chunk_render.get_rect().move(rpos))
-        surf.blit(SELECTED_ITEM_BG[0], (15, surf.get_height() - 85, 70, 70))
+        surf.blit(SELECTED_ITEM_BG[0], (15, surf.get_height() - 85, 550, 70))
         globals.player.refresh_inventory_if_needed()
-        if globals.player.selected_item_texture is not None:
-            surf.blit(
-                globals.player.selected_item_texture,
-                (25, surf.get_height() - 75, 50, 50)
-            )
+        item_display_x = 25
+        for item_texture in globals.player.item_textures:
+            if item_texture is not None:
+                surf.blit(
+                    item_texture,
+                    (item_display_x, surf.get_height() - 75, 50, 50)
+                )
+            item_display_x += 60
+        pygame.draw.rect(
+            surf, (255, 255, 255),
+            (20 + globals.player.inventory.selected * 60, surf.get_height() - 80, 60, 60),
+            2
+        )
         if globals.paused:
             return
         if globals.mouse_world[0] == pymath.inf:
@@ -188,7 +196,7 @@ class ClientChunk(WorldChunk):
         self.redraw.add((x, y))
 
 
-def get_block_texture(block: Block) -> pygame.surface.Surface:
+def get_block_texture(block: Block, randomized: bool = True) -> pygame.surface.Surface:
     if block is None:
         tex = MISSING_TEXTURE[0]
     elif block.texture_path is None:
@@ -196,7 +204,7 @@ def get_block_texture(block: Block) -> pygame.surface.Surface:
     else:
         sprites = BLOCK_SPRITES[block.id]
         assert sprites is not None
-        if block.turnable_texture:
+        if randomized and block.turnable_texture:
             tex = random.choice(sprites)
         else:
             tex = sprites[0]

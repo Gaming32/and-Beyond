@@ -231,9 +231,17 @@ while globals.running:
                     elif event.key == K_a:
                         move_left = False
             elif event.type == MOUSEBUTTONUP:
-                if event.button == 6 and globals.ui_override is not None:
+                if event.button == BUTTON_X1 and globals.ui_override is not None:
                     globals.ui_override.close()
-                globals.released_mouse_buttons[event.button - 1] = True
+                if event.button < 8:
+                    globals.released_mouse_buttons[event.button - 1] = True
+                else:
+                    logging.warning('pygame sent mouse button %i?', event.button)
+            elif event.type == MOUSEBUTTONDOWN:
+                if event.button == BUTTON_WHEELUP:
+                    globals.player.add_selected_item(-1)
+                elif event.button == BUTTON_WHEELDOWN:
+                    globals.player.add_selected_item(1)
             elif chat_open and event.type == pygame.TEXTINPUT:
                 globals.chat_client.current_chat += event.text
                 globals.chat_client.dirty = True

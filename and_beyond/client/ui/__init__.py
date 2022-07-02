@@ -117,7 +117,7 @@ class UiTextInput(UiElement):
             self.width = max(text_render.get_width() + 20, DEFAULT_ELEMENT_WIDTH)
         area = Rect(at + Vector2(DEFAULT_ELEMENT_WIDTH // 2 - self.width // 2, 0), (self.width, DEFAULT_ELEMENT_HEIGHT))
         pygame.draw.rect(surf, UI_BG, area, 0, 5)
-        if pressed[0]:
+        if pressed[BUTTON_LEFT - 1]:
             if area.collidepoint(globals.mouse_screen): # type: ignore
                 self.selected = True
             else:
@@ -180,7 +180,7 @@ class UiButton(UiElement):
         )
         if area.collidepoint(globals.mouse_screen): # type: ignore
             pygame.draw.rect(surf, UI_FG, area, 5, 5)
-            if released[0]:
+            if released[BUTTON_LEFT - 1]:
                 return self.callback()
 
 
@@ -251,7 +251,7 @@ class UiSlider(UiElement):
         )
         if area.collidepoint(globals.mouse_screen): # type: ignore
             pygame.draw.rect(surf, UI_FG, area, 5, 5)
-            if pressed[0]:
+            if pressed[BUTTON_LEFT - 1]:
                 self.value = self._screen_to_value(int(globals.mouse_screen.x - area.x))
                 self.callback(self.value)
         surf.fill(UI_FG, Rect(area.x + self._value_to_screen() - 2, area.y, 5, DEFAULT_ELEMENT_HEIGHT))

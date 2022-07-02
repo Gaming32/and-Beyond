@@ -3,7 +3,10 @@ import logging
 import random
 import sys
 from asyncio.events import AbstractEventLoop
-from typing import Any, Awaitable, Callable, Generator, Generic, Iterable, Optional, Sequence, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Generator, Generic, Iterable, Optional, Sequence, TypeVar, Union, overload
+
+if TYPE_CHECKING:
+    from _typeshed import SupportsRichComparisonT
 
 _T = TypeVar('_T')
 _KT = TypeVar('_KT')
@@ -119,6 +122,14 @@ async def spiral_loop_async(w: int, h: int, cb: Callable[[int, int], Awaitable[A
         if x == y or (x < 0 and x == -y) or (x > 0 and x == 1-y):
             dx, dy = -dy, dx
         x, y = x+dx, y+dy
+
+
+def clamp(
+    val: 'SupportsRichComparisonT',
+    min_val: 'SupportsRichComparisonT',
+    max_val: 'SupportsRichComparisonT'
+) -> 'SupportsRichComparisonT':
+    return max(min(val, max_val), min_val)
 
 
 async def ainput(prompt: str = '', loop: Optional[AbstractEventLoop] = None) -> str:

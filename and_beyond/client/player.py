@@ -25,7 +25,7 @@ class ClientPlayer(AbstractPlayer):
     render_x: float
     render_y: float
     is_local: bool
-    selected_item_texture: Optional[pygame.surface.Surface]
+    item_textures: list[Optional[pygame.surface.Surface]]
     dir: bool
     frame: float
     display_name: Optional[str]
@@ -51,7 +51,8 @@ class ClientPlayer(AbstractPlayer):
         self.physics = PlayerPhysics(self)
         self.time_since_physics = 0
         self.inventory = PlayerInventory()
-        self.refresh_inventory()
+        self.item_textures = [None] * 9
+        self.refresh_inventory_force()
 
     @property
     def world(self) -> ClientWorld:
@@ -108,17 +109,21 @@ class ClientPlayer(AbstractPlayer):
         self.render_x = self.x
         self.render_y = self.y
 
+    def refresh_inventory_force(self) -> None:
+        for i in range(9):
+            item = self.inventory.items[i]
+            if item is None:
+                self.item_textures[i] = None
+            else:
+                self.item_textures[i] = pygame.transform.scale(
+                    get_block_texture(item.item, False), (50, 50)
+                )
+
     def refresh_inventory_if_needed(self) -> None:
         if not self.inventory_needs_refresh:
             return
         self.inventory_needs_refresh = False
-        selected_item = self.inventory.selected_item
-        if selected_item is None:
-            self.selected_item_texture = None
-        else:
-            self.selected_item_texture = pygame.transform.scale(
-                get_block_texture(selected_item.item), (50, 50)
-            )
+        self.refresh_inventory_force()
 
     def refresh_inventory(self) -> None:
         self.inventory_needs_refresh = True
@@ -126,9 +131,15 @@ class ClientPlayer(AbstractPlayer):
     def set_selected_item(self, slot: int, sync_to_server: bool = True) -> None:
         self.inventory.selected = slot
         self.refresh_inventory()
-        if sync_to_server:
-            assert globals.game_connection is not None
+        if sync_to_server and globals.game_connection is not None:
             globals.game_connection.write_packet_sync(InventorySelectPacket(slot))
+
+    def add_selected_item(self, amount: int, sync_to_server: bool = True) -> None:
+        self.inventory.selected = (self.inventory.selected + amount) % 9
+        self.refresh_inventory()
+        if sync_to_server and globals.game_connection is not None:
+            assert globals.game_connection is not None
+            globals.game_connection.write_packet_sync(InventorySelectPacket(self.inventory.selected))
 
     def send_position(self, x: Optional[float] = None, y: Optional[float] = None) -> None:
         x = self.x if x is None else x
