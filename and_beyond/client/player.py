@@ -115,9 +115,15 @@ class ClientPlayer(AbstractPlayer):
             if item is None:
                 self.item_textures[i] = None
             else:
-                self.item_textures[i] = pygame.transform.scale(
+                self.item_textures[i] = item_texture = pygame.transform.scale(
                     get_block_texture(item.item, False), (50, 50)
                 )
+                if item.count != 1:
+                    number_render = CHAT_FONT.render(str(item.count), True, (255, 255, 255))
+                    item_texture.blit(
+                        number_render,
+                        (50 - number_render.get_width(), 50 - number_render.get_height())
+                    )
 
     def refresh_inventory_if_needed(self) -> None:
         if not self.inventory_needs_refresh:
@@ -129,7 +135,8 @@ class ClientPlayer(AbstractPlayer):
         self.inventory_needs_refresh = True
 
     def set_selected_item(self, slot: int, sync_to_server: bool = True) -> None:
-        self.inventory.selected = slot % 9
+        slot %= 9
+        self.inventory.selected = slot
         self.refresh_inventory()
         if sync_to_server and globals.game_connection is not None:
             globals.game_connection.write_packet_sync(InventorySelectPacket(slot))
