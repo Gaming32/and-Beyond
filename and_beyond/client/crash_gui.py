@@ -49,7 +49,9 @@ def display_crash_gui(exc: Exception) -> None:
                 ))
             elif event.type in (pygame.VIDEORESIZE, pygame.VIDEOEXPOSE):
                 _render_crash_gui(crash_font, surf, lines)
+
         if copy_time > 0 and pygame.time.get_ticks() - copy_time > 2000:
             copy_time = 0
             _render_crash_gui(crash_font, surf, lines)
+
         pygame.display.update()
