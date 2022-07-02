@@ -46,10 +46,12 @@ class ClientWorld(AbstractWorld):
             rpos.y = surf.get_height() - rpos.y
             surf.blit(chunk_render, chunk_render.get_rect().move(rpos))
         surf.blit(SELECTED_ITEM_BG[0], (15, surf.get_height() - 85, 70, 70))
-        surf.blit(
-            globals.player.selected_block_texture,
-            (25, surf.get_height() - 75, 50, 50)
-        )
+        globals.player.refresh_inventory_if_needed()
+        if globals.player.selected_item_texture is not None:
+            surf.blit(
+                globals.player.selected_item_texture,
+                (25, surf.get_height() - 75, 50, 50)
+            )
         if globals.paused:
             return
         if globals.mouse_world[0] == pymath.inf:
@@ -77,12 +79,14 @@ class ClientWorld(AbstractWorld):
         buttons = pygame.mouse.get_pressed(3)
         if buttons[0]:
             globals.player.set_block(sel_cx, sel_cy, sel_bx, sel_by, blocks.AIR)
-        elif buttons[2] and globals.player.can_reach(
-            sel_x, sel_y,
-            globals.player.selected_block.bounding_box,
-            (player.physics.offset_bb for player in globals.all_players.values())
-        ):
-            globals.player.set_block(sel_cx, sel_cy, sel_bx, sel_by, globals.player.selected_block)
+        elif buttons[2]:
+            selected_item = globals.player.inventory.selected_item
+            if selected_item is not None and globals.player.can_reach(
+                sel_x, sel_y,
+                selected_item.item.bounding_box,
+                (player.physics.offset_bb for player in globals.all_players.values())
+            ):
+                globals.player.set_block(sel_cx, sel_cy, sel_bx, sel_by, selected_item.item)
 
     def _is_under_block_in_2_chunks(self) -> bool:
         if globals.player.x == pymath.inf or globals.player.y == pymath.inf:

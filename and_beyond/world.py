@@ -18,7 +18,7 @@ import aiofiles
 from typing_extensions import Self
 
 from and_beyond import blocks
-from and_beyond.abstract_player import AbstractPlayer
+from and_beyond.abstract_player import AbstractPlayer, PlayerInventory
 from and_beyond.blocks import Block, get_block_by_id
 from and_beyond.text import Text
 
@@ -657,6 +657,7 @@ class OfflinePlayer(AbstractPlayer):
         spawn_y = 0 if spawn_y is None else spawn_y
         banned = None
         operator_level = 0
+        inventory = None
         if self.data_path.exists():
             async with aiofiles.open(self.data_path) as fp:
                 raw_data = await fp.read()
@@ -671,11 +672,16 @@ class OfflinePlayer(AbstractPlayer):
                 if banned is not None:
                     banned = Text.from_json(banned)
                 operator_level = data.get('operator', 0)
+                inventory = data.get('inventory', None)
         else:
             self.x = spawn_x
             self.y = spawn_y
         self.banned = banned
         self.operator_level = operator_level
+        if inventory is not None:
+            self.inventory = PlayerInventory.from_json(inventory)
+        else:
+            self.inventory = PlayerInventory()
 
     async def save(self) -> None:
         data = {
@@ -683,6 +689,7 @@ class OfflinePlayer(AbstractPlayer):
             'y': self.y,
             'banned': None if not self.banned else self.banned.to_json(),
             'operator': self.operator_level,
+            'inventory': self.inventory.to_json(),
         }
         raw_data = await self.aloop.run_in_executor(None, partial(json.dumps, data, indent=2))
         async with aiofiles.open(self.data_path, 'w') as fp:

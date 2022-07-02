@@ -17,6 +17,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from cryptography.hazmat.primitives.serialization.base import load_der_public_key
 
+from and_beyond.abstract_player import InventoryItem
 from and_beyond.client import globals
 from and_beyond.client.chat import ClientChatMessage
 from and_beyond.client.consts import SERVER_CONNECT_EVENT, SERVER_DISCONNECT_EVENT
@@ -29,9 +30,10 @@ from and_beyond.http_errors import Unauthorized
 from and_beyond.middleware import (BufferedWriterMiddleware, EncryptedReaderMiddleware, EncryptedWriterMiddleware,
                                    ReaderMiddleware, WriterMiddleware, create_writer_middlewares)
 from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket, ChunkUpdatePacket, ClientRequestPacket,
-                               DisconnectPacket, Packet, PingPacket, PlayerInfoPacket, PlayerPositionPacket,
-                               RemovePlayerPacket, ServerInfoPacket, SimplePlayerPositionPacket, UnloadChunkPacket,
-                               read_packet, read_packet_timeout, write_packet)
+                               DisconnectPacket, InventoryPacket, InventorySelectPacket, InventoryUpdatePacket, Packet,
+                               PingPacket, PlayerInfoPacket, PlayerPositionPacket, RemovePlayerPacket,
+                               ServerInfoPacket, SimplePlayerPositionPacket, UnloadChunkPacket, read_packet,
+                               read_packet_timeout, write_packet)
 from and_beyond.text import Text, plain_text, translatable_text
 from and_beyond.utils import DEBUG
 
@@ -158,6 +160,18 @@ class ServerConnection:
             elif isinstance(packet, SimplePlayerPositionPacket):
                 globals.player.x = packet.x
                 globals.player.y = packet.y
+            elif isinstance(packet, InventoryPacket):
+                globals.player.inventory = packet.inventory
+                globals.player.refresh_inventory()
+            elif isinstance(packet, InventoryUpdatePacket):
+                if packet.item is None:
+                    globals.player.inventory.items[packet.slot] = None
+                else:
+                    globals.player.inventory.items[packet.slot] = InventoryItem(packet.item, packet.count)
+                globals.player.refresh_inventory()
+            elif isinstance(packet, InventorySelectPacket):
+                globals.player.inventory.selected = packet.slot
+                globals.player.refresh_inventory()
             elif isinstance(packet, PlayerInfoPacket):
                 new_player = ClientPlayer(packet.name)
                 globals.all_players[packet.uuid] = new_player

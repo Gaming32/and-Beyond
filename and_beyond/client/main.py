@@ -28,7 +28,6 @@ logging.info('Loaded %i assets in %f seconds', ASSET_COUNT, end - start)
 from pygame import *
 from pygame.locals import *
 
-from and_beyond import blocks
 from and_beyond import text as text_module
 from and_beyond.client import globals
 from and_beyond.client.chat import ChatClient
@@ -186,23 +185,9 @@ while globals.running:
                         move_right = True
                     elif event.key == K_a:
                         move_left = True
-                    # elif event.key == K_SPACE:
-                    #     move_up = True
-                    elif event.key == K_1:
-                        globals.player.change_selected_block(blocks.STONE)
-                    elif event.key == K_2:
-                        globals.player.change_selected_block(blocks.DIRT)
-                    elif event.key == K_3:
-                        globals.player.change_selected_block(blocks.GRASS)
-                    elif event.key == K_4:
-                        globals.player.change_selected_block(blocks.WOOD)
-                    elif event.key == K_5:
-                        globals.player.change_selected_block(blocks.PLANKS)
-                    elif event.key == K_6:
-                        globals.player.change_selected_block(blocks.LEAVES)
-                    elif event.key == K_7:
-                        globals.player.change_selected_block(blocks.TORCH)
-                    if event.key == K_t:
+                    elif K_1 <= event.key <= K_9:
+                        globals.player.set_selected_item(event.key - K_1)
+                    elif event.key == K_t:
                         should_chat_open = True
                     elif event.key == K_SLASH:
                         should_chat_open = True

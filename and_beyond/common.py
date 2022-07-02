@@ -11,8 +11,9 @@ PROTOCOL_VERSION_MAP = [
     'a1.3.3', # 4
     'a1.3.5', # 5
     'a1.3.6', # 6
+    'a1.4.0', # 7
 ]
-VERSION_DISPLAY_NAME = 'a1.3.6'
+VERSION_DISPLAY_NAME = 'a1.4.0'
 
 KEY_LENGTH = 32
 AUTH_SERVER = 'ab-auth.jemnetworks.com'

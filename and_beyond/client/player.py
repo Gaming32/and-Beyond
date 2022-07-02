@@ -8,15 +8,14 @@ import pygame.transform
 from pygame import *
 from pygame.locals import *
 
-from and_beyond import blocks
-from and_beyond.abstract_player import AbstractPlayer
+from and_beyond.abstract_player import AbstractPlayer, PlayerInventory
 from and_beyond.blocks import Block
 from and_beyond.client import globals
 from and_beyond.client.assets import CHAT_FONT, PERSON_SPRITES
 from and_beyond.client.consts import BLOCK_RENDER_SIZE
 from and_beyond.client.utils import lerp, world_to_screen
 from and_beyond.client.world import ClientWorld, get_block_texture
-from and_beyond.packet import ChunkUpdatePacket, SimplePlayerPositionPacket
+from and_beyond.packet import ChunkUpdatePacket, InventorySelectPacket, SimplePlayerPositionPacket
 from and_beyond.physics import PlayerPhysics
 
 
@@ -26,14 +25,14 @@ class ClientPlayer(AbstractPlayer):
     render_x: float
     render_y: float
     is_local: bool
-    selected_block: Block
-    selected_block_texture: pygame.surface.Surface
+    selected_item_texture: Optional[pygame.surface.Surface]
     dir: bool
     frame: float
     display_name: Optional[str]
     name_render: Optional[pygame.surface.Surface]
     name_offset: Vector2
     time_since_physics: float
+    inventory_needs_refresh: bool
 
     def __init__(self, name: Optional[str] = None) -> None:
         self.x = inf
@@ -45,13 +44,14 @@ class ClientPlayer(AbstractPlayer):
         self.is_local = name is None
         # We know better than https://mypy.readthedocs.io/en/latest/generics.html#variance-of-generic-types here :)
         self.loaded_chunks = globals.local_world.loaded_chunks # type: ignore
-        self.change_selected_block(blocks.STONE)
         self.dir = True
         self.frame = 0
         self.display_name = name
         self.name_render = None
         self.physics = PlayerPhysics(self)
         self.time_since_physics = 0
+        self.inventory = PlayerInventory()
+        self.refresh_inventory()
 
     @property
     def world(self) -> ClientWorld:
@@ -108,9 +108,27 @@ class ClientPlayer(AbstractPlayer):
         self.render_x = self.x
         self.render_y = self.y
 
-    def change_selected_block(self, new: Block) -> None:
-        self.selected_block = new
-        self.selected_block_texture = pygame.transform.scale(get_block_texture(new), (50, 50))
+    def refresh_inventory_if_needed(self) -> None:
+        if not self.inventory_needs_refresh:
+            return
+        self.inventory_needs_refresh = False
+        selected_item = self.inventory.selected_item
+        if selected_item is None:
+            self.selected_item_texture = None
+        else:
+            self.selected_item_texture = pygame.transform.scale(
+                get_block_texture(selected_item.item), (50, 50)
+            )
+
+    def refresh_inventory(self) -> None:
+        self.inventory_needs_refresh = True
+
+    def set_selected_item(self, slot: int, sync_to_server: bool = True) -> None:
+        self.inventory.selected = slot
+        self.refresh_inventory()
+        if sync_to_server:
+            assert globals.game_connection is not None
+            globals.game_connection.write_packet_sync(InventorySelectPacket(slot))
 
     def send_position(self, x: Optional[float] = None, y: Optional[float] = None) -> None:
         x = self.x if x is None else x
