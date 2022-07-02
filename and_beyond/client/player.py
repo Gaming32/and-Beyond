@@ -129,17 +129,13 @@ class ClientPlayer(AbstractPlayer):
         self.inventory_needs_refresh = True
 
     def set_selected_item(self, slot: int, sync_to_server: bool = True) -> None:
-        self.inventory.selected = slot
+        self.inventory.selected = slot % 9
         self.refresh_inventory()
         if sync_to_server and globals.game_connection is not None:
             globals.game_connection.write_packet_sync(InventorySelectPacket(slot))
 
     def add_selected_item(self, amount: int, sync_to_server: bool = True) -> None:
-        self.inventory.selected = (self.inventory.selected + amount) % 9
-        self.refresh_inventory()
-        if sync_to_server and globals.game_connection is not None:
-            assert globals.game_connection is not None
-            globals.game_connection.write_packet_sync(InventorySelectPacket(self.inventory.selected))
+        self.set_selected_item(self.inventory.selected + amount)
 
     def send_position(self, x: Optional[float] = None, y: Optional[float] = None) -> None:
         x = self.x if x is None else x

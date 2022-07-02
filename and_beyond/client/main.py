@@ -238,7 +238,10 @@ while globals.running:
                 else:
                     logging.warning('pygame sent mouse button %i?', event.button)
             elif event.type == MOUSEBUTTONDOWN:
-                if event.button == BUTTON_WHEELUP:
+                if event.button == BUTTON_LEFT and globals.game_status == GameStatus.IN_GAME:
+                    if Rect(15, screen.get_height() - 85, 550, 70).collidepoint(event.pos):
+                        globals.player.set_selected_item((event.pos[0] - 15) // 60)
+                elif event.button == BUTTON_WHEELUP:
                     globals.player.add_selected_item(-1)
                 elif event.button == BUTTON_WHEELDOWN:
                     globals.player.add_selected_item(1)
