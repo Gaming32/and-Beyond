@@ -15,7 +15,7 @@ def _render_crash_gui(crash_font: pygame.font.Font, surf: pygame.surface.Surface
 
 
 def display_crash_gui(exc: Exception) -> None:
-    base_tb = ''.join(traceback.format_exception(exc))
+    base_tb = ''.join(traceback.format_exception(None, exc, None))
     tb_lines = base_tb.split('\n')
     lines = ['Your game has crashed! Here is a brief summary of the error:'] + tb_lines
 
