@@ -467,14 +467,14 @@ class AsyncServer:
         packet: Packet,
         cpos_only: Optional[tuple[int, int]] = None,
         exclude_player: Optional[Client] = None
-    ) -> tuple[None, ...]:
+    ) -> int:
         tasks: list[asyncio.Task[None]] = []
         for client in self.clients:
             if client is exclude_player:
                 continue
             if cpos_only is None or cpos_only in client.loaded_chunks:
                 tasks.append(self.loop.create_task(client.send_or_remove(packet)))
-        return await asyncio.gather(*tasks)
+        return len(await asyncio.gather(*tasks))
 
     async def run_command(self, cmd: str, sender: AbstractCommandSender) -> Any:
         name, *rest = cmd.split(' ', 1)
