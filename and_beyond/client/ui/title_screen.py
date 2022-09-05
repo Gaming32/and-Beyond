@@ -65,7 +65,7 @@ class TitleScreen(Ui):
             return
         screen = globals.ui_override = QuestionScreen(
             'Enter Server Address/IP:',
-            'Connect',
+            translatable_text('multiplayer.connect'),
             ok_callback=connect_clicked,
             default_text=globals.config.config['last_server']
         )

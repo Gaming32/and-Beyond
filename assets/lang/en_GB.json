@@ -13,6 +13,7 @@
     "singleplayer.title": "Select a world",
     "singleplayer.new_world": "(New world)",
     "singleplayer.open_worlds_folder": "Open worlds folder",
+    "multiplayer.connect": "Connect",
     "options.title": "Options",
     "options.framerate": "Framerate",
     "options.framerate.unlimited": "Unlimited",

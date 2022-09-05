@@ -14,7 +14,12 @@
             "filename": "assets/lang/en_GB.json",
             "enabled": true,
             "language": "en-GB"
-        }
+        },
+        // {
+        //     "filename": "assets/lang/de_DE.json",
+        //     "enabled": true,
+        //     "language": "de-DE"
+        // }
     ],
     "cSpell.ignoreWords": [
         "ingame"
