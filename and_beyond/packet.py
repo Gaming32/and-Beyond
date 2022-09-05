@@ -8,6 +8,7 @@ from uuid import UUID
 
 from and_beyond import blocks
 from and_beyond.abc import JsonSerializable, ValidJson
+from and_beyond.abstract_player import PlayerInventory
 from and_beyond.blocks import Block, get_block_by_id
 from and_beyond.common import KEY_LENGTH, PROTOCOL_VERSION
 from and_beyond.middleware import ReaderMiddleware, WriterMiddleware
@@ -33,6 +34,9 @@ class PacketType(enum.IntEnum):
     PLAYER_POS = 10
     SIMPLE_PLAYER_POS = 11
     CHAT = 12
+    INVENTORY = 13
+    INVENTORY_UPDATE = 14
+    INVENTORY_SELECT = 15
 
 
 class Packet(abc.ABC):
@@ -414,6 +418,58 @@ class ChatPacket(Packet):
         _write_double(self.time, writer)
 
 
+class InventoryPacket(Packet):
+    type = PacketType.INVENTORY
+    inventory: PlayerInventory
+
+    def __init__(self, inventory: PlayerInventory = PlayerInventory()) -> None:
+        self.inventory = inventory
+
+    async def read(self, reader: ReaderMiddleware) -> None:
+        self.inventory = await _read_json_serializable(reader, PlayerInventory) or PlayerInventory()
+
+    def write(self, writer: WriterMiddleware) -> None:
+        _write_json_serializable(self.inventory, writer)
+
+
+class InventoryUpdatePacket(Packet):
+    type = PacketType.INVENTORY_UPDATE
+    slot: int
+    item: Optional[Block]
+    count: int
+
+    def __init__(self, slot: int = 0, item: Optional[Block] = None, count: int = 0) -> None:
+        self.slot = slot
+        self.item = item
+        self.count = count
+
+    async def read(self, reader: ReaderMiddleware) -> None:
+        data = await reader.readexactly(3)
+        self.slot = data[0]
+        if data[1]:
+            self.item = get_block_by_id(data[1])
+        else:
+            self.item = None
+        self.count = data[2]
+
+    def write(self, writer: WriterMiddleware) -> None:
+        writer.write(bytes((self.slot, (self.item or blocks.AIR).id, self.count)))
+
+
+class InventorySelectPacket(Packet):
+    type = PacketType.INVENTORY_SELECT
+    slot: int
+
+    def __init__(self, slot: int = 0) -> None:
+        self.slot = slot
+
+    async def read(self, reader: ReaderMiddleware) -> None:
+        self.slot = (await reader.readexactly(1))[0]
+
+    def write(self, writer: WriterMiddleware) -> None:
+        writer.write(bytes((self.slot,)))
+
+
 PACKET_CLASSES: list[type[Packet]] = [
     ClientRequestPacket, # CLIENT_REQUEST
     ServerInfoPacket, # SERVER_INFO
@@ -428,4 +484,7 @@ PACKET_CLASSES: list[type[Packet]] = [
     PlayerPositionPacket, # PLAYER_POS
     SimplePlayerPositionPacket, # SIMPLE_PLAYER_POS
     ChatPacket, # CHAT
+    InventoryPacket, # INVENTORY
+    InventoryUpdatePacket, # INVENTORY_UPDATE
+    InventorySelectPacket, # INVENTORY_SELECT
 ]

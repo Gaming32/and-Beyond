@@ -16,14 +16,16 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from cryptography.hazmat.primitives.serialization.base import load_der_public_key
 
+from and_beyond.abstract_player import InventoryItem
 from and_beyond.common import (KEY_LENGTH, MOVE_SPEED_CAP_SQ, NAMESPACE_AND_BEYOND, PROTOCOL_VERSION, USERNAME_REGEX,
                                VERSION_DISPLAY_NAME, VIEW_DISTANCE_BOX, get_version_name)
 from and_beyond.middleware import (BufferedWriterMiddleware, EncryptedReaderMiddleware, EncryptedWriterMiddleware,
                                    ReaderMiddleware, WriterMiddleware, create_writer_middlewares)
 from and_beyond.packet import (BasicAuthPacket, ChatPacket, ChunkPacket, ChunkUpdatePacket, ClientRequestPacket,
-                               DisconnectPacket, Packet, PingPacket, PlayerInfoPacket, PlayerPositionPacket,
-                               RemovePlayerPacket, ServerInfoPacket, SimplePlayerPositionPacket, UnloadChunkPacket,
-                               read_packet, read_packet_timeout, write_packet)
+                               DisconnectPacket, InventoryPacket, InventorySelectPacket, InventoryUpdatePacket, Packet,
+                               PingPacket, PlayerInfoPacket, PlayerPositionPacket, RemovePlayerPacket,
+                               ServerInfoPacket, SimplePlayerPositionPacket, UnloadChunkPacket, read_packet,
+                               read_packet_timeout, write_packet)
 from and_beyond.server.commands import ClientCommandSender
 from and_beyond.server.player import Player
 from and_beyond.text import EMPTY_TEXT, MaybeText, Text, plain_text, translatable_text
@@ -120,6 +122,7 @@ class Client:
         packet = PlayerInfoPacket(self.uuid, self.nickname)
         await self.server.send_to_all(packet, exclude_player=self)
         await self.load_chunks_around_player(9)
+        await self.send_or_remove(InventoryPacket(self.player.inventory))
         await self.set_position_safe()
         self.send_players_task = self.aloop.create_task(self.send_player_positions())
         self.load_chunks_around_player_task()
@@ -403,6 +406,13 @@ class Client:
                         await self.server.run_command(message.value[1:], self.command_sender)
                     else:
                         await self.server.send_chat(f'<{self.player}> {message}', log=True)
+                elif isinstance(packet, InventoryUpdatePacket):
+                    if packet.item is None:
+                        self.player.inventory.items[packet.slot] = None
+                    else:
+                        self.player.inventory.items[packet.slot] = InventoryItem(packet.item, packet.count)
+                elif isinstance(packet, InventorySelectPacket):
+                    self.player.inventory.selected = packet.slot
                 else:
                     logging.warn('Client %s sent illegal packet: %s', self, packet.type.name)
                     await self.disconnect(translatable_text('server.illegal_packet', packet.type.name))

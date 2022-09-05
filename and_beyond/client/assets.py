@@ -82,7 +82,7 @@ ASSET_COUNT += len(PERSON_SPRITES)
 BLOCK_SPRITES: list[Optional[list[pygame.surface.Surface]]] = []
 load_block_textures('assets/sprites/')
 
-SELECTED_ITEM_BG = [pygame.surface.Surface((70, 70))]
+SELECTED_ITEM_BG = [pygame.surface.Surface((550, 70))]
 ASSET_COUNT += 1
 
 def transform_assets() -> int:

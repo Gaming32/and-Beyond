@@ -28,7 +28,6 @@ logging.info('Loaded %i assets in %f seconds', ASSET_COUNT, end - start)
 from pygame import *
 from pygame.locals import *
 
-from and_beyond import blocks
 from and_beyond import text as text_module
 from and_beyond.client import globals
 from and_beyond.client.chat import ChatClient
@@ -186,23 +185,9 @@ while globals.running:
                         move_right = True
                     elif event.key == K_a:
                         move_left = True
-                    # elif event.key == K_SPACE:
-                    #     move_up = True
-                    elif event.key == K_1:
-                        globals.player.change_selected_block(blocks.STONE)
-                    elif event.key == K_2:
-                        globals.player.change_selected_block(blocks.DIRT)
-                    elif event.key == K_3:
-                        globals.player.change_selected_block(blocks.GRASS)
-                    elif event.key == K_4:
-                        globals.player.change_selected_block(blocks.WOOD)
-                    elif event.key == K_5:
-                        globals.player.change_selected_block(blocks.PLANKS)
-                    elif event.key == K_6:
-                        globals.player.change_selected_block(blocks.LEAVES)
-                    elif event.key == K_7:
-                        globals.player.change_selected_block(blocks.TORCH)
-                    if event.key == K_t:
+                    elif K_1 <= event.key <= K_9:
+                        globals.player.set_selected_item(event.key - K_1)
+                    elif event.key == K_t:
                         should_chat_open = True
                     elif event.key == K_SLASH:
                         should_chat_open = True
@@ -246,9 +231,20 @@ while globals.running:
                     elif event.key == K_a:
                         move_left = False
             elif event.type == MOUSEBUTTONUP:
-                if event.button == 6 and globals.ui_override is not None:
+                if event.button == BUTTON_X1 and globals.ui_override is not None:
                     globals.ui_override.close()
-                globals.released_mouse_buttons[event.button - 1] = True
+                if event.button < 8:
+                    globals.released_mouse_buttons[event.button - 1] = True
+                else:
+                    logging.warning('pygame sent mouse button %i?', event.button)
+            elif event.type == MOUSEBUTTONDOWN:
+                if event.button == BUTTON_LEFT and globals.game_status == GameStatus.IN_GAME:
+                    if Rect(15, screen.get_height() - 85, 550, 70).collidepoint(event.pos):
+                        globals.player.set_selected_item((event.pos[0] - 15) // 60)
+                elif event.button == BUTTON_WHEELUP:
+                    globals.player.add_selected_item(-1)
+                elif event.button == BUTTON_WHEELDOWN:
+                    globals.player.add_selected_item(1)
             elif chat_open and event.type == pygame.TEXTINPUT:
                 globals.chat_client.current_chat += event.text
                 globals.chat_client.dirty = True

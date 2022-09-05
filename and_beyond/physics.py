@@ -1,13 +1,14 @@
 import math
 from typing import TYPE_CHECKING, Optional, Sequence, Union
 
-from and_beyond.abstract_player import AbstractPlayer
 from and_beyond.blocks import Block
 from and_beyond.common import GRAVITY, TERMINAL_VELOCITY
-from and_beyond.world import AbstractWorld
 
 if TYPE_CHECKING:
     import pygame
+
+    from and_beyond.abstract_player import AbstractPlayer
+    from and_beyond.world import AbstractWorld
 
 EPSILON = 0.001
 
@@ -41,7 +42,7 @@ class AABB:
     def contains_point(self, x: float, y: float) -> bool:
         return self.x1 <= x <= self.x2 and self.y1 <= y <= self.y2
 
-    def collides_with_world(self, world: AbstractWorld) -> Optional[tuple[int, int, Block]]:
+    def collides_with_world(self, world: 'AbstractWorld') -> Optional[tuple[int, int, Block]]:
         for x_off in range(-2, 3):
             for y_off in range(-2, 3):
                 x = int(self.x1) + x_off
@@ -71,13 +72,13 @@ class AABB:
 class PlayerPhysics:
     x_velocity: float
     y_velocity: float
-    player: AbstractPlayer
+    player: 'AbstractPlayer'
     dirty: bool
 
     air_time: int
     bounding_box: AABB
 
-    def __init__(self, player: AbstractPlayer) -> None:
+    def __init__(self, player: 'AbstractPlayer') -> None:
         self.x_velocity = 0
         self.y_velocity = 0
         self.player = player
