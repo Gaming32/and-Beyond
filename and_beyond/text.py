@@ -164,7 +164,7 @@ def get_available_languages() -> dict[str, TranslateMapping]:
 def _load_language_mapping(lang_file: str) -> tuple[Optional[TranslateMapping], str]:
     language = os.path.splitext(lang_file)[0]
     try:
-        with open(f'assets/lang/{lang_file}') as f:
+        with open(f'assets/lang/{lang_file}', encoding='utf8') as f:
             return json.load(f), language
     except Exception:
         logging.warning('Failed to load translations for %s', language, exc_info=True)
