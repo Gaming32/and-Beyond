@@ -47,7 +47,7 @@ class PlayerInventory:
             InventoryItem(blocks.PLANKS),
             InventoryItem(blocks.LEAVES),
             InventoryItem(blocks.TORCH),
-            InventoryItem(blocks.SLAB),
+            None,
             None
         ]
         self.selected = 0
